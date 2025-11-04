@@ -1,0 +1,13 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Dashboard</title>
+</head>
+<body>
+    <h2>Bienvenido, {{ user.Nombre }}!</h2>
+    <p>Rol: {{ user.Rol }}</p>
+    <p><a href="{% url 'logout' %}">Cerrar sesión</a></p>
+    <hr>
+    <p>Esta es tu área privada.</p>
+</body>
+</html>

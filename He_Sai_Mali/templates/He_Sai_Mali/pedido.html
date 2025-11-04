@@ -1,0 +1,199 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <link rel="icon" type="image/png" href="{% static 'He_Sai_Mali/logo.png' %}">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>He Sai Mali</title>
+    <style>
+        /* BASE GENERAL */
+        body {
+            background-color: #2c3038;
+            font-family: 'Roboto', sans-serif;
+            margin: 0;
+            padding: 0;
+        }
+        header {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            background-color: #981a28;
+            border-bottom: 8px solid #f3bb67;
+            
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: flex-end;
+            align-items: center;
+            padding: 0 2%;
+            box-shadow: 0 6px 10px black;
+
+            position: relative;
+
+            user-select: none;
+            z-index: 1000;
+        }
+
+        header img {
+            height: 40px;
+            margin-right: 10px;
+        }
+
+        header h1{
+            display: flex;
+            align-items: center;
+            text-align: left;
+            color:#dacfb7;
+            font-size: 25px;
+            margin-right: auto;
+        }
+        
+        header ul {
+            display: flex;
+            padding: 0;
+            margin: 0;
+            list-style-type: none;
+            color:#ffffff;
+            background-color: #981a28;
+        }
+        
+        header a{
+            text-decoration: none;
+            color: inherit;
+            display: flex;
+            justify-content: center;
+            min-width: 100px;
+            padding: 32px 10px;
+            margin: 0;
+        }
+
+        header li {
+            padding: 0;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        header li:hover {
+            background-color: #b12131;
+            color: #dacfb7;
+            box-shadow: inset 0 -4px 0px #f3bb67;
+        }
+
+        header li:active {
+            background-color: #f3bb67;
+            color: #981a28;
+        }
+
+        .info {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            padding-bottom: 60px;
+            padding-top: 10px;
+            background-color: #2c3038;
+            margin: 0 10px;
+            border-top: 3px solid black;
+        }
+
+        /*--INFO--*/
+        .infod {
+            flex-basis: 30%;
+            color: #dacfb7;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            font-size: 14px;
+        }
+        
+        .infoimg {
+            width: 20px;
+            height: 20px;
+            filter: 
+                brightness(0)
+                invert(1)
+                sepia(0.9)
+                saturate(1000%)
+                hue-rotate(300deg)
+                brightness(1.1)
+                contrast(0.9);
+        }
+
+        .contactosimg {
+            width: 25px;
+            height: 25px;
+            filter: 
+                brightness(0)
+                invert(1)
+                sepia(0.3)
+                saturate(1000%)
+                hue-rotate(300deg)
+                brightness(1.1)
+                contrast(0.9);
+        }
+        /*--------*/
+
+        footer {
+            display: flex;
+            color: #dacfb7;
+            background-color: #41444a;
+            justify-content: center;
+            align-items: center;
+            border-bottom: 10px solid #2c3038;
+            font-size: 14px;
+        }
+
+        footer a {
+            color: #dacfb7;
+            text-decoration: none;
+            transition: color 0.3s;
+        }
+
+        footer a:hover {
+            font-weight: bold;
+            color: #f3bb67;
+        }
+
+        footer a:active {
+            transform: scale(95%);
+        }
+    </style>
+</head>
+<body>
+    <header>
+            <img src="{% static 'He_Sai_Mali/logo.png' %}" alt="Logo He Sai Mali">
+            <h1>Hê Sãî Mãlî</h1>
+            
+            <nav>
+                <ul>
+                    <li><a href="/">INICIO</a></li>
+                    <li><a href="pedido">ORDENAR</a></li>
+                    <li><a href="">INICIAR SESIÓN</a></li>
+                </ul>               
+            </nav>
+    </header>
+
+    <div class="info">
+        <div class="infod">
+            <img src="{% static 'He_Sai_Mali/ubicacion.png' %}" class="infoimg" alt="ImagenUbicacion">
+            <p>Cd. Sandino - Pinar del río 30 metros abajo frente a super express zona #4</p>
+        </div>
+        <div class="infod">
+            <img src="{% static 'He_Sai_Mali/llamar.png' %}" class="infoimg" alt="ImagenTelefono">
+            <p>(505) 8559 7764</p>
+        </div>
+        <div class="infod">
+            <a href="https://www.facebook.com/people/H%C3%AA-s%C3%A3%C3%AE-m%C3%A3l%C3%AE/100075950454030/" target="_blank">
+                <img src="{% static 'He_Sai_Mali/facebook.png' %}" class="contactosimg" alt="ImagenFacebook">
+            </a>
+            <a href="https://wa.me/85597764" target="_blank">
+                <img src="{% static 'He_Sai_Mali/whatsapp.png' %}" class="contactosimg" alt="ImagenWhatsapp">
+            </a>
+        </div>
+    </div>
+    <footer>
+        <a href="login" style="margin-right: 50px;">Acceso</a>
+        <p>2025 Hê Sãî Mãlî.</p>
+    </footer>
+</body>
+</html>

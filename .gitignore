@@ -1,0 +1,11 @@
+venv/
+env/
+.venv/
+.env/
+
+*.pyc
+*~
+__pycache__
+.python-version
+.log
+.git-history

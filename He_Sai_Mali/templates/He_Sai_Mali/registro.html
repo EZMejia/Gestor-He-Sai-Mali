@@ -1,0 +1,272 @@
+{% load static %}
+<!DOCTYPE html>
+<html>
+<head>
+    <title>He Sai Mali - Registro</title>
+    <style>
+        /* ... (CSS existente, solo se muestran los cambios y añadidos relevantes) ... */
+        body { 
+            font-family: 'Roboto', sans-serif;
+            background-image: url("{% static 'He_Sai_Mali/fondo.png' %}");
+            background-position: center bottom;
+            display: flex;
+            justify-content: center; /* Centrar el contenido */
+            align-items: flex-start;
+            min-height: 100vh;
+            margin: 0;
+        }
+
+        form {
+            margin: 100px auto;
+            padding: 40px; 
+            background-color: white;
+            box-shadow: 0 0 50px 10px rgba(0, 0, 0, 0.3);
+            width: 100%;
+            max-width: 450px;
+        }
+        
+        input, select { 
+            /* ... estilos input/select ... */
+            width: 100%; 
+            padding: 8px; 
+            margin: 5px 0;
+            border-width: 0 0 2px 0; 
+            border-style: solid;
+            box-sizing: border-box;
+            transition: border-color 0.3s;
+        }
+        
+        /* Nuevo estilo para resaltar los inputs con error */
+        input.error-highlight, select.error-highlight {
+            border-bottom-color: red !important;
+        }
+
+        /* Estilos de error */
+        .error { color: red; }
+        .success { color: green; }
+
+        /* Estilo para el contenedor de errores internos */
+        #form-error-message {
+            margin-bottom: 15px;
+            padding: 10px;
+            border: 1px solid red;
+            background-color: #ffeaea;
+            color: red;
+            border-radius: 4px;
+            display: none; /* Oculto por defecto */
+        }
+        
+        .step-section {
+            display: none;
+        }
+        #step-1 {
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <form id="registrationForm" method="post">
+        
+        <h2>Registro de Empleado</h2>
+        {% csrf_token %}
+        
+        <div id="form-error-message"></div>
+
+        <div class="step-section" id="step-1">
+            <h3>Paso 1: Datos Personales</h3>
+            <p>
+                <label>Nombre:</label>
+                <input type="text" name="nombre" id="nombre" value="{{ valores.nombre }}" placeholder="Nombre" required>
+            </p>
+            <p>
+                <label>Apellido:</label>
+                <input type="text" name="apellido" id="apellido" value="{{ valores.apellido }}" placeholder="Apellido" required>
+            </p>
+            <p>
+                <label>Rol:</label>
+                <select name="rol" id="rol" required>
+                    <option value="">Seleccionar rol</option>
+                    <option value="Administrador" {% if valores.rol == 'Administrador' %}selected{% endif %}>Administrador</option>
+                    <option value="Mesero" {% if valores.rol == 'Mesero' %}selected{% endif %}>Mesero</option>
+                    <option value="Cajero" {% if valores.rol == 'Cajero' %}selected{% endif %}>Cajero</option>
+                </select>
+            </p>
+            <button type="button" onclick="nextStep(1)">Continuar</button>
+        </div>
+
+        <div class="step-section" id="step-2">
+            <h3>Paso 2: Contacto e Identificación</h3>
+            <p>
+                <label>Correo:</label>
+                <input type="email" name="correo" id="correo" value="{{ valores.correo }}" placeholder="nombre@ejemplo.com" required>
+            </p>
+            <p>
+                <label>Teléfono (opcional):</label>
+                <input type="text" name="telefono" id="telefono" value="{{ valores.telefono }}" placeholder="0000-0000">
+            </p>
+            <p>
+                <label>Cédula:</label>
+                <input type="text" name="cedula" id="cedula" value="{{ valores.cedula }}" placeholder="000-000000-0000X" required>
+            </p>
+            <button type="button" onclick="prevStep(2)">Regresar</button>
+            <button type="button" onclick="nextStep(2)">Continuar</button>
+        </div>
+
+        <div class="step-section" id="step-3">
+            <h3>Paso 3: Credenciales de Acceso</h3>
+            <p>
+                <label>Contraseña:</label>
+                <input type="password" name="contrasena1" id="contrasena1" placeholder="••••••••" required>
+            </p>
+            <p>
+                <label>Confirmar contraseña:</label>
+                <input type="password" name="contrasena2" id="contrasena2" placeholder="••••••••" required>
+            </p>
+            <button type="button" onclick="prevStep(3)">Regresar</button>
+            <button type="button" onclick="nextStep(3)">Continuar</button>
+        </div>
+
+        <div class="step-section" id="step-4">
+            <h3>Paso 4: Resumen</h3>
+            <p>
+                <label class="summary-label">Usuario:</label>
+                <span id="summary-usuario"></span>
+            </p>
+            <p>
+                <label class="summary-label">Nombre Completo:</label>
+                <span id="summary-nombre"></span>
+            </p>
+            <p>
+                <label class="summary-label">Rol:</label>
+                <span id="summary-rol"></span>
+            </p>
+            <p>
+                <label class="summary-label">Correo:</label>
+                <span id="summary-correo"></span>
+            </p>
+            <p>
+                <label class="summary-label">Cédula:</label>
+                <span id="summary-cedula"></span>
+            </p>
+
+            <button type="button" onclick="prevStep(4)">Regresar</button>
+            <button type="submit">Registrarse</button>
+        </div>
+
+    </form>
+
+    <p style="text-align:center; margin-top:20px;"><a href="{% url 'login' %}">¿Ya tienes cuenta? Iniciar sesión</a></p>
+
+    <script>
+        // Función para mostrar el paso actual y ocultar los demás
+        function showStep(stepNumber) {
+            // Ocultar el mensaje de error al cambiar de paso
+            document.getElementById('form-error-message').style.display = 'none';
+            
+            document.querySelectorAll('.step-section').forEach(section => {
+                section.style.display = 'none';
+            });
+            document.getElementById(`step-${stepNumber}`).style.display = 'block';
+        }
+
+        // Función para mostrar el error
+        function displayError(message) {
+            const errorDiv = document.getElementById('form-error-message');
+            errorDiv.textContent = message;
+            errorDiv.style.display = 'block';
+        }
+
+        // Función para generar el nombre de usuario
+        function generateUsername(nombre, apellido, rol) {
+            const n = nombre.trim().substring(0, 2).toLowerCase();
+            const a = apellido.trim().substring(0, 2).toLowerCase();
+            const r = rol.trim().toLowerCase().replace(/[^a-z0-9]/g, ''); 
+            return n + a + r + "HSL";
+        }
+
+        // Función para ir al siguiente paso, con validación mejorada
+        function nextStep(currentStep) {
+            const currentSection = document.getElementById(`step-${currentStep}`);
+            const requiredInputs = currentSection.querySelectorAll('[required]');
+            
+            // Limpiar errores previos
+            document.getElementById('form-error-message').style.display = 'none';
+            document.querySelectorAll('.error-highlight').forEach(el => {
+                el.classList.remove('error-highlight');
+            });
+            
+            let isValid = true;
+            let firstInvalidInput = null;
+
+            requiredInputs.forEach(input => {
+                if (!input.value.trim()) {
+                    isValid = false;
+                    input.classList.add('error-highlight');
+                    if (!firstInvalidInput) {
+                        firstInvalidInput = input;
+                    }
+                } else {
+                    input.classList.remove('error-highlight');
+                }
+            });
+
+            if (isValid) {
+                const nextStepNumber = currentStep + 1;
+
+                if (nextStepNumber === 4) {
+                    updateSummary();
+                }
+                
+                showStep(nextStepNumber);
+            } else {
+                // Mostrar el error en el div
+                displayError("Por favor, completa todos los campos requeridos para continuar.");
+                if (firstInvalidInput) {
+                    firstInvalidInput.focus();
+                }
+            }
+        }
+
+        // Función para regresar al paso anterior
+        function prevStep(currentStep) {
+            showStep(currentStep - 1);
+        }
+
+        // Función para actualizar el resumen y generar el usuario
+        function updateSummary() {
+            // ... (Lógica de updateSummary se mantiene igual) ...
+            const nombre = document.getElementById('nombre').value;
+            const apellido = document.getElementById('apellido').value;
+            const rol = document.getElementById('rol').options[document.getElementById('rol').selectedIndex].text;
+            const correo = document.getElementById('correo').value;
+            const cedula = document.getElementById('cedula').value;
+
+            // 1. Generar y mostrar el USUARIO
+            const usuario = generateUsername(nombre, apellido, rol);
+            document.getElementById('summary-usuario').textContent = usuario;
+
+            // 2. Mostrar la demás información en el resumen
+            document.getElementById('summary-nombre').textContent = `${nombre} ${apellido}`;
+            document.getElementById('summary-rol').textContent = rol;
+            document.getElementById('summary-correo').textContent = correo;
+            document.getElementById('summary-cedula').textContent = cedula;
+
+            // 3. Crear campo oculto para enviar el usuario
+            let user_input = document.getElementById('generated_username');
+            if (!user_input) {
+                user_input = document.createElement('input');
+                user_input.type = 'hidden';
+                user_input.name = 'usuario';
+                user_input.id = 'generated_username';
+                document.getElementById('registrationForm').appendChild(user_input);
+            }
+            user_input.value = usuario;
+        }
+
+        // Asegurarse de que solo el primer paso se muestre al cargar
+        document.addEventListener('DOMContentLoaded', () => {
+            showStep(1);
+        });
+    </script>
+</body>
+</html>
