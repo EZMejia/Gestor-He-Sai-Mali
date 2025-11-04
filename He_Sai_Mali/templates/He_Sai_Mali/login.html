@@ -1,36 +1,125 @@
+{% load static %}
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Iniciar Sesión</title>
+    <title>He Sai Mali - Iniciar Sesión</title>
     <style>
-        body { font-family: Arial; margin: 40px; }
-        input { width: 100%; padding: 8px; margin: 5px 0; }
-        button { padding: 10px 20px; background: #3498db; color: white; border: none; cursor: pointer; }
-        .error { color: red; }
+        body { 
+            font-family: 'Roboto', sans-serif;
+            background-image: url("{% static 'He_Sai_Mali/fondo.png' %}");
+            background-position: center bottom;
+            display: flex;
+            flex-direction: column;
+            justify-content: center; /* Centrar el contenido */
+            align-items: flex-start;
+            min-height: 100vh;
+            margin: 0;
+        }
+
+        form {
+            display: block;
+            margin: 100px auto;
+            padding: 40px; 
+            background-color: white;
+            box-shadow: 0 0 50px 10px rgba(0, 0, 0, 0.3);
+            width: 100%;
+            max-width: 450px;
+        }
+
+        .He_Sai_Mali {
+            display: flex;
+            align-items: center;
+        }
+
+        .He_Sai_Mali img{
+            height: 40px;
+            margin-right: 3px;
+        }
+
+        .He_Sai_Mali h2{
+            margin: 0;
+            padding: 0;
+            font-size:large;
+            color: #981a28;
+        }
+
+        input {
+            width: 100%; 
+            padding: 8px; 
+            margin: 5px 0;
+            border-width: 0 0 2px 0; 
+            border-style: solid;
+            box-sizing: border-box;
+            outline: none;
+            transition: border-color 0.3s;
+        }
+
+        p {
+            margin: 10px;
+        }
+
+        .boton {
+            display: flex;
+            justify-content: flex-end;
+        }
+
+        button { 
+            padding: 5px 20px;
+            gap: 5px;
+            background-color: #981a28;
+            color: white;
+            border: 2px solid #f3bb67;
+            border-radius: 5px;
+            user-select: none;
+            transition: background-color 0.3s;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background-color: #832630;
+        }
+        
+        button:active {
+            background-color: #b52435;
+            transform: scale(97%);
+        }
+
+        .error { 
+            margin-bottom: 15px;
+            padding: 10px;
+            border: 1px solid red;
+            background-color: #ffeaea;
+            color: red;
+            border-radius: 4px;
+        }
     </style>
 </head>
 <body>
-    <h2>Iniciar Sesión</h2>
-
-    {% if messages %}
-        {% for message in messages %}
-            <p class="error">{{ message }}</p>
-        {% endfor %}
-    {% endif %}
-
     <form method="post">
+        <div class="He_Sai_Mali">
+            <img src="{% static 'He_Sai_Mali/logo.png' %}" alt="Logo He Sai Mali">
+            <h2>He Sai Mali</h2>
+        </div>
+        <h2>Iniciar Sesión</h2>
+        {% if messages %}
+            {% for message in messages %}
+                <p class="error">{{ message }}</p>
+            {% endfor %}
+        {% endif %}
         {% csrf_token %}
         <p>
             <label>Usuario:</label>
-            <input type="text" name="usuario" placeholder="Ej: jupeMeseroHSM" required>
+            <input type="text" name="usuario" placeholder="Usuario" required>
         </p>
         <p>
             <label>Contraseña:</label>
-            <input type="password" name="contrasena" required>
+            <input type="password" name="contrasena" placeholder="••••••••" required>
         </p>
-        <button type="submit">Iniciar Sesión</button>
+        <div class="boton">
+            <button type="submit">Iniciar sesión</button>
+        </div>
     </form>
 
-    <p><a href="{% url 'registro' %}">¿No tienes cuenta? Regístrate</a></p>
+    <p><a href="{% url 'registro' %}">Registrarse</a></p>
 </body>
 </html>

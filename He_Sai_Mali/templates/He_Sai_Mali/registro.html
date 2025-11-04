@@ -17,6 +17,7 @@
         }
 
         form {
+            display: block;
             margin: 100px auto;
             padding: 40px; 
             background-color: white;
@@ -24,15 +25,36 @@
             width: 100%;
             max-width: 450px;
         }
+
+        h2 {
+            margin-top: 10px;
+        }
         
+        .He_Sai_Mali {
+            display: flex;
+            align-items: center;
+        }
+
+        .He_Sai_Mali img{
+            height: 40px;
+            margin-right: 3px;
+        }
+
+        .He_Sai_Mali h2{
+            margin: 0;
+            padding: 0;
+            font-size:large;
+            color: #981a28;
+        }
+
         input, select { 
-            /* ... estilos input/select ... */
             width: 100%; 
             padding: 8px; 
             margin: 5px 0;
             border-width: 0 0 2px 0; 
             border-style: solid;
             box-sizing: border-box;
+            outline: none;
             transition: border-color 0.3s;
         }
         
@@ -58,15 +80,66 @@
         
         .step-section {
             display: none;
+            margin: 10px;
         }
         #step-1 {
             display: block;
+        }
+        .botones {
+            display: flex;
+            justify-content: flex-end;
+            gap: 5px;
+        }
+
+        .Continuar {
+            padding: 5px 20px;
+            gap: 5px;
+            background-color: #981a28;
+            color: white;
+            border: 2px solid #f3bb67;
+            border-radius: 5px;
+            user-select: none;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+
+        .Continuar:hover {
+            background-color: #832630;
+        }
+        
+        .Continuar:active {
+            background-color: #b52435;
+            transform: scale(97%);
+        }
+
+        .Registrarse {
+            padding: 5px 20px;
+            background-color: black;
+            color: white;
+            border: 2px solid #f3bb67;
+            border-radius: 5px;
+            user-select: none;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+
+        .Registrarse:hover {
+            background-color: #981a28;
+        }
+
+        .Registrarse:active {
+            background-color: black;
+            transform: scale(97%);
         }
     </style>
 </head>
 <body>
     <form id="registrationForm" method="post">
-        
+        <div class="He_Sai_Mali">
+            <img src="{% static 'He_Sai_Mali/logo.png' %}" alt="Logo He Sai Mali">
+            <h2>He Sai Mali</h2>
+        </div>
+
         <h2>Registro de Empleado</h2>
         {% csrf_token %}
         
@@ -91,7 +164,9 @@
                     <option value="Cajero" {% if valores.rol == 'Cajero' %}selected{% endif %}>Cajero</option>
                 </select>
             </p>
-            <button type="button" onclick="nextStep(1)">Continuar</button>
+            <div class="botones">
+                <button type="button" onclick="nextStep(1)" class="Continuar">Siguiente</button>
+            </div>
         </div>
 
         <div class="step-section" id="step-2">
@@ -108,8 +183,10 @@
                 <label>Cédula:</label>
                 <input type="text" name="cedula" id="cedula" value="{{ valores.cedula }}" placeholder="000-000000-0000X" required>
             </p>
-            <button type="button" onclick="prevStep(2)">Regresar</button>
-            <button type="button" onclick="nextStep(2)">Continuar</button>
+            <div class="botones">
+                <button type="button" onclick="prevStep(2)" class="Continuar">Atrás</button>
+                <button type="button" onclick="nextStep(2)" class="Continuar">Siguiente</button>
+            </div>
         </div>
 
         <div class="step-section" id="step-3">
@@ -122,8 +199,10 @@
                 <label>Confirmar contraseña:</label>
                 <input type="password" name="contrasena2" id="contrasena2" placeholder="••••••••" required>
             </p>
-            <button type="button" onclick="prevStep(3)">Regresar</button>
-            <button type="button" onclick="nextStep(3)">Continuar</button>
+            <div class="botones">
+                <button type="button" onclick="prevStep(3)" class="Continuar">Atrás</button>
+                <button type="button" onclick="nextStep(3)" class="Continuar">Siguiente</button>
+            </div>
         </div>
 
         <div class="step-section" id="step-4">
@@ -149,13 +228,13 @@
                 <span id="summary-cedula"></span>
             </p>
 
-            <button type="button" onclick="prevStep(4)">Regresar</button>
-            <button type="submit">Registrarse</button>
+            <div class="botones">
+                <button type="button" onclick="prevStep(4)" class="Continuar">Atrás</button>
+                <button type="submit" class="Registrarse">Registrarse</button>
+            </div>
         </div>
-
+        <p style="text-align:center; margin-top:20px;">¿Ya existe una cuenta? <a href="{% url 'login' %}">Iniciar sesión</a></p>
     </form>
-
-    <p style="text-align:center; margin-top:20px;"><a href="{% url 'login' %}">¿Ya tienes cuenta? Iniciar sesión</a></p>
 
     <script>
         // Función para mostrar el paso actual y ocultar los demás
@@ -197,6 +276,7 @@
             
             let isValid = true;
             let firstInvalidInput = null;
+            let errorMessage = "Por favor, completa todos los campos requeridos para continuar.";
 
             requiredInputs.forEach(input => {
                 if (!input.value.trim()) {
@@ -210,6 +290,19 @@
                 }
             });
 
+            if (currentStep === 3 && isValid) {
+                const pass1 = document.getElementById('contrasena1').value;
+                const pass2 = document.getElementById('contrasena2').value;
+
+                if (pass1 !== pass2) {
+                    isValid = false;
+                    errorMessage = "Las contraseñas no coinciden. Por favor, verifícalas.";
+                    document.getElementById('contrasena1').classList.add('error-highlight');
+                    document.getElementById('contrasena2').classList.add('error-highlight');
+                    if (!firstInvalidInput) firstInvalidInput = document.getElementById('contrasena1');
+                }
+            }
+
             if (isValid) {
                 const nextStepNumber = currentStep + 1;
 
@@ -220,7 +313,8 @@
                 showStep(nextStepNumber);
             } else {
                 // Mostrar el error en el div
-                displayError("Por favor, completa todos los campos requeridos para continuar.");
+                displayError(errorMessage);
+
                 if (firstInvalidInput) {
                     firstInvalidInput.focus();
                 }

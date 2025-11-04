@@ -67,7 +67,6 @@ def registro(request):
         empleado.set_password(contrasena1)
         empleado.save()
 
-        messages.success(request, f'Registro exitoso. Tu usuario es: <strong>{usuario}</strong>')
         return redirect('login')
 
     return render(request, 'He_Sai_Mali/registro.html')
@@ -85,11 +84,11 @@ def login_view(request):
                 login(request, user)
                 rol = (user.Rol or '').strip().lower()
                 if rol == "administrador":
-                    return redirect('admin_panel')
+                    return redirect('dashboard')
                 elif rol == "mesero":
-                    return redirect('mesero_dashboard')
+                    return redirect('dashboard')
                 elif rol == "cajero":
-                    return redirect('cajero_dashboard')
+                    return redirect('dashboard')
                 else:
                     return redirect('dashboard')
             else:
