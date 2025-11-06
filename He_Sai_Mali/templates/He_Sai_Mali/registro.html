@@ -1,10 +1,12 @@
 {% load static %}
 <!DOCTYPE html>
-<html>
+<html lang="es">
 <head>
+    <meta charset="UTF-8">
+    <link rel="icon" type="image/png" href="{% static 'He_Sai_Mali/logo.png' %}">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>He Sai Mali - Registro</title>
     <style>
-        /* ... (CSS existente, solo se muestran los cambios y añadidos relevantes) ... */
         body { 
             font-family: 'Roboto', sans-serif;
             background-image: url("{% static 'He_Sai_Mali/fondo.png' %}");
@@ -161,7 +163,7 @@
                     <option value="">Seleccionar rol</option>
                     <option value="Administrador" {% if valores.rol == 'Administrador' %}selected{% endif %}>Administrador</option>
                     <option value="Mesero" {% if valores.rol == 'Mesero' %}selected{% endif %}>Mesero</option>
-                    <option value="Cajero" {% if valores.rol == 'Cajero' %}selected{% endif %}>Cajero</option>
+                    <option value="Cocinero" {% if valores.rol == 'Cocinero' %}selected{% endif %}>Cocinero</option>
                 </select>
             </p>
             <div class="botones">

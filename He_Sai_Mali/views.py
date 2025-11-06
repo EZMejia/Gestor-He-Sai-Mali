@@ -1,10 +1,15 @@
 from django.shortcuts import render, redirect
-from django.contrib.auth.decorators import login_required
+from django.contrib.auth.decorators import login_required, user_passes_test
 
 from django.contrib.auth import login, authenticate, logout
 from django.contrib import messages
-from .models import Empleado
+
+from .models import *
+from django.db.models import F, Sum, Case, When
+
 import re
+
+from .decorators import es_rol
 
 # Create your views here.
 def main(request):
@@ -84,21 +89,29 @@ def login_view(request):
                 login(request, user)
                 rol = (user.Rol or '').strip().lower()
                 if rol == "administrador":
-                    return redirect('dashboard')
+                    return redirect('pedidos')
                 elif rol == "mesero":
-                    return redirect('dashboard')
-                elif rol == "cajero":
-                    return redirect('dashboard')
+                    return redirect('pedidos')
+                elif rol == "cocinero":
+                    return redirect('cocina')
                 else:
-                    return redirect('dashboard')
+                    return redirect('pedidos')
             else:
                 messages.error(request, 'Usuario o contraseña incorrectos.')
 
     return render(request, 'He_Sai_Mali/login.html')
 
-@login_required
-def dashboard(request):
-    return render(request, 'He_Sai_Mali/dashboard.html')
+@user_passes_test(es_rol("Mesero"), login_url='login')
+def vista_mesero(request):
+    return render(request, 'He_Sai_Mali/pedidos.html')
+
+@user_passes_test(es_rol("Mesero"), login_url='login')
+def vista_registrarpedido(request):
+    return render(request, 'He_Sai_Mali/registrarpedido.html')
+
+@user_passes_test(es_rol("Cocinero"), login_url='login')
+def vista_cocinero(request):
+    return render(request, 'He_Sai_Mali/cocina.html')
 
 @login_required
 def logout_view(request):
