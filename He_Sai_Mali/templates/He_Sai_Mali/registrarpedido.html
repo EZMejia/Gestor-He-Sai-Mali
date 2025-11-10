@@ -54,6 +54,14 @@
                         {% else %}
                             <small class="form-text text-muted">Si el cliente ya existe, se asociará el pedido a él.</small>
                         {% endif %}
+                        <label for="id_nombre_cliente" class="form-label fw-bold">Telefono del Cliente (*)</label>
+                        <input type="text" 
+                               name="telefono_cliente" 
+                               id="id_nombre_cliente" 
+                               class="form-control form-control-lg" 
+                               value="{{ telefono_cliente_previo }}" 
+                               placeholder="Ingrese el telefono del cliente"
+                               {% if pedido_existente %}readonly{% endif %}> 
                     </div>
                 </div>
             </div>

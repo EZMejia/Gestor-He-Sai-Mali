@@ -306,6 +306,7 @@ def vista_registrarpedido(request, pedido_id=None):
 
     if request.method == 'POST':
         nombre_cliente = request.POST.get('nombre_cliente')
+        telefono_cliente =  request.POST.get('telefono_cliente')
         
         if not nombre_cliente:
             context = {
@@ -313,6 +314,7 @@ def vista_registrarpedido(request, pedido_id=None):
                 'platillos': menu_platillos,
                 'nombre_cliente_previo': nombre_cliente,
                 'pedido_existente': pedido_existente,
+                'telefono_cliente_previo': telefono_cliente,
             }
             return render(request, 'He_Sai_Mali/registrarpedido.html', context)
 
@@ -337,6 +339,7 @@ def vista_registrarpedido(request, pedido_id=None):
                     # Se usa get_or_create para evitar duplicados si el nombre es el único identificador
                     cliente_a_usar, created = Cliente.objects.get_or_create(
                         Nombre=nombre_cliente,
+                        Telefono=telefono_cliente,
                         # Puedes añadir más campos para la búsqueda si tienes más datos (ej: teléfono, correo)
                         defaults={'Nombre': nombre_cliente} 
                     )
@@ -405,7 +408,8 @@ def vista_registrarpedido(request, pedido_id=None):
                         context = {
                             'error_message': 'Debe seleccionar al menos un platillo.',
                             'platillos': menu_platillos,
-                            'nombre_cliente_previo': nombre_cliente # Para repoblar el campo
+                            'nombre_cliente_previo': nombre_cliente, # Para repoblar el campo
+                            'telefono_cliente_previo': telefono_cliente,
                         }
                         return render(request, 'He_Sai_Mali/registrarpedido.html', context)
                     else:
@@ -435,6 +439,7 @@ def vista_registrarpedido(request, pedido_id=None):
                 'error_message': f'Error en el registro del pedido: {e}',
                 'platillos': menu_platillos,
                 'nombre_cliente_previo': nombre_cliente,
+                'telefono_cliente_previo': telefono_cliente,
                 'pedido_existente': pedido_existente,
             }
             return render(request, 'He_Sai_Mali/registrarpedido.html', context)
@@ -444,6 +449,7 @@ def vista_registrarpedido(request, pedido_id=None):
         'platillos': menu_platillos,
         # Si es un pedido existente (para agregar), pre-rellenar el nombre del cliente
         'nombre_cliente_previo': pedido_existente.IdCliente.Nombre if pedido_existente else '',
+        'telefono_cliente_previo': pedido_existente.IdCliente.Telefono if pedido_existente else '',
         'pedido_existente': pedido_existente
     }
     return render(request, 'He_Sai_Mali/registrarpedido.html', context)
