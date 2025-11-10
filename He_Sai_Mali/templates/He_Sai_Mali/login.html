@@ -12,7 +12,6 @@
             background-image: url("{% static 'He_Sai_Mali/fondo.png' %}");
             background-position: center bottom;
             display: flex;
-            flex-direction: column;
             justify-content: center; /* Centrar el contenido */
             align-items: flex-start;
             min-height: 100vh;
@@ -31,10 +30,17 @@
 
         .He_Sai_Mali {
             display: flex;
+            justify-content: space-between;
+            align-items: center;
+            width: 100%;
+        }
+
+        .He_Sai_Mali .logo-texto{
+            display: flex;
             align-items: center;
         }
 
-        .He_Sai_Mali img{
+        .He_Sai_Mali .logo{
             height: 40px;
             margin-right: 3px;
         }
@@ -57,9 +63,6 @@
             transition: border-color 0.3s;
         }
 
-        p {
-            margin: 10px;
-        }
 
         .boton {
             display: flex;
@@ -95,13 +98,62 @@
             color: red;
             border-radius: 4px;
         }
+        
+        a {
+            color: white;
+        }
+
+        .flechaRegresar {
+            width: 25px;
+            height: 25px;
+            transform: rotate(180deg);
+            filter: 
+                brightness(0) 
+                saturate(100%) 
+                invert(13%) 
+                sepia(97%) 
+                saturate(700%) 
+                hue-rotate(320deg) 
+                brightness(130%) 
+                contrast(100%);
+        }
+
+        .flechaRegresar:hover {
+            filter: 
+                brightness(0) 
+                saturate(100%) 
+                invert(13%) 
+                sepia(97%) 
+                saturate(700%) 
+                hue-rotate(320deg) 
+                brightness(90%) 
+                contrast(100%);
+        }
+
+        .flechaRegresar:active {
+            filter: 
+                brightness(0) 
+                saturate(100%) 
+                invert(13%) 
+                sepia(97%) 
+                saturate(700%) 
+                hue-rotate(320deg) 
+                brightness(170%) 
+                contrast(100%);
+        }
     </style>
 </head>
 <body>
     <form method="post">
         <div class="He_Sai_Mali">
-            <img src="{% static 'He_Sai_Mali/logo.png' %}" alt="Logo He Sai Mali">
-            <h2>He Sai Mali</h2>
+            <a href="/">
+                <img href="/" src="{% static 'He_Sai_Mali/flecha.png' %}" class="flechaRegresar" alt="regresar">
+            </a>
+
+            <div class="logo-texto">
+                <img src="{% static 'He_Sai_Mali/logo.png' %}" class="logo" alt="Logo He Sai Mali">
+                <h2>He Sai Mali</h2>
+            </div>
         </div>
         <h2>Iniciar Sesión</h2>
         {% if messages %}
@@ -121,8 +173,8 @@
         <div class="boton">
             <button type="submit">Iniciar sesión</button>
         </div>
-    </form>
-
+        
     <p><a href="{% url 'registro' %}">Registrarse</a></p>
+    </form>
 </body>
 </html>

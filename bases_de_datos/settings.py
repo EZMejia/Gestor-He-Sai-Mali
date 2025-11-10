@@ -128,5 +128,6 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 AUTH_USER_MODEL = 'He_Sai_Mali.Empleado'
 
-# Opcional: para que el admin use el correo
 ADMIN_SITE_HEADER = "Panel He Sai Mali"
+
+SESSION_EXPIRE_AT_BROWSER_CLOSE = True
