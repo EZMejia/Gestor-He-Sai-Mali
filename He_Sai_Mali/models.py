@@ -81,7 +81,6 @@ class Cliente(models.Model):
 # 11. Modelo Mesa
 class Mesa(models.Model):
     IdMesa = models.AutoField(primary_key=True)
-    NumeroMesa = models.IntegerField(unique=True)
     Capacidad = models.IntegerField(default=4)
     Ocupada = models.BooleanField(default=False)
 
@@ -102,7 +101,7 @@ class Pedido(models.Model):
     IdMesa = models.ForeignKey(Mesa, on_delete=models.SET_NULL, null=True, blank=True)
 
     def __str__(self):
-        return f"Pedido N°{self.IdPedido}"
+        return f"pedido N°{self.IdPedido}"
 
     class Meta:
         db_table = 'Pedido'
@@ -158,7 +157,7 @@ class Proveedor(models.Model):
     IdProveedor = models.AutoField(primary_key=True)
     nombre = models.CharField(max_length=100, unique=True)
     telefono = models.CharField(max_length=15, blank=True, unique=True)
-    correo = models.EmailField(unique=True)
+    direccion = models.CharField(max_length=100, unique=True)
 
     def __str__(self):
         return self.nombre
