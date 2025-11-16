@@ -2,7 +2,7 @@ from django.db import models
 from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, PermissionsMixin
 from django.utils import timezone
 
-# Create your models here.
+# Adaptar los usuarios admin creados por Django
 class EmpleadoManager(BaseUserManager):
     def create_user(self, usuario, contrasena=None, **extra_fields):
         if not usuario:
@@ -19,15 +19,15 @@ class EmpleadoManager(BaseUserManager):
 
 # 1. Modelo Empleado
 class Empleado(AbstractBaseUser, PermissionsMixin):
-    IdEmpleado = models.AutoField(primary_key=True)
+    idEmpleado = models.AutoField(primary_key=True)
 
-    Nombre = models.CharField(max_length=20)
-    Apellido = models.CharField(max_length=20)
-    Telefono = models.CharField(max_length=11, blank=True, null=True)
-    Correo = models.EmailField(unique=True)
-    Cedula = models.CharField(max_length=16, unique=True)
-    Rol = models.CharField(max_length=50)
-    Usuario = models.CharField(max_length=50, unique=True)
+    nombre = models.CharField(max_length=40)
+    apellido = models.CharField(max_length=60)
+    telefono = models.IntegerField(unique=True)
+    correo = models.EmailField(unique=True)
+    cedula = models.CharField(max_length=16, unique=True)
+    rol = models.CharField(max_length=20)
+    usuario = models.CharField(max_length=30, unique=True)
 
     is_active = models.BooleanField(default=True)
     is_staff = models.BooleanField(default=False)
@@ -35,12 +35,12 @@ class Empleado(AbstractBaseUser, PermissionsMixin):
 
     objects = EmpleadoManager()
 
-    USERNAME_FIELD = 'Usuario' 
+    USERNAME_FIELD = 'usuario' 
     
-    REQUIRED_FIELDS = ['Apellido', 'Nombre','Correo','Cedula','Rol']
+    REQUIRED_FIELDS = ['apellido', 'nombre','correo','cedula','rol']
 
     def __str__(self):
-        return self.Usuario
+        return self.usuario
 
     # Necesario para admin
     def has_perm(self, perm, obj=None):
@@ -52,111 +52,58 @@ class Empleado(AbstractBaseUser, PermissionsMixin):
     class Meta:
         db_table = 'Empleado'
 
-# 2. Modelo Platillo
-class Platillo(models.Model):
-    IdPlatillo = models.AutoField(primary_key=True)
-    Nombre = models.CharField(max_length=100, unique=True)
-    Descripcion = models.TextField(blank=True, null=True)
-    Precio = models.DecimalField(max_digits=10, decimal_places=2)
+# 2. Modelo ProductoMenu
+class ProductoMenu(models.Model):
+    idProductoMenu = models.AutoField(primary_key=True)
+    nombre = models.CharField(max_length=100, unique=True)
+    categoria = models.CharField(max_length=20)
+    receta = models.CharField(max_length=1000)
+    precio = models.DecimalField(max_digits=10, decimal_places=2)
+
+    # Agregado
+    disponible = models.BooleanField(default=1)
 
     def __str__(self):
-        return self.Nombre
+        return self.nombre
 
     class Meta:
-        db_table = 'Platillo'
+        db_table = 'ProductoMenu'
 
-# 10. Modelo Cliente
+# 3. Modelo Cliente
 class Cliente(models.Model):
-    IdCliente = models.AutoField(primary_key=True)
-    Nombre = models.CharField(max_length=100)
-    Telefono = models.CharField(max_length=15, blank=True, null=True)
-    Correo = models.EmailField(max_length=100, blank=True, null=True)
+    idCliente = models.AutoField(primary_key=True)
+    tipoCliente = models.CharField(max_length=10)
+    nombre = models.CharField(max_length=100)
+    identificacion = models.CharField(max_length=20, blank=True, null=True)
+    telefono = models.IntegerField(blank=True, null=True)
+    correo = models.EmailField(max_length=100, blank=True, null=True)
+
+    # Agregado
+    direccion = models.CharField(max_length=1000,blank=True, null=True)
 
     def __str__(self):
-        return self.Nombre
+        return self.nombre
 
     class Meta:
         db_table = 'Cliente'
 
-# 11. Modelo Mesa
+# 4. Modelo Mesa
 class Mesa(models.Model):
-    IdMesa = models.AutoField(primary_key=True)
-    Capacidad = models.IntegerField(default=4)
-    Ocupada = models.BooleanField(default=False)
+    idMesa = models.AutoField(primary_key=True)
+    capacidad = models.IntegerField()
+    ocupada = models.BooleanField(default=False)
 
     def __str__(self):
-        return f"Mesa {self.NumeroMesa} ({self.Ocupada})"
+        return f"Mesa {self.idMesa} ({self.ocupada})"
 
     class Meta:
         db_table = 'Mesa'
 
-# 3. Modelo Pedido
-class Pedido(models.Model):
-    IdPedido = models.AutoField(primary_key=True)
-    Fecha = models.DateTimeField(default=timezone.now)
-    MontoTotal = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
-    MetodoPago = models.CharField(max_length=50, blank=True, null=True)
-    
-    IdCliente = models.ForeignKey(Cliente, on_delete=models.CASCADE)
-    IdMesa = models.ForeignKey(Mesa, on_delete=models.SET_NULL, null=True, blank=True)
-
-    def __str__(self):
-        return f"pedido N°{self.IdPedido}"
-
-    class Meta:
-        db_table = 'Pedido'
-
-# 4. Modelo Intermedio: Pedido_Platillo (Solicita)
-class Pedido_Platillo(models.Model):
-    IdPedido_Platillo = models.AutoField(primary_key=True)
-    # FK IdPedido
-    IdPedido = models.ForeignKey(Pedido, on_delete=models.CASCADE, related_name='items')
-    
-    # FK IdPlatillo
-    IdPlatillo = models.ForeignKey(Platillo, on_delete=models.PROTECT)
-    
-    # Campo 'Estado'
-    ESTADOS = [
-        ('Registrado', 'Registrado'),
-        ('Listo', 'Listo'),
-        ('Servido', 'Servido'),
-        ('Facturado', 'Facturado'),
-    ]
-    Estado = models.CharField(max_length=20, choices=ESTADOS, default='Registrado')
-    Cantidad = models.IntegerField(default=1) # Añadido, ya que un platillo puede pedirse varias veces.
-
-    def __str__(self):
-        return f"{self.Cantidad}x {self.IdPlatillo.Nombre} en Pedido {self.IdPedido.IdPedido} ({self.Estado})"
-
-    class Meta:
-        # Clave compuesta (Pedido, Platillo)
-        db_table = 'Pedido_Platillo'
-
-# 5. Modelo Intermedio: Empleado_Pedido (Atiende)
-class Empleado_Pedido(models.Model):
-    IdEmpleado_Pedido = models.AutoField(primary_key=True)
-
-    # FK IdEmpleado (Mesero)
-    IdEmpleado = models.ForeignKey(Empleado, on_delete=models.PROTECT, related_name='pedidos_atendidos')
-    
-    # FK IdPedido
-    IdPedido = models.ForeignKey(Pedido, on_delete=models.CASCADE, related_name='atendido_por')
-    
-    FechaAsignacion = models.DateTimeField(default=timezone.now)
-
-    def __str__(self):
-        return f"{self.IdEmpleado.Usuario} atiende Pedido N°{self.IdPedido.IdPedido}"
-
-    class Meta:
-        # Clave compuesta (Empleado, Pedido)
-        unique_together = (('IdEmpleado', 'IdPedido'),) 
-        db_table = 'Empleado_Pedido'
-
-# 6. Modelo Proveedor
+# 5. Modelo Proveedor
 class Proveedor(models.Model):
-    IdProveedor = models.AutoField(primary_key=True)
+    idProveedor = models.AutoField(primary_key=True)
     nombre = models.CharField(max_length=100, unique=True)
-    telefono = models.CharField(max_length=15, blank=True, unique=True)
+    telefono = models.IntegerField(blank=True, null=True)
     direccion = models.CharField(max_length=100, unique=True)
 
     def __str__(self):
@@ -165,44 +112,119 @@ class Proveedor(models.Model):
     class Meta:
         db_table = 'Proveedor'
 
-# 7. Modelo Ingrediente
-class Ingrediente(models.Model):
-    IdIngrediente = models.AutoField(primary_key=True)
+# Se cambio Ingrediente -> ArticuloInventario
+# 6. Modelo Ingrediente
+class ArticuloInventario(models.Model):
+    idArticuloInventario = models.AutoField(primary_key=True)
     nombre = models.CharField(max_length=100, unique=True)
     unidad_de_medida = models.CharField(max_length=20)
-    stock = models.IntegerField(default=0)
+    stock = models.DecimalField(max_digits=10, decimal_places=2)
+
+    # Agregado
+    tipoArticulo = models.CharField(max_length=20)
+    ubicacion = models.CharField(max_length=20)
+
 
     def __str__(self):
         return f"{self.nombre} ({self.stock} {self.unidad_de_medida})"
     
     class Meta:
-        db_table = 'Ingrediente'
+        db_table = 'ArticuloInventario'
     
-# 8. Modelo Intermedio: Platillo_Ingrediente (contiene)
-class Platillo_Ingrediente(models.Model):
-    IdPlatillo_Ingrediente = models.AutoField(primary_key=True)
-
-    IdPlatillo = models.ForeignKey(Platillo, on_delete=models.CASCADE)
-    IdIngrediente = models.ForeignKey(Ingrediente, on_delete=models.PROTECT)
-    cantidad_usada = models.DecimalField(max_digits=10, decimal_places=2) # Cantidad necesaria
-
-    def __str__(self):
-        return f"Receta: {self.platillo.nombre} usa {self.cantidad_usada} de {self.ingrediente.nombre}"
+# 7. Modelo Pedido
+class Pedido(models.Model):
+    idPedido = models.AutoField(primary_key=True)
+    fecha = models.DateTimeField(default=timezone.now)
+    montoTotal = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
+    metodoPago = models.CharField(max_length=50, blank=True, null=True)
     
-    class Meta:
-        unique_together = ('IdPlatillo', 'IdIngrediente')
-        db_table = 'Platillo_Ingrediente'
-    
-# 9. Modelo Intermedio: Ingrediente_Proveedor (suministra)
-class Ingrediente_Proveedor(models.Model):
-    IdIngrediente_Proveedor = models.AutoField(primary_key=True)
+    idCliente = models.ForeignKey(Cliente, on_delete=models.CASCADE)
+    idMesa = models.ForeignKey(Mesa, on_delete=models.SET_NULL, null=True, blank=True)
 
-    IdIngrediente = models.ForeignKey(Ingrediente, on_delete=models.CASCADE)
-    IdProveedor = models.ForeignKey(Proveedor, on_delete=models.CASCADE)
+    # Agregado
+    estadoDePago = models.BooleanField(default=False, blank=True, null=True)
 
     def __str__(self):
-        return f"{self.ingrediente.nombre} suministrado por {self.proveedor.nombre}"
+        return f"pedido N°{self.idPedido}"
+
+    class Meta:
+        db_table = 'Pedido'
+
+# 8. Modelo Intermedio: Pedido_ProductoMenu (Solicita)
+class Pedido_ProductoMenu(models.Model):
+    idPedido_ProductoMenu = models.AutoField(primary_key=True)
+    # FK IdPedido
+    idPedido = models.ForeignKey(Pedido, on_delete=models.CASCADE, related_name='items')
+    
+    # FK IdProductoMenu
+    idProductoMenu = models.ForeignKey(ProductoMenu, on_delete=models.PROTECT)
+    
+    # Campo 'Estado'
+    ESTADOS = [
+        ('Registrado', 'Registrado'),
+        ('Listo', 'Listo'),
+        ('Servido', 'Servido'),
+        ('Facturado', 'Facturado'),
+    ]
+    estado = models.CharField(max_length=20, choices=ESTADOS, default='Registrado')
+    cantidad = models.IntegerField(default=1)
+
+    def __str__(self):
+        return f"{self.cantidad}x {self.idProductoMenu.nombre} en Pedido {self.idPedido.idPedido} ({self.estado})"
+
+    class Meta:
+        db_table = 'Pedido_ProductoMenu'
+
+# 9. Modelo Intermedio: Empleado_Pedido (Atiende)
+class Empleado_Pedido(models.Model):
+    idEmpleado_Pedido = models.AutoField(primary_key=True)
+
+    # FK IdEmpleado (Mesero)
+    idEmpleado = models.ForeignKey(Empleado, on_delete=models.PROTECT)
+    
+    # FK IdPedido
+    idPedido = models.ForeignKey(Pedido, on_delete=models.CASCADE)
+    
+    fechaAsignacion = models.DateTimeField(default=timezone.now)
+
+    def __str__(self):
+        return f"{self.idEmpleado.usuario} atiende Pedido N°{self.idPedido.idPedido}"
+
+    class Meta:
+        # Clave compuesta (Empleado, Pedido)
+        unique_together = (('idEmpleado', 'idPedido'),) 
+        db_table = 'Empleado_Pedido'
+
+# 10. Modelo Intermedio: ProductoMenu_Ingrediente (contiene)
+class ProductoMenu_ArticuloInventario(models.Model):
+    idProductoMenu_ArticuloInventario = models.AutoField(primary_key=True)
+
+    idProductoMenu = models.ForeignKey(ProductoMenu, on_delete=models.CASCADE)
+    idArticuloInventario = models.ForeignKey(ArticuloInventario, on_delete=models.PROTECT)
+    cantidad_usada = models.DecimalField(max_digits=10, decimal_places=2)
+
+    def __str__(self):
+        return f"Receta: {self.ProductoMenu.nombre} usa {self.cantidad_usada} de {self.ArticuloInventario.nombre}"
     
     class Meta:
-        unique_together = ('IdIngrediente', 'IdProveedor')
-        db_table = 'Ingrediente_Proveedor'
+        unique_together = ('idProductoMenu', 'idArticuloInventario')
+        db_table = 'ProductoMenu_ArticuloInventario'
+    
+# 11. Modelo Intermedio: Ingrediente_Proveedor (suministra)
+class ArticuloInventario_Proveedor(models.Model):
+    idArticuloInventario_Proveedor = models.AutoField(primary_key=True)
+
+    fechaCompra = models.DateTimeField(default=timezone.now)
+    precioCompra = models.DecimalField(max_digits=10, decimal_places=2)
+
+    # Agregado
+    cantidadCompra = models.DecimalField(max_digits = 10, decimal_places=2)
+
+    idArticuloInventario = models.ForeignKey(ArticuloInventario, on_delete=models.CASCADE)
+    idProveedor = models.ForeignKey(Proveedor, on_delete=models.CASCADE)
+    def __str__(self):
+        return f"{self.ArticuloInventario.nombre} suministrado por {self.proveedor.nombre}"
+    
+    class Meta:
+        unique_together = ('idArticuloInventario', 'idProveedor')
+        db_table = 'ArticuloInventario_Proveedor'

@@ -34,10 +34,17 @@
         
         .He_Sai_Mali {
             display: flex;
+            justify-content: space-between;
+            align-items: center;
+            width: 100%;
+        }
+
+        .He_Sai_Mali .logo-texto{
+            display: flex;
             align-items: center;
         }
 
-        .He_Sai_Mali img{
+        .He_Sai_Mali .logo{
             height: 40px;
             margin-right: 3px;
         }
@@ -47,6 +54,45 @@
             padding: 0;
             font-size:large;
             color: #981a28;
+        }
+
+        .flechaRegresar {
+            width: 25px;
+            height: 25px;
+            transform: rotate(180deg);
+            filter: 
+                brightness(0) 
+                saturate(100%) 
+                invert(13%) 
+                sepia(97%) 
+                saturate(700%) 
+                hue-rotate(320deg) 
+                brightness(130%) 
+                contrast(100%);
+        }
+
+        .flechaRegresar:hover {
+            filter: 
+                brightness(0) 
+                saturate(100%) 
+                invert(13%) 
+                sepia(97%) 
+                saturate(700%) 
+                hue-rotate(320deg) 
+                brightness(90%) 
+                contrast(100%);
+        }
+
+        .flechaRegresar:active {
+            filter: 
+                brightness(0) 
+                saturate(100%) 
+                invert(13%) 
+                sepia(97%) 
+                saturate(700%) 
+                hue-rotate(320deg) 
+                brightness(170%) 
+                contrast(100%);
         }
 
         input, select { 
@@ -138,8 +184,14 @@
 <body>
     <form id="registrationForm" method="post">
         <div class="He_Sai_Mali">
-            <img src="{% static 'He_Sai_Mali/logo.png' %}" alt="Logo He Sai Mali">
-            <h2>He Sai Mali</h2>
+            <a href="{% url 'pedidos' %}">
+                <img href="{% url 'pedidos' %}" src="{% static 'He_Sai_Mali/flecha.png' %}" class="flechaRegresar" alt="regresar">
+            </a>
+
+            <div class="logo-texto">
+                <img src="{% static 'He_Sai_Mali/logo.png' %}" class="logo" alt="Logo He Sai Mali">
+                <h2>He Sai Mali</h2>
+            </div>
         </div>
 
         <h2>Registro de Empleado</h2>
@@ -151,11 +203,11 @@
             <h3>Paso 1: Datos Personales</h3>
             <p>
                 <label>Nombre:</label>
-                <input type="text" name="nombre" id="nombre" value="{{ valores.nombre }}" placeholder="Nombre" required>
+                <input type="text" name="nombre" id="nombre" value="{{ valores.nombre }}" placeholder="Nombre" required autocomplete="off">
             </p>
             <p>
                 <label>Apellido:</label>
-                <input type="text" name="apellido" id="apellido" value="{{ valores.apellido }}" placeholder="Apellido" required>
+                <input type="text" name="apellido" id="apellido" value="{{ valores.apellido }}" placeholder="Apellido" required autocomplete="off">
             </p>
             <p>
                 <label>Rol:</label>
@@ -175,15 +227,15 @@
             <h3>Paso 2: Contacto e Identificación</h3>
             <p>
                 <label>Correo:</label>
-                <input type="email" name="correo" id="correo" value="{{ valores.correo }}" placeholder="nombre@ejemplo.com" required>
+                <input type="email" name="correo" id="correo" value="{{ valores.correo }}" placeholder="nombre@ejemplo.com" required autocomplete="off">
             </p>
             <p>
                 <label>Teléfono (opcional):</label>
-                <input type="text" name="telefono" id="telefono" value="{{ valores.telefono }}" placeholder="0000-0000">
+                <input type="text" name="telefono" id="telefono" value="{{ valores.telefono }}" placeholder="00000000" autocomplete="off">
             </p>
             <p>
                 <label>Cédula:</label>
-                <input type="text" name="cedula" id="cedula" value="{{ valores.cedula }}" placeholder="000-000000-0000X" required>
+                <input type="text" name="cedula" id="cedula" value="{{ valores.cedula }}" placeholder="000-000000-0000X" required autocomplete="off">
             </p>
             <div class="botones">
                 <button type="button" onclick="prevStep(2)" class="Continuar">Atrás</button>
@@ -195,11 +247,11 @@
             <h3>Paso 3: Credenciales de Acceso</h3>
             <p>
                 <label>Contraseña:</label>
-                <input type="password" name="contrasena1" id="contrasena1" placeholder="••••••••" required>
+                <input type="password" name="contrasena1" id="contrasena1" placeholder="••••••••" required autocomplete="off">
             </p>
             <p>
                 <label>Confirmar contraseña:</label>
-                <input type="password" name="contrasena2" id="contrasena2" placeholder="••••••••" required>
+                <input type="password" name="contrasena2" id="contrasena2" placeholder="••••••••" required autocomplete="off">
             </p>
             <div class="botones">
                 <button type="button" onclick="prevStep(3)" class="Continuar">Atrás</button>
@@ -235,7 +287,7 @@
                 <button type="submit" class="Registrarse">Registrarse</button>
             </div>
         </div>
-        <p style="text-align:center; margin-top:20px;">¿Ya existe una cuenta? <a href="{% url 'login' %}">Iniciar sesión</a></p>
+        <p style="text-align:center; margin-top:20px;">¿Ya existe una cuenta? <a href="{% url 'logout' %}">Iniciar sesión</a></p>
     </form>
 
     <script>
@@ -261,7 +313,7 @@
         function generateUsername(nombre, apellido, rol) {
             const n = nombre.trim().substring(0, 2).toLowerCase();
             const a = apellido.trim().substring(0, 2).toLowerCase();
-            const r = rol.trim().toLowerCase().replace(/[^a-z0-9]/g, ''); 
+            const r = rol.trim(); 
             return n + a + r + "HSL";
         }
 

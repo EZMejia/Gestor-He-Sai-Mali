@@ -8,7 +8,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Cola de Pedidos</title>
     <style>
-        /* ... Estilos anteriores (omitiendo por brevedad) ... */
         body {
             background-color: #2c3038;
             font-family: 'Roboto', sans-serif;
@@ -18,7 +17,6 @@
         header {
             box-sizing: border-box;
             margin: 0;
-            padding: 0;
             background-color: #981a28;
             border-bottom: 8px solid #f3bb67;
             
@@ -58,8 +56,122 @@
             background-color: #b12131;
             border-radius: 5px;
             padding: 10px;
-            border: 2px solid #f3bb67;
         }
+
+        .dropdown-rol {
+            display: inline-block;
+            padding: 0;
+            margin:     0;
+            list-style-type: none;
+            color:#ffffff;
+            background-color: #981a28;
+        }
+
+        .dropdown-btn {
+            text-decoration: none;
+            color: inherit;
+            display: flex;
+            justify-content: center;
+            min-width: 130px;
+            padding: 42px 10px;
+            margin: 0;
+            background-color: #981a28;
+            border: none;
+            cursor: pointer;
+            font-size: 15px;
+            font-weight: normal;
+            transition: all 0.2s ease;
+        }
+
+        .dropdown-btn:hover {
+            background-color: #b12131;
+            color: #dacfb7;
+            box-shadow: inset 0 -4px 0px #f3bb67;
+        }
+
+        .dropdown-content {
+            position: absolute;
+            background-color: #981a28;
+            min-width: 130px;
+            box-shadow: 0px 8px 16px 3px rgba(0,0,0,0.2);
+            z-index: 1;
+            border-radius: 0 0 5px 5px;
+            margin: 0;
+            border-top: 8px solid #f3bb67;
+
+            overflow: hidden;
+            max-height: 0;
+            opacity: 0;
+            
+            /* Aplica la transición a las propiedades que queremos animar */
+            transition: max-height 0.2s ease-in-out, opacity 0.2s ease-in-out;
+        }
+        
+        .show {
+            max-height: 500px;
+            opacity: 1;
+            
+            display: block; 
+        }
+
+        .option-link {
+            /* Estilo de cada opción/enlace dentro del menú */
+            color: white;
+            padding: 10px 16px;
+            text-decoration: none; /* Elimina el subrayado */
+            display: block; /* Ocupa todo el ancho */
+            transition: background-color 0.2s;
+            font-size: 15px;
+            border-radius: 5px;
+        }
+
+        .option-link:hover {
+            background-color: #b12131;
+            border-bottom: 2px solid #f3bb67;
+        }
+
+        .show {
+            display: block;
+        }
+
+        /*------------------------------*/
+        .salir {
+            display: flex;
+            padding: 0;
+            margin: 0 15px 0 0;
+            list-style-type: none;
+            color:#ffffff;
+            background-color: #981a28;
+        }
+        .btn-salir {
+            text-decoration: none;
+            color: inherit;
+            display: flex;
+            justify-content: center;
+            min-width: 100px;
+            padding: 32px 10px;
+            margin: 0;
+            background-color: #981a28;
+            border: none;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        .btn-salir h1 {
+            font-size: 15px;
+            font-weight: normal;
+        }
+        .btn-salir:hover {
+            background-color: #b12131;
+            color: #dacfb7;
+            box-shadow: inset 0 -4px 0px #f3bb67;
+        }
+        .btn-salir:active {
+            background-color: #f3bb67;
+            color: #981a28;
+        }
+
+        /*--Fin del Header--*/
+
         .btn {
             display: flex;
             text-align: center;
@@ -159,8 +271,8 @@
             margin: 5px;
             border-radius: 5px;
             cursor: pointer;
-            text-decoration: none; /* Estilo de enlace */
-            color: black; /* Color de texto predeterminado */
+            text-decoration: none;
+            color: black;
             font-weight: bold;
         }
         .lista_platillos li.platillos:nth-child(odd) {
@@ -227,7 +339,30 @@
     <header>
         <img src="{% static 'He_Sai_Mali/logo.png' %}" alt="Logo He Sai Mali">
         <h1 class="Titulo">COLA DE PEDIDOS</h1>
-        <h1 class="Info"><b>Bienvenido</b>: {{ nombre_mesero }} {{ apellido_mesero }} ({{ rol_empleado }})</h1>
+        
+        {% if rol_empleado == "Administrador"%}
+            <div class="dropdown-rol">
+                <button class="dropdown-btn" onclick="toggleDropdown()">VISTAS</button>
+
+                <div id="rolMenu" class="dropdown-content">
+                    <a href="{% url 'pedidos' %}" class="option-link">Pedidos</a>
+                    <a href="{% url 'cocina' %}" class="option-link">Cocina</a>
+                    <a href="{% url 'admin_ingredientes' %}" class="option-link">Ingredientes</a>
+                    <a href="{% url 'admin_platillos' %}" class="option-link">Platillos</a>
+                    <a href="{% url 'admin_proveedores' %}" class="option-link">Proveedores</a>
+                    <a href="{% url 'registro' %}" class="option-link">Registrar User</a>
+                </div>
+            </div>
+        {% endif %}
+
+        <form method="POST" action="{% url 'logout' %}" class="salir">
+            {% csrf_token %}
+            <button type="submit" class="btn-salir">
+                <h1>CERRAR SESIÓN</h1>
+            </button>
+        </form>
+
+        <h1 class="Info">{{ nombre_mesero }} {{ apellido_mesero }} ({{ rol_empleado }})</h1>
     </header>
     <div class="contenido">
         {% if messages %}
@@ -251,23 +386,23 @@
         </div>
         {% if cola_pedidos %}
             {% for pedido in cola_pedidos %}
-                {% with estado=estado_botones|get_item:pedido.IdPedido %}
+                {% with estado=estado_botones|get_item:pedido.idPedido %}
                 <div class="container_pedidos">
                     <div>
                         <div class="pedido_head">
-                            <span class="numero"><b>Pedido N° {{ pedido.IdPedido }}</b></span>
-                            <span class="cliente"><b>Cliente:</b> {{ pedido.Nombre }}</span>
+                            <span class="numero"><b>Pedido N° {{ pedido.idPedido }}</b></span>
+                            <span class="cliente"><b>Cliente:</b> {{ pedido.nombre }}</span>
                         </div>
                         <div class="info">
-                            <span class="total"><b>Total</b>: C${{ pedido.MontoTotal|floatformat:2 }}</span>
-                            <span class="fecha"><b>Fecha</b>: {{ pedido.Fecha|date:"d/m/Y H:i" }}</span>
+                            <span class="total"><b>Total</b>: C${{ pedido.montoTotal|floatformat:2 }}</span>
+                            <span class="fecha"><b>Fecha</b>: {{ pedido.fecha|date:"d/m/Y H:i" }}</span>
                         </div>
                     </div>
                     
                     <div>
                         <h3>Detalle de Platillos:</h3>
                         <ul class="lista_platillos">
-                            {% for platillo in platillos_por_pedido|get_item:pedido.IdPedido %}
+                            {% for platillo in platillos_por_pedido|get_item:pedido.idPedido %}
                                 <li class="platillos">
                                     <div class="platillo">{{ platillo.Cantidad }}x {{ platillo.Nombre }}</div>
                                     <form method="POST" action="{% url 'cambiar_estado_platillo' platillo.IdPedido_Platillo %}" style="display:inline;">
@@ -295,7 +430,7 @@
                     </div>
 
                     <div class="action-buttons">
-                        <form method="POST" action="{% url 'facturar_pedido' pedido.IdPedido %}" style="display:inline;">
+                        <form method="POST" action="{% url 'facturar_pedido' pedido.idPedido %}" style="display:inline;">
                             {% csrf_token %}
                             <button type="submit" 
                                     class="btn-facturar" 
@@ -305,11 +440,11 @@
                             </button>
                         </form>
 
-                        <a href="{% url 'registrarpedido_agregar' pedido.IdPedido %}" class="btn-agregar">
+                        <a href="{% url 'registrarpedido_agregar' pedido.idPedido %}" class="btn-agregar">
                             ➕ Agregar Platillos
                         </a>
 
-                        <form method="POST" action="{% url 'eliminar_pedido' pedido.IdPedido %}" style="display:inline;" onsubmit="return confirm('¿Está seguro de que desea eliminar el Pedido N°{{ pedido.IdPedido }}? Esta acción es irreversible.');">
+                        <form method="POST" action="{% url 'eliminar_pedido' pedido.idPedido %}" style="display:inline;" onsubmit="return confirm('¿Está seguro de que desea eliminar el Pedido N°{{ pedido.IdPedido }}? Esta acción es irreversible.');">
                             {% csrf_token %}
                             <button type="submit" 
                                     class="btn-eliminar" 
@@ -331,21 +466,25 @@
     <footer>
         <p>2025 Hê Sãî Mãlî.</p>
     </footer>
+    
+    <script>
+        function toggleDropdown() {
+            // Muestra u oculta el elemento con el id "rolMenu"
+            document.getElementById("rolMenu").classList.toggle("show");
+        }
+
+        // Opcional: Cerrar el menú si el usuario hace clic fuera de él
+        window.onclick = function(event) {
+            if (!event.target.matches('.dropdown-btn')) {
+                var dropdowns = document.getElementsByClassName("dropdown-content");
+                for (var i = 0; i < dropdowns.length; i++) {
+                    var openDropdown = dropdowns[i];
+                    if (openDropdown.classList.contains('show')) {
+                        openDropdown.classList.remove('show');
+                    }
+                }
+            }
+        }
+    </script>
 </body>
 </html>
-
-{% comment %} 
-Para que el diccionario `platillos_por_pedido` funcione en el template, 
-necesitas un 'custom tag' o una forma de acceder al valor por clave de un diccionario. 
-Una solución simple en Django es crear un filtro personalizado `get_item`.
-Si no puedes crear un filtro, deberías pre-procesar la data en `views.py` 
-para que cada objeto `pedido` tenga su lista de `platillos` adjunta.
-Dado que no puedo modificar la configuración de Django, asumiré que tienes
-un filtro de plantilla llamado `get_item` configurado:
-
-1. Crea un archivo `templatetags/custom_filters.py`
-2. Dentro, agrega:
-   @register.filter(name='get_item')
-   def get_item(dictionary, key):
-       return dictionary.get(key)
-{% endcomment %}

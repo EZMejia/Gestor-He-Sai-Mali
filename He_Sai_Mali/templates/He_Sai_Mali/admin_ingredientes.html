@@ -1,12 +1,11 @@
 {% load static %}
-{% load custom_filters %}
 <!DOCTYPE html>
 <html lang="es">
 <head>
     <meta charset="UTF-8">
     <link rel="icon" type="image/png" href="{% static 'He_Sai_Mali/logo.png' %}">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Cocina - Cola de Platillos</title>
+    <title>Admin - Ingredientes</title>
     <style>
         body {
             background-color: #2c3038;
@@ -61,7 +60,7 @@
         .dropdown-rol {
             display: inline-block;
             padding: 0;
-            margin: 0;
+            margin:    0;
             list-style-type: none;
             color:#ffffff;
             background-color: #981a28;
@@ -172,90 +171,122 @@
 
         /*--Fin del Header--*/
 
-        /* Nuevo estilo para la cola de cocina, basado en el estilo de pedido anterior */
-        .cola-cocina {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 20px;
-            justify-content: center;
+        /* Contenedor principal de la vista de Ingredientes */
+        .contenido {
+            padding-top: 20px;
+            width: 90%;
+            margin: 0 auto;
+            min-height: calc(100vh - 100px); /* Para que el footer se quede abajo */
+        }
+
+        .seccion-titulo {
+            color: white;
+            font-size: 30px;
+            margin-bottom: 20px;
+            border-bottom: 2px solid #f3bb67;
+            padding-bottom: 5px;
+        }
+        .subtitulo {
+            color: white;
+            font-size: 24px;
+            margin-top: 40px;
+            margin-bottom: 15px;
+        }
+        .alert {
+            padding: 10px; 
+            margin-bottom: 10px; 
+            border-radius: 5px;
+            font-weight: bold;
+        }
+
+        /* Estilos de Card (Adaptación de Bootstrap Card) */
+        .card {
+            background-color: white;
+            border-radius: 5px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            margin-bottom: 20px;
+        }
+        .card-header {
+            padding: 15px;
+            border-bottom: 1px solid #ddd;
+            border-radius: 5px 5px 0 0;
+            font-weight: bold;
+            color: white;
+            background-color: #3c78d8; /* Azul primario */
+        }
+        .card-body {
             padding: 20px;
         }
 
-        .pedido-card {
-            background-color: white;
-            box-shadow: 0 0 15px 5px rgba(0, 0, 0, 0.2);
-            border-radius: 5px;
-            width: 300px;
-            overflow: hidden;
+        /* Estilos de Formulario (Adaptación) */
+        .form-label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        .form-control {
+            width: 100%;
+            padding: 8px;
+            margin-bottom: 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
             box-sizing: border-box;
-            border: 2px solid #ccc; /* Añadido borde para coherencia */
         }
-        
-        .pedido-mas-antiguo {
-            background-color: #fff3cd; /* Amarillo suave */
-            border-color: #ffc107; /* Borde amarillo más fuerte */
-        }
-
-        .card-header {
+        .row {
             display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 10px;
-            background-color: #981a28; /* Color principal */
-            color: white;
-            border-bottom: 3px solid #f3bb67;
+            gap: 10px;
+            margin-bottom: 10px;
         }
-        .pedido-mas-antiguo .card-header {
-            background-color: #ffc107; /* Amarillo */
-            color: black;
-            border-bottom-color: #981a28;
+        .col-md-4, .col-md-2 {
+            flex-grow: 1;
+            padding: 0 5px;
         }
-
-        .card-body {
-            padding: 15px;
-        }
-
-        .card-body h6 {
-            color: #333;
-            margin-top: 10px;
-            padding-bottom: 5px;
-            margin-bottom: 0px;
-            border-bottom: 1px solid #eee;
-        }
-
-        .platillo-item {
+        .d-flex {
             display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 8px 0;
-            border-bottom: 1px dashed #ddd;
+            align-items: flex-end;
         }
-        .platillo-item:last-child {
-            border-bottom: none;
+        .w-100 {
+            width: 100%;
         }
 
-        .btn-listo {
-            background-color: #4CAF50; /* Verde */
-            color: white;
-            padding: 5px 10px;
-            border: none;
+        /* Estilos de Botones de Formulario */
+        .btn-success { 
+            background-color: #38761d; 
+            color: white; 
+            border: none; 
+            padding: 10px 15px;
             border-radius: 5px;
             cursor: pointer;
-            text-decoration: none;
             transition: background-color 0.2s;
-            font-size: 14px;
         }
-        .btn-listo:hover {
-            background-color: #38761d;
-        }
+        .btn-success:hover { background-color: #274e13; }
 
-        .alert-info-custom {
-            width: 90%; 
-            margin: 20px auto; 
-            padding: 20px; 
-            border-radius: 5px; 
-            background-color: #d9edf7; 
-            color: #31708f;
+        /* Estilos de Tabla (Adaptación de Bootstrap Table) */
+        .table {
+            width: 100%;
+            border-collapse: collapse;
+            background-color: white;
+            border-radius: 5px;
+            overflow: hidden;
+            margin-bottom: 50px; /* Espacio antes del footer */
+        }
+        .table th, .table td {
+            padding: 12px 15px;
+            border-bottom: 1px solid #ddd;
+            text-align: left;
+        }
+        .table th {
+            background-color: #f3bb67;
+            color: #2c3038;
+            font-weight: bold;
+        }
+        .table-striped tbody tr:nth-child(odd) {
+            background-color: #f9f9f9;
+        }
+        .table-hover tbody tr:hover {
+            background-color: #f0f0f0;
+        }
+        .text-center {
             text-align: center;
         }
 
@@ -267,18 +298,18 @@
             align-items: center;
             border-bottom: 10px solid #2c3038;
             font-size: 14px;
-            width: 100%;
-            margin-top: 20px; /* Espacio para separar del contenido */
             padding: 10px 0;
+            width: 100%;
+            box-sizing: border-box;
         }
     </style>
 </head>
 <body>
     <header>
         <img src="{% static 'He_Sai_Mali/logo.png' %}" alt="Logo He Sai Mali">
-        <h1 class="Titulo">COLA DE COCINA</h1>
+        <h1 class="Titulo">ADMINISTRACIÓN DE INGREDIENTES</h1>
         
-        {% if user.rol == "Administrador" %}
+        {% if user.rol == "Administrador"%}
             <div class="dropdown-rol">
                 <button class="dropdown-btn" onclick="toggleDropdown()">VISTAS</button>
 
@@ -302,13 +333,16 @@
 
         <h1 class="Info">{{ user.nombre }} {{ user.apellido }} ({{ user.rol }})</h1>
     </header>
+
     <div class="contenido">
         
+        <h1 class="seccion-titulo">Administración de Ingredientes</h1>
+
         {% if messages %}
-            <div style="width: 90%; margin: 10px auto;">
+            <div style="width: 100%;">
             {% for message in messages %}
-                <div style="padding: 10px; margin-bottom: 10px; border-radius: 5px; 
-                    {% if message.tags == 'error' %}background-color: #f44336; color: white;
+                <div class="alert" 
+                    style="{% if message.tags == 'error' %}background-color: #f44336; color: white;
                     {% elif message.tags == 'success' %}background-color: #4CAF50; color: white;
                     {% else %}background-color: #ff9800; color: black;{% endif %}">
                     {{ message }}
@@ -316,47 +350,63 @@
             {% endfor %}
             </div>
         {% endif %}
-        
-        <h2 style="color: #dacfb7; text-align: center; padding: 20px 0;">Platillos Pendientes por Elaborar</h2>
 
-        {% if pedidos_en_cola %}
-            <div class="cola-cocina">
-                {% for pedido in pedidos_en_cola %}
-                    <div class="pedido-card {% if forloop.first %}pedido-mas-antiguo{% endif %}">
-                        <div class="card-header">
-                            <span style="font-size: 18px;"><b>Pedido N° {{ pedido.id }}</b></span>
-                            <span style="font-size: 14px;">Mesa: {{ pedido.mesa }}</span>
+        <div class="card">
+            <div class="card-header">
+                Agregar Nuevo Ingrediente
+            </div>
+            <div class="card-body">
+                <form method="post">
+                    {% csrf_token %}
+                    <div class="row">
+                        <div class="col-md-4">
+                            <label for="nombre" class="form-label">Nombre</label>
+                            <input type="text" class="form-control" id="nombre" name="nombre" required>
                         </div>
-                        <div class="card-body">
-                            <p style="margin-bottom: 5px;">Cliente: {{ pedido.cliente }}</p>
-                            <p style="font-size: 0.85em; color: #666;">Hora: {{ pedido.hora|date:"H:i:s" }}</p>
-                            
-                            <h6>Platillos a Preparar:</h6>
-                            
-                            {% for platillo in pedido.platillos %}
-                                <div class="platillo-item">
-                                    <div style="font-weight: bold;">
-                                        {{ platillo.cantidad }}x {{ platillo.nombre }}
-                                    </div>
-                                    <form method="post" action="{% url 'platillo_listo' platillo.id_pp %}" style="display:inline;">
-                                        {% csrf_token %}
-                                        <button type="submit" class="btn-listo" title="Marcar como listo para servir">
-                                            Listo
-                                        </button>
-                                    </form>
-                                </div>
-                            {% endfor %}
+                        <div class="col-md-4">
+                            <label for="unidad" class="form-label">Unidad de Medida</label>
+                            <input type="text" class="form-control" id="unidad" name="unidad" placeholder="ej. libras, unidades, ml" required>
+                        </div>
+                        <div class="col-md-2">
+                            <label for="stock" class="form-label">Stock Inicial</label>
+                            <input type="number" class="form-control" id="stock" name="stock" value="0" min="0">
+                        </div>
+                        <div class="col-md-2 d-flex">
+                            <button type="submit" class="btn-success w-100">Guardar</button>
                         </div>
                     </div>
-                {% endfor %}
+                </form>
             </div>
-        {% else %}
-            <div class="alert-info-custom">
-                ¡No hay platillos pendientes!
-            </div>
-        {% endif %}
-    </div>
+        </div>
 
+        <h2 class="subtitulo">Listado de Ingredientes</h2>
+        <table class="table table-striped table-hover">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Nombre</th>
+                    <th>Stock</th>
+                    <th>Unidad</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for ing in ingredientes %}
+                <tr>
+                    <td>{{ ing.idArticuloInventario }}</td>
+                    <td>{{ ing.nombre }}</td>
+                    <td>{{ ing.stock }}</td>
+                    <td>{{ ing.unidad_de_medida }}</td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="4" class="text-center">No hay ingredientes registrados.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+
+    </div>
+    
     <footer>
         <p>2025 Hê Sãî Mãlî.</p>
     </footer>

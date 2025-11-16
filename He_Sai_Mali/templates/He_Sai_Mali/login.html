@@ -141,6 +141,11 @@
                 brightness(170%) 
                 contrast(100%);
         }
+
+        .Blank {
+            color: white;
+            user-select: none;
+        }
     </style>
 </head>
 <body>
@@ -164,17 +169,17 @@
         {% csrf_token %}
         <p>
             <label>Usuario:</label>
-            <input type="text" name="usuario" placeholder="Usuario" required>
+            <input type="text" name="usuario" placeholder="Usuario" required autocomplete="off">
         </p>
         <p>
             <label>Contraseña:</label>
-            <input type="password" name="contrasena" placeholder="••••••••" required>
+            <input type="password" name="contrasena" placeholder="••••••••" required autocomplete="off">
         </p>
         <div class="boton">
             <button type="submit">Iniciar sesión</button>
         </div>
         
-    <p><a href="{% url 'registro' %}">Registrarse</a></p>
+        <p class="Blank">Registrarse</p>
     </form>
 </body>
 </html>

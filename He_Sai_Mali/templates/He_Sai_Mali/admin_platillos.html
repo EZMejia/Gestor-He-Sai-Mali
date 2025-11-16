@@ -1,0 +1,567 @@
+{% load static %}
+{% load custom_filters %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <link rel="icon" type="image/png" href="{% static 'He_Sai_Mali/logo.png' %}">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin - Platillos</title>
+    <style>
+        body {
+            background-color: #2c3038;
+            font-family: 'Roboto', sans-serif;
+            margin: 0;
+            padding: 0;
+            color: #333; /* Color de texto base para el contenido principal */
+        }
+        header {
+            box-sizing: border-box;
+            margin: 0;
+            background-color: #981a28;
+            border-bottom: 8px solid #f3bb67;
+            
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: flex-end;
+            align-items: center;
+            padding: 0 2%;
+            box-shadow: 0 6px 10px black;
+
+            position: relative;
+
+            user-select: none;
+            z-index: 1000;
+        }
+
+        header img {
+            height: 40px;
+            margin-right: 10px;
+        }
+
+        header .Titulo {
+            display: flex;
+            align-items: center;
+            text-align: left;
+            color:#dacfb7;
+            font-size: 25px;
+            margin-right: auto;
+        }
+        header .Info {
+            display: flex;
+            align-items: center;
+            text-align: left;
+            color:#dacfb7;
+            font-size: 15px;
+            margin-right: 0;
+            background-color: #b12131;
+            border-radius: 5px;
+            padding: 10px;
+        }
+
+        .dropdown-rol {
+            display: inline-block;
+            padding: 0;
+            margin:     0;
+            list-style-type: none;
+            color:#ffffff;
+            background-color: #981a28;
+        }
+
+        .dropdown-btn {
+            text-decoration: none;
+            color: inherit;
+            display: flex;
+            justify-content: center;
+            min-width: 130px;
+            padding: 42px 10px;
+            margin: 0;
+            background-color: #981a28;
+            border: none;
+            cursor: pointer;
+            font-size: 15px;
+            font-weight: normal;
+            transition: all 0.2s ease;
+        }
+
+        .dropdown-btn:hover {
+            background-color: #b12131;
+            color: #dacfb7;
+            box-shadow: inset 0 -4px 0px #f3bb67;
+        }
+
+        .dropdown-content {
+            position: absolute;
+            background-color: #981a28;
+            min-width: 130px;
+            box-shadow: 0px 8px 16px 3px rgba(0,0,0,0.2);
+            z-index: 1;
+            border-radius: 0 0 5px 5px;
+            margin: 0;
+            border-top: 8px solid #f3bb67;
+
+            overflow: hidden;
+            max-height: 0;
+            opacity: 0;
+            
+            /* Aplica la transición a las propiedades que queremos animar */
+            transition: max-height 0.2s ease-in-out, opacity 0.2s ease-in-out;
+        }
+        
+        .show {
+            max-height: 500px;
+            opacity: 1;
+            
+            display: block; 
+        }
+
+        .option-link {
+            /* Estilo de cada opción/enlace dentro del menú */
+            color: white;
+            padding: 10px 16px;
+            text-decoration: none; /* Elimina el subrayado */
+            display: block; /* Ocupa todo el ancho */
+            transition: background-color 0.2s;
+            font-size: 15px;
+            border-radius: 5px;
+        }
+
+        .option-link:hover {
+            background-color: #b12131;
+            border-bottom: 2px solid #f3bb67;
+        }
+
+        .show {
+            display: block;
+        }
+
+        /*------------------------------*/
+        .salir {
+            display: flex;
+            padding: 0;
+            margin: 0 15px 0 0;
+            list-style-type: none;
+            color:#ffffff;
+            background-color: #981a28;
+        }
+        .btn-salir {
+            text-decoration: none;
+            color: inherit;
+            display: flex;
+            justify-content: center;
+            min-width: 100px;
+            padding: 32px 10px;
+            margin: 0;
+            background-color: #981a28;
+            border: none;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        .btn-salir h1 {
+            font-size: 15px;
+            font-weight: normal;
+        }
+        .btn-salir:hover {
+            background-color: #b12131;
+            color: #dacfb7;
+            box-shadow: inset 0 -4px 0px #f3bb67;
+        }
+        .btn-salir:active {
+            background-color: #f3bb67;
+            color: #981a28;
+        }
+
+        /*--Fin del Header--*/
+
+        /* Estilos principales para el contenido de la administración */
+        .container_admin {
+            display: block;
+            box-sizing: border-box;
+            margin: 20px auto;
+            background-color: white;
+            box-shadow: 0 0 50px 10px rgba(0, 0, 0, 0.3);
+            width: 90%;
+            max-width: 1200px; /* Limite de ancho para la administración */
+            border-radius: 5px;
+            padding: 20px;
+        }
+
+        .card-custom {
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .card-header-custom {
+            background-color: #981a28; /* Color principal del diseño */
+            color: white;
+            padding: 10px 15px;
+            border-bottom: 3px solid #f3bb67; /* Color de acento */
+            border-radius: 5px 5px 0 0;
+            font-weight: bold;
+        }
+        .card-body-custom {
+            padding: 15px;
+        }
+
+        /* Estilos para el botón Guardar */
+        .btn-custom-success {
+            text-decoration: none;
+            color: white;
+            background-color: #38761d;
+            padding: 8px 15px;
+            border-radius: 5px;
+            transition: background-color 0.2s;
+            border: none;
+            cursor: pointer;
+        }
+        .btn-custom-success:hover {
+            background-color: #274e13;
+        }
+        
+        .form-label-custom {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        .form-control-custom {
+            width: 100%;
+            padding: 8px;
+            margin-bottom: 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        textarea.form-control-custom {
+            resize: vertical;
+        }
+
+        /* Estilos para la tabla */
+        .table-custom {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+        }
+        .table-custom thead tr {
+            background-color: #dacfb7; /* Color claro del diseño */
+            border-bottom: 2px solid #981a28;
+        }
+        .table-custom th, .table-custom td {
+            padding: 10px;
+            text-align: left;
+            border-bottom: 1px solid #eee;
+        }
+        .table-custom tbody tr:nth-child(odd) {
+            background-color: #F8F8F8;
+        }
+        .table-custom tbody tr:nth-child(even) {
+            background-color: #EEEEEE;
+        }
+        .table-custom tbody tr:hover {
+            background-color: #e0e0e0;
+        }
+        
+        /* Estilos de mensajes (adaptados) */
+        .alert-custom {
+            padding: 10px;
+            margin-bottom: 15px;
+            border-radius: 5px;
+            color: white;
+            font-weight: bold;
+        }
+        .alert-error { background-color: #f44336; }
+        .alert-success { background-color: #4CAF50; }
+        .alert-info { background-color: #ff9800; color: black; }
+        
+        footer {
+            display: flex;
+            color: #dacfb7;
+            background-color: #41444a;
+            justify-content: center;
+            align-items: center;
+            border-top: 5px solid #f3bb67; /* Cambiado a top para mejor vista */
+            border-bottom: 10px solid #2c3038;
+            font-size: 14px;
+            padding: 10px 0;
+            margin-top: 20px;
+        }
+
+        .btn-toggle-disponible {
+            padding: 5px 10px;
+            border-radius: 4px;
+            border: none;
+            cursor: pointer;
+            color: white;
+            font-weight: bold;
+            transition: background-color 0.2s;
+        }
+        .btn-disponible-true {
+            background-color: #4CAF50; /* Verde */
+        }
+        .btn-disponible-true:hover {
+            background-color: #38761d;
+        }
+        .btn-disponible-false {
+            background-color: #f44336; /* Rojo */
+        }
+        .btn-disponible-false:hover {
+            background-color: #b12131;
+        }
+
+        /* Estilos para el campo de Ingredientes Dinámicos */
+        .ingrediente-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 8px;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            background-color: #f9f9f9;
+        }
+        .ingrediente-item select, .ingrediente-item input {
+            flex-grow: 1;
+            padding: 8px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+        .btn-remover {
+            background-color: #f44336;
+            color: white;
+            border: none;
+            padding: 8px 10px;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        .btn-remover:hover {
+            background-color: #b12131;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <img src="{% static 'He_Sai_Mali/logo.png' %}" alt="Logo He Sai Mali">
+        <h1 class="Titulo">ADMINISTRACIÓN DE PLATILLOS</h1>
+        
+        {% if rol_empleado == "Administrador"%}
+            <div class="dropdown-rol">
+                <button class="dropdown-btn" onclick="toggleDropdown()">VISTAS</button>
+
+                <div id="rolMenu" class="dropdown-content">
+                    <a href="{% url 'pedidos' %}" class="option-link">Pedidos</a>
+                    <a href="{% url 'cocina' %}" class="option-link">Cocina</a>
+                    <a href="{% url 'admin_ingredientes' %}" class="option-link">Ingredientes</a>
+                    <a href="{% url 'admin_platillos' %}" class="option-link">Platillos</a>
+                    <a href="{% url 'admin_proveedores' %}" class="option-link">Proveedores</a>
+                    <a href="{% url 'registro' %}" class="option-link">Registrar User</a>
+                </div>
+            </div>
+        {% endif %}
+
+        <form method="POST" action="{% url 'logout' %}" class="salir">
+            {% csrf_token %}
+            <button type="submit" class="btn-salir">
+                <h1>CERRAR SESIÓN</h1>
+            </button>
+        </form>
+
+        <h1 class="Info">{{ nombre_empleado }} {{ apellido_empleado }} ({{ rol_empleado }})</h1>
+    </header>
+    
+    <div class="container_admin">
+        <h1 style="color: #981a28; margin-bottom: 20px;">Administración de Platillos</h1>
+
+        {% if messages %}
+            {% for message in messages %}
+                <div class="alert-custom alert-{{ message.tags }}" role="alert">
+                    {{ message }}
+                    </div>
+            {% endfor %}
+        {% endif %}
+
+        <div class="card-custom">
+            <div class="card-header-custom">
+                Agregar Nuevo Platillo
+            </div>
+            <div class="card-body-custom">
+                <form method="post">
+                    {% csrf_token %}
+                    <div style="display: flex; flex-wrap: wrap; gap: 15px;">
+                                                <div style="flex: 1 1 30%;">
+                            <label for="nombre" class="form-label-custom">Nombre</label>
+                            <input type="text" class="form-control-custom" id="nombre" name="nombre" required>
+                        </div>
+                        <div style="flex: 1 1 20%;">
+                            <label for="precio" class="form-label-custom">Precio (C$)</label>
+                            <input type="number" step="0.01" class="form-control-custom" id="precio" name="precio" min="0" required>
+                        </div>
+                        <div style="flex: 1 1 25%;">
+                            <label for="categoria" class="form-label-custom">Categoría</label>
+                            <input list="categorias-list" class="form-control-custom" id="categoria" name="categoria" required placeholder="ej. Desayuno, Almuerzo">
+                            <datalist id="categorias-list">
+                                {% for cat in categorias %}
+                                    <option value="{{ cat }}">
+                                {% endfor %}
+                            </datalist>
+                        </div>
+
+                                                <div style="flex: 1 1 100%;">
+                            <label for="receta" class="form-label-custom">Receta / Descripción</label>
+                            <textarea class="form-control-custom" id="receta" name="receta" rows="2" required></textarea>
+                        </div>
+
+                        <div style="flex: 1 1 100%; border-top: 1px dashed #ccc; padding-top: 15px;">
+                            <label class="form-label-custom" style="margin-bottom: 10px;">Artículos de Inventario (Ingredientes)</label>
+                            
+                            <div id="ingredientes-container">
+                                </div>
+
+                            <button type="button" class="btn-custom-success" onclick="agregarIngrediente()">
+                                + Añadir Ingrediente
+                            </button>
+                        </div>
+                        
+                                                <div style="flex: 1 1 100%; margin-top: 20px;">
+                            <button type="submit" class="btn-custom-success" style="width: 100%;">Guardar Platillo</button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <h2 style="color: #981a28; margin-top: 30px; border-bottom: 2px solid #dacfb7; padding-bottom: 5px;">Listado de Platillos</h2>
+        <table class="table-custom">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Categoría</th>                     <th>Nombre</th>
+                    <th>Precio</th>
+                    <th>Descripción</th>
+                    <th>Disponibilidad</th>                 </tr>
+            </thead>
+            <tbody>
+                {% for platillo in platillos %}
+                <tr>
+                    <td>{{ platillo.idProductoMenu }}</td>
+                    <td>{{ platillo.categoria|default:"N/A" }}</td>                     <td>{{ platillo.nombre }}</td>
+                    <td>C$ {{ platillo.precio|floatformat:2 }}</td>
+                    <td>{{ platillo.receta|default:"N/A" }}</td>
+                    <td>
+                                                <form method="post" action="{% url 'toggle_disponibilidad_platillo' platillo.idProductoMenu %}" style="margin: 0;">
+                            {% csrf_token %}
+                            <button type="submit" 
+                                    class="btn-toggle-disponible {% if platillo.disponible %}btn-disponible-true{% else %}btn-disponible-false{% endif %}">
+                                {% if platillo.disponible %}Disponible{% else %}No Disponible{% endif %}
+                            </button>
+                        </form>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="6" style="text-align: center;">No hay platillos registrados.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+
+    </div>
+    
+    <footer>
+        <p>2025 Hê Sãî Mãlî.</p>
+    </footer>
+    
+    <script>
+        function toggleDropdown() {
+            document.getElementById("rolMenu").classList.toggle("show");
+        }
+
+        window.onclick = function(event) {
+            if (!event.target.matches('.dropdown-btn')) {
+                var dropdowns = document.getElementsByClassName("dropdown-content");
+                for (var i = 0; i < dropdowns.length; i++) {
+                    var openDropdown = dropdowns[i];
+                    if (openDropdown.classList.contains('show')) {
+                        openDropdown.classList.remove('show');
+                    }
+                }
+            }
+        }
+        
+        // --- Funciones para Ingredientes Dinámicos ---
+
+        // Función para crear un nuevo campo de ingrediente
+        function agregarIngrediente() {
+            const container = document.getElementById('ingredientes-container');
+            const wrapper = document.createElement('div');
+            wrapper.className = 'ingrediente-item';
+            
+            // 1. Selector de Artículo de Inventario (con Datalist para filtro)
+            const inputArticulo = document.createElement('input');
+            inputArticulo.type = 'text';
+            inputArticulo.className = 'form-control-custom';
+            inputArticulo.setAttribute('list', 'articulos-inventario-list');
+            inputArticulo.setAttribute('placeholder', 'Buscar Ingrediente');
+            inputArticulo.setAttribute('required', 'required');
+            // Necesario para enviar el ID del artículo al backend (se actualiza al seleccionar)
+            inputArticulo.setAttribute('data-id-target', 'idArticuloInventario[]');
+            
+            // 2. Input oculto para enviar el ID real del artículo seleccionado
+            const hiddenInput = document.createElement('input');
+            hiddenInput.type = 'hidden';
+            hiddenInput.name = 'idArticuloInventario[]';
+            hiddenInput.setAttribute('required', 'required'); // Hacer el ID obligatorio
+            
+            // 3. Input para la Cantidad Usada
+            const inputCantidad = document.createElement('input');
+            inputCantidad.type = 'number';
+            inputCantidad.step = '0.01';
+            inputCantidad.min = '0.01';
+            inputCantidad.name = 'cantidad_usada[]';
+            inputCantidad.className = 'form-control-custom';
+            inputCantidad.setAttribute('placeholder', 'Cantidad usada');
+            inputCantidad.setAttribute('required', 'required');
+            
+            // 4. Botón de Remover
+            const btnRemover = document.createElement('button');
+            btnRemover.type = 'button';
+            btnRemover.className = 'btn-remover';
+            btnRemover.textContent = 'X';
+            btnRemover.onclick = function() {
+                container.removeChild(wrapper);
+            };
+
+            // 5. Lógica para manejar la selección del datalist y actualizar el hidden input
+            inputArticulo.addEventListener('input', function() {
+                const datalist = document.getElementById('articulos-inventario-list');
+                const selectedOption = Array.from(datalist.options).find(option => option.value === this.value);
+                
+                if (selectedOption) {
+                    // Si se selecciona una opción válida, actualiza el valor del input oculto
+                    hiddenInput.value = selectedOption.getAttribute('data-id');
+                } else {
+                    // Si el texto no coincide con una opción, vacía el input oculto
+                    hiddenInput.value = '';
+                }
+            });
+
+            // Ensamblar el elemento
+            wrapper.appendChild(inputArticulo);
+            wrapper.appendChild(hiddenInput);
+            wrapper.appendChild(inputCantidad);
+            wrapper.appendChild(btnRemover);
+            container.appendChild(wrapper);
+        }
+
+        // Ejecutar al cargar para asegurar que no haya inputs de ingredientes vacíos al inicio (opcional)
+        // document.addEventListener('DOMContentLoaded', agregarIngrediente); 
+
+    </script>
+
+    <datalist id="articulos-inventario-list">
+        {% for articulo in articulos_inventario %}
+            <option value="{{ articulo.nombre }}" data-id="{{ articulo.idArticuloInventario }}">
+        {% endfor %}
+    </datalist>
+    </body>
+</html>

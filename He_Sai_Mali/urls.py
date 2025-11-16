@@ -19,5 +19,14 @@ urlpatterns = [
     # ------------------------------------------
     
     path('cocina/', views.vista_cocinero, name='cocina'),
+    path('cocina/platillo_listo/<int:pedido_platillo_id>/', views.platillo_listo, name='platillo_listo'), # NUEVA URL
+
+    # --- Vistas de Administrador (NUEVAS) ---
+    path('ingredientes/', views.admin_ingredientes, name='admin_ingredientes'),
+    path('platillos/', views.admin_platillos, name='admin_platillos'),
+    path('platillos/toggle/<int:platillo_id>/', views.toggle_disponibilidad_platillo, name='toggle_disponibilidad_platillo'),
+    path('proveedores/', views.admin_proveedores, name='admin_proveedores'),
+    # ----------------------------------------
+
     path('logout/', views.logout_view, name='logout'),
 ]
