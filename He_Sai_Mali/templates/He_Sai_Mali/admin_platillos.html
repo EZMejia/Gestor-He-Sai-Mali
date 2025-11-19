@@ -240,7 +240,7 @@
         .table-custom {
             width: 100%;
             border-collapse: collapse;
-            margin-top: 15px;
+            margin-top: 0px;
         }
         .table-custom thead tr {
             background-color: #dacfb7; /* Color claro del diseño */
@@ -279,11 +279,8 @@
             background-color: #41444a;
             justify-content: center;
             align-items: center;
-            border-top: 5px solid #f3bb67; /* Cambiado a top para mejor vista */
             border-bottom: 10px solid #2c3038;
             font-size: 14px;
-            padding: 10px 0;
-            margin-top: 20px;
         }
 
         .btn-toggle-disponible {
@@ -385,85 +382,88 @@
                 Agregar Nuevo Platillo
             </div>
             <div class="card-body-custom">
-                <form method="post">
-                    {% csrf_token %}
-                    <div style="display: flex; flex-wrap: wrap; gap: 15px;">
-                                                <div style="flex: 1 1 30%;">
-                            <label for="nombre" class="form-label-custom">Nombre</label>
-                            <input type="text" class="form-control-custom" id="nombre" name="nombre" required>
-                        </div>
-                        <div style="flex: 1 1 20%;">
-                            <label for="precio" class="form-label-custom">Precio (C$)</label>
-                            <input type="number" step="0.01" class="form-control-custom" id="precio" name="precio" min="0" required>
-                        </div>
-                        <div style="flex: 1 1 25%;">
-                            <label for="categoria" class="form-label-custom">Categoría</label>
-                            <input list="categorias-list" class="form-control-custom" id="categoria" name="categoria" required placeholder="ej. Desayuno, Almuerzo">
-                            <datalist id="categorias-list">
-                                {% for cat in categorias %}
-                                    <option value="{{ cat }}">
-                                {% endfor %}
-                            </datalist>
-                        </div>
+                <form method="post">
+                    {% csrf_token %}
+                    <div style="display: flex; flex-wrap: wrap; gap: 15px;">
+                        <div style="flex: 1 1 30%;">
+                            <label for="nombre" class="form-label-custom">Nombre</label>
+                            <input type="text" class="form-control-custom" id="nombre" name="nombre" required>
+                        </div>
+                        <div style="flex: 1 1 20%;">
+                            <label for="precio" class="form-label-custom">Precio (C$)</label>
+                            <input type="number" step="0.01" class="form-control-custom" id="precio" name="precio" min="0" required>
+                        </div>
+                        <div style="flex: 1 1 25%;">
+                            <label for="categoria" class="form-label-custom">Categoría</label>
+                            <input list="categorias-list" class="form-control-custom" id="categoria" name="categoria" required>
+                            <datalist id="categorias-list">
+                                {% for cat in categorias %}
+                                    <option value="{{ cat }}">
+                                {% endfor %}
+                            </datalist>
+                        </div>
 
-                                                <div style="flex: 1 1 100%;">
-                            <label for="receta" class="form-label-custom">Receta / Descripción</label>
-                            <textarea class="form-control-custom" id="receta" name="receta" rows="2" required></textarea>
-                        </div>
+                        <div style="flex: 1 1 100%;">
+                            <label for="receta" class="form-label-custom">Receta / Descripción</label>
+                            <textarea class="form-control-custom" id="receta" name="receta" rows="2" required></textarea>
+                        </div>
 
                         <div style="flex: 1 1 100%; border-top: 1px dashed #ccc; padding-top: 15px;">
                             <label class="form-label-custom" style="margin-bottom: 10px;">Artículos de Inventario (Ingredientes)</label>
                             
                             <div id="ingredientes-container">
-                                </div>
+                            </div>
 
                             <button type="button" class="btn-custom-success" onclick="agregarIngrediente()">
                                 + Añadir Ingrediente
                             </button>
                         </div>
                         
-                                                <div style="flex: 1 1 100%; margin-top: 20px;">
-                            <button type="submit" class="btn-custom-success" style="width: 100%;">Guardar Platillo</button>
-                        </div>
-                    </div>
-                </form>
-            </div>
+                        <div style="flex: 1 1 100%; margin-top: 20px;">
+                            <button type="submit" class="btn-custom-success" style="width: 100%;">Guardar Platillo</button>
+                        </div>
+                    </div>
+                </form>
+            </div>
         </div>
 
-        <h2 style="color: #981a28; margin-top: 30px; border-bottom: 2px solid #dacfb7; padding-bottom: 5px;">Listado de Platillos</h2>
-        <table class="table-custom">
-            <thead>
-                <tr>
-                    <th>ID</th>
-                    <th>Categoría</th>                     <th>Nombre</th>
-                    <th>Precio</th>
-                    <th>Descripción</th>
-                    <th>Disponibilidad</th>                 </tr>
-            </thead>
-            <tbody>
-                {% for platillo in platillos %}
-                <tr>
-                    <td>{{ platillo.idProductoMenu }}</td>
-                    <td>{{ platillo.categoria|default:"N/A" }}</td>                     <td>{{ platillo.nombre }}</td>
-                    <td>C$ {{ platillo.precio|floatformat:2 }}</td>
-                    <td>{{ platillo.receta|default:"N/A" }}</td>
-                    <td>
-                                                <form method="post" action="{% url 'toggle_disponibilidad_platillo' platillo.idProductoMenu %}" style="margin: 0;">
-                            {% csrf_token %}
+        <h2 style="color: #981a28; margin-top: 30px; border-bottom: 2px solid #dacfb7; padding-bottom: 5px; margin-bottom: 0;">Listado de Platillos</h2>
+        <table class="table-custom">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Categoría</th>                     
+                    <th>Nombre</th>
+                    <th>Precio</th>
+                    <th>Descripción</th>
+                    <th>Disponibilidad</th>                 
+                </tr>
+            </thead>
+            <tbody>
+                {% for platillo in platillos %}
+                <tr>
+                    <td>{{ platillo.idProductoMenu }}</td>
+                    <td>{{ platillo.categoria|default:"N/A" }}</td>                     
+                    <td>{{ platillo.nombre }}</td>
+                    <td>C$ {{ platillo.precio|floatformat:2 }}</td>
+                    <td>{{ platillo.receta|default:"N/A" }}</td>
+                    <td>
+                        <form method="post" action="{% url 'toggle_disponibilidad_platillo' platillo.idProductoMenu %}" style="margin: 0;">
+                            {% csrf_token %}
                             <button type="submit" 
                                     class="btn-toggle-disponible {% if platillo.disponible %}btn-disponible-true{% else %}btn-disponible-false{% endif %}">
                                 {% if platillo.disponible %}Disponible{% else %}No Disponible{% endif %}
                             </button>
                         </form>
-                    </td>
-                </tr>
-                {% empty %}
-                <tr>
-                    <td colspan="6" style="text-align: center;">No hay platillos registrados.</td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="6" style="text-align: center;">No hay platillos registrados.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
 
     </div>
     
@@ -515,8 +515,8 @@
             // 3. Input para la Cantidad Usada
             const inputCantidad = document.createElement('input');
             inputCantidad.type = 'number';
-            inputCantidad.step = '0.01';
-            inputCantidad.min = '0.01';
+            inputCantidad.step = '0.1';
+            inputCantidad.min = '0.1';
             inputCantidad.name = 'cantidad_usada[]';
             inputCantidad.className = 'form-control-custom';
             inputCantidad.setAttribute('placeholder', 'Cantidad usada');

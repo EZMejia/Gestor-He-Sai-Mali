@@ -12,6 +12,7 @@
             font-family: 'Roboto', sans-serif;
             margin: 0;
             padding: 0;
+            color: #333; /* Color de texto base para el contenido principal */
         }
         header {
             box-sizing: border-box;
@@ -60,7 +61,7 @@
         .dropdown-rol {
             display: inline-block;
             padding: 0;
-            margin:    0;
+            margin:     0;
             list-style-type: none;
             color:#ffffff;
             background-color: #981a28;
@@ -171,60 +172,72 @@
 
         /*--Fin del Header--*/
 
-        /* Contenedor principal de la vista de Ingredientes */
-        .contenido {
-            padding-top: 20px;
-            width: 90%;
-            margin: 0 auto;
-            min-height: calc(100vh - 100px); /* Para que el footer se quede abajo */
-        }
-
-        .seccion-titulo {
-            color: white;
-            font-size: 30px;
-            margin-bottom: 20px;
-            border-bottom: 2px solid #f3bb67;
-            padding-bottom: 5px;
-        }
-        .subtitulo {
-            color: white;
-            font-size: 24px;
-            margin-top: 40px;
-            margin-bottom: 15px;
-        }
-        .alert {
-            padding: 10px; 
-            margin-bottom: 10px; 
-            border-radius: 5px;
-            font-weight: bold;
-        }
-
-        /* Estilos de Card (Adaptación de Bootstrap Card) */
-        .card {
+        /* Estilos principales para el contenido de la administración */
+        .container_admin {
+            display: block;
+            box-sizing: border-box;
+            margin: 20px auto;
             background-color: white;
+            box-shadow: 0 0 50px 10px rgba(0, 0, 0, 0.3);
+            width: 90%;
+            max-width: 1200px; /* Limite de ancho para la administración */
             border-radius: 5px;
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-            margin-bottom: 20px;
-        }
-        .card-header {
-            padding: 15px;
-            border-bottom: 1px solid #ddd;
-            border-radius: 5px 5px 0 0;
-            font-weight: bold;
-            color: white;
-            background-color: #3c78d8; /* Azul primario */
-        }
-        .card-body {
             padding: 20px;
         }
 
-        /* Estilos de Formulario (Adaptación) */
-        .form-label {
+        .card-custom {
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .card-header-custom {
+            background-color: #981a28; /* Color principal del diseño */
+            color: white;
+            padding: 10px 15px;
+            border-bottom: 3px solid #f3bb67; /* Color de acento */
+            border-radius: 5px 5px 0 0;
+            font-weight: bold;
+        }
+        .card-body-custom {
+            padding: 15px;
+        }
+
+        /* Estilos para el botón Guardar */
+        .btn-custom-success {
+            text-decoration: none;
+            color: white;
+            background-color: #38761d;
+            padding: 8px 15px;
+            border-radius: 5px;
+            transition: background-color 0.2s;
+            border: none;
+            cursor: pointer;
+        }
+        .btn-custom-success:hover {
+            background-color: #274e13;
+        }
+        
+        .btn-custom-danger { 
+            text-decoration: none;
+            color: white;
+            background-color: #f44336; 
+            padding: 8px 15px;
+            border-radius: 5px;
+            transition: background-color 0.2s;
+            border: none;
+            cursor: pointer;
+        }
+        .btn-custom-danger:hover {
+            background-color: #b12131;
+        }
+        
+        .form-label-custom {
             display: block;
             margin-bottom: 5px;
             font-weight: bold;
         }
-        .form-control {
+        .form-control-custom {
             width: 100%;
             padding: 8px;
             margin-bottom: 10px;
@@ -232,64 +245,101 @@
             border-radius: 4px;
             box-sizing: border-box;
         }
-        .row {
-            display: flex;
-            gap: 10px;
-            margin-bottom: 10px;
-        }
-        .col-md-4, .col-md-2 {
-            flex-grow: 1;
-            padding: 0 5px;
-        }
-        .d-flex {
-            display: flex;
-            align-items: flex-end;
-        }
-        .w-100 {
-            width: 100%;
+        textarea.form-control-custom {
+            resize: vertical;
         }
 
-        /* Estilos de Botones de Formulario */
-        .btn-success { 
-            background-color: #38761d; 
-            color: white; 
-            border: none; 
-            padding: 10px 15px;
-            border-radius: 5px;
-            cursor: pointer;
-            transition: background-color 0.2s;
-        }
-        .btn-success:hover { background-color: #274e13; }
-
-        /* Estilos de Tabla (Adaptación de Bootstrap Table) */
-        .table {
+        /* Estilos para la tabla */
+        .table-custom {
             width: 100%;
             border-collapse: collapse;
-            background-color: white;
-            border-radius: 5px;
-            overflow: hidden;
-            margin-bottom: 50px; /* Espacio antes del footer */
+            margin-top: 0px;
+            color: #333; /* Color de texto para la tabla */
         }
-        .table th, .table td {
-            padding: 12px 15px;
-            border-bottom: 1px solid #ddd;
+        .table-custom thead tr {
+            background-color: #dacfb7; /* Color claro del diseño */
+            border-bottom: 2px solid #981a28;
+        }
+        .table-custom th, .table-custom td {
+            padding: 10px;
             text-align: left;
+            border-bottom: 1px solid #eee;
         }
-        .table th {
-            background-color: #f3bb67;
-            color: #2c3038;
+        .table-custom tbody tr:nth-child(odd) {
+            background-color: #F8F8F8;
+        }
+        .table-custom tbody tr:nth-child(even) {
+            background-color: #EEEEEE;
+        }
+        .table-custom tbody tr:hover {
+            background-color: #e0e0e0;
+        }
+        
+        /* Estilos de mensajes (adaptados) */
+        .alert-custom {
+            padding: 10px;
+            margin-bottom: 15px;
+            border-radius: 5px;
+            color: white;
             font-weight: bold;
         }
-        .table-striped tbody tr:nth-child(odd) {
-            background-color: #f9f9f9;
-        }
-        .table-hover tbody tr:hover {
-            background-color: #f0f0f0;
-        }
-        .text-center {
-            text-align: center;
+        .alert-error { background-color: #f44336; }
+        .alert-success { background-color: #4CAF50; }
+        .alert-info { background-color: #ff9800; color: black; }
+
+        .form-text-custom {
+            color: #6c757d;
+            display: block;
+            margin-top: -5px;
+            margin-bottom: 10px;
+            font-size: 0.85em;
         }
 
+        /* Estilos del Modal/Overlay de Compra */
+        .overlay-custom {
+            display: none; 
+            position: fixed; 
+            top: 0; 
+            left: 0; 
+            width: 100%; 
+            height: 100%; 
+            background: rgba(0, 0, 0, 0.5); 
+            z-index: 1000;
+        }
+
+        .modal-card-custom {
+            display: none; 
+            position: fixed; 
+            top: 50%; 
+            left: 50%; 
+            transform: translate(-50%, -50%); 
+            z-index: 1001; 
+            width: 400px; 
+            max-width: 90%; 
+            background-color: white;
+            border-radius: 5px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.5);
+            border: 3px solid #f3bb67;
+        }
+
+        .modal-header-custom {
+            background-color: #981a28; 
+            color: white;
+            padding: 15px;
+            border-bottom: 3px solid #f3bb67;
+            border-radius: 5px 5px 0 0;
+            font-weight: bold;
+            font-size: 1.2em;
+        }
+        .modal-body-custom {
+            padding: 15px;
+            color: #333;
+        }
+        .modal-input-group {
+            margin-bottom: 15px;
+        }
+        /* Fin de Estilos del Modal/Overlay */
+        
         footer {
             display: flex;
             color: #dacfb7;
@@ -298,9 +348,8 @@
             align-items: center;
             border-bottom: 10px solid #2c3038;
             font-size: 14px;
+            margin-top: 20px; /* Asegura un espacio con el contenido */
             padding: 10px 0;
-            width: 100%;
-            box-sizing: border-box;
         }
     </style>
 </head>
@@ -309,7 +358,8 @@
         <img src="{% static 'He_Sai_Mali/logo.png' %}" alt="Logo He Sai Mali">
         <h1 class="Titulo">ADMINISTRACIÓN DE INGREDIENTES</h1>
         
-        {% if user.rol == "Administrador"%}
+        {# Se asume que el usuario es Administrador para mostrar el menú de vistas #}
+        {% if user.rol == "Administrador" %}
             <div class="dropdown-rol">
                 <button class="dropdown-btn" onclick="toggleDropdown()">VISTAS</button>
 
@@ -331,80 +381,146 @@
             </button>
         </form>
 
-        <h1 class="Info">{{ user.nombre }} {{ user.apellido }} ({{ user.rol }})</h1>
+        <h1 class="Info">{{ user.nombre }} {{ user.apellido }} ({{ rol_empleado }})</h1>
     </header>
 
-    <div class="contenido">
-        
-        <h1 class="seccion-titulo">Administración de Ingredientes</h1>
+    <div class="container_admin">
+        <h1 style="color: #981a28; margin-bottom: 20px;">Inventario de Ingredientes</h1>
 
+        {# Mensajes de Django adaptados al nuevo estilo #}
         {% if messages %}
-            <div style="width: 100%;">
             {% for message in messages %}
-                <div class="alert" 
-                    style="{% if message.tags == 'error' %}background-color: #f44336; color: white;
-                    {% elif message.tags == 'success' %}background-color: #4CAF50; color: white;
-                    {% else %}background-color: #ff9800; color: black;{% endif %}">
+                <div class="alert-custom alert-{{ message.tags }}" role="alert">
                     {{ message }}
                 </div>
             {% endfor %}
-            </div>
         {% endif %}
+        
+        {# MODAL / FORMULARIO FLOTANTE DE COMPRA #}
+        <div id="formOverlay" class="overlay-custom"></div>
 
-        <div class="card">
-            <div class="card-header">
+        <div id="compraFormContainer" class="modal-card-custom">
+            <div class="modal-header-custom">
+                Registrar Compra para: <span id="nombreIngrediente" style="font-weight: normal;"></span>
+            </div>
+            <div class="modal-body-custom">
+                <form method="POST" action="{% url 'comprar_ingrediente' %}">
+                    {% csrf_token %}
+                    <input type="hidden" name="id_ingrediente" id="idIngredienteInput" required>
+
+                    <div class="modal-input-group">
+                        <label for="proveedorInput" class="form-label-custom">Proveedor:</label>
+                        <input type="text" list="proveedores-list" id="proveedorInput" class="form-control-custom" placeholder="Seleccione un proveedor" required>
+                        <input type="hidden" name="id_proveedor_fk" id="idProveedorInput" required>
+                    </div>
+                    
+                    <div class="modal-input-group">
+                        <label for="precioCompra" class="form-label-custom">Precio de Compra (C$):</label>
+                        <input type="number" step="0.01" min="0.01" name="precio_compra" id="precioCompra" class="form-control-custom" required>
+                    </div>
+                    
+                    <div class="modal-input-group">
+                        <label for="cantidadComprada" class="form-label-custom">Cantidad Comprada:</label>
+                        <input type="number" step="0.01" min="0.01" name="cantidad_comprada" id="cantidadComprada" class="form-control-custom" required>
+                        <small id="unidadMedida" class="form-text-custom"></small>
+                    </div>
+                    
+                    <div class="modal-input-group">
+                        <label for="fechaCompra" class="form-label-custom">Fecha de la Compra:</label>
+                        <input type="date" name="fecha_compra" id="fechaCompra" class="form-control-custom" required>
+                    </div>
+                    
+                    <button type="submit" class="btn-custom-success">Registrar Compra</button>
+                    <button type="button" class="btn-custom-danger" onclick="ocultarFormularioCompra()">Cancelar</button>
+                </form>
+            </div>
+        </div>
+        {# FIN DE MODAL / FORMULARIO FLOTANTE DE COMPRA #}
+
+        {# Formulario Agregar Nuevo Ingrediente #}
+        <div class="card-custom">
+            <div class="card-header-custom">
                 Agregar Nuevo Ingrediente
             </div>
-            <div class="card-body">
-                <form method="post">
+            <div class="card-body-custom">
+                <form method="POST" action="{% url 'agregar_ingrediente' %}" style="display: flex; gap: 20px; flex-wrap: wrap; align-items: flex-end;">
                     {% csrf_token %}
-                    <div class="row">
-                        <div class="col-md-4">
-                            <label for="nombre" class="form-label">Nombre</label>
-                            <input type="text" class="form-control" id="nombre" name="nombre" required>
-                        </div>
-                        <div class="col-md-4">
-                            <label for="unidad" class="form-label">Unidad de Medida</label>
-                            <input type="text" class="form-control" id="unidad" name="unidad" placeholder="ej. libras, unidades, ml" required>
-                        </div>
-                        <div class="col-md-2">
-                            <label for="stock" class="form-label">Stock Inicial</label>
-                            <input type="number" class="form-control" id="stock" name="stock" value="0" min="0">
-                        </div>
-                        <div class="col-md-2 d-flex">
-                            <button type="submit" class="btn-success w-100">Guardar</button>
-                        </div>
+                    
+                    <div style="flex-grow: 1; min-width: 200px;">
+                        <label for="nombre" class="form-label-custom">Nombre del Ingrediente:</label>
+                        <input type="text" name="nombre" id="nombre" class="form-control-custom" required>
                     </div>
+                    
+                    <div style="flex-grow: 0; min-width: 150px;">
+                        <label for="tipo_articulo" class="form-label-custom">Tipo de Artículo:</label>
+                        <select name="tipo_articulo" id="tipo_articulo" class="form-control-custom" required>
+                            <option value="">Seleccione el Tipo</option>
+                                <option value="{{ 'Ingrediente' }}">Ingrediente</option>
+                        </select>
+                    </div>
+                    
+                    <div style="flex-grow: 0; min-width: 100px;">
+                        <label for="stock" class="form-label-custom">Stock Inicial:</label>
+                        <input type="number" step="0.01" min="0" name="stock" id="stock" class="form-control-custom" value="0" required>
+                    </div>
+                    
+                    <div style="flex-grow: 0; min-width: 150px;">
+                        <label for="unidad_de_medida" class="form-label-custom">Unidad de Medida (ej. lb, ml, unidad):</label>
+                        <input type="text" name="unidad_de_medida" id="unidad_de_medida" class="form-control-custom" required>
+                    </div>
+                    
+                    <div style="flex-grow: 1; min-width: 300px;">
+                        <label for="ubicacion" class="form-label-custom">Ubicación:</label>
+                        <input type="text" name="ubicacion" id="ubicacion" class="form-control-custom">
+                        <small class="form-text-custom">Opcional. Deja en blanco si no aplica.</small>
+                    </div>
+                    
+                    <button type="submit" class="btn-custom-success" style="padding: 10px 15px; margin-top: 5px;">Guardar Ingrediente</button>
                 </form>
             </div>
         </div>
 
-        <h2 class="subtitulo">Listado de Ingredientes</h2>
-        <table class="table table-striped table-hover">
-            <thead>
-                <tr>
-                    <th>ID</th>
-                    <th>Nombre</th>
-                    <th>Stock</th>
-                    <th>Unidad</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for ing in ingredientes %}
-                <tr>
-                    <td>{{ ing.idArticuloInventario }}</td>
-                    <td>{{ ing.nombre }}</td>
-                    <td>{{ ing.stock }}</td>
-                    <td>{{ ing.unidad_de_medida }}</td>
-                </tr>
-                {% empty %}
-                <tr>
-                    <td colspan="4" class="text-center">No hay ingredientes registrados.</td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-
+        {# Listado de Ingredientes / Tabla #}
+        <h2 style="color: #981a28; margin-top: 30px; border-bottom: 2px solid #dacfb7; padding-bottom: 5px; margin-bottom: 10px;">Listado de Ingredientes</h2>
+        <div class="card-custom" style="padding: 0; overflow-x: auto;">
+            <table class="table-custom">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Nombre</th>
+                        <th>Tipo de Artículo</th> 
+                        <th>Stock Actual</th>
+                        <th>Unidad de Medida</th>
+                        <th>Ubicación</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for articulo in ingredientes %}
+                        <tr 
+                            class="clickable-row" 
+                        >
+                            <td>{{ articulo.idArticuloInventario }}</td>
+                            <td>{{ articulo.nombre }}</td>
+                            <td>{{ articulo.tipoArticulo|default:"N/A" }}</td>
+                            <td>{{ articulo.stock }}</td>
+                            <td>{{ articulo.unidad_de_medida }}</td>
+                            <td>{{ articulo.ubicacion|default:"-" }}</td> 
+                            <td>
+                                <button type="button" class="btn-custom-success" onclick="event.stopPropagation(); mostrarFormularioCompra({{ articulo.idArticuloInventario }}, '{{ articulo.nombre }}', '{{ articulo.unidadDeMedida }}')">
+                                    Comprar
+                                </button>
+                            </td>
+                        </tr>
+                    {% empty %}
+                        <tr>
+                            <td colspan="7" style="text-align: center;">No hay ingredientes registrados.</td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {# Fin de Listado de Ingredientes / Tabla #}
     </div>
     
     <footer>
@@ -412,12 +528,11 @@
     </footer>
     
     <script>
+        // Función para el dropdown del encabezado
         function toggleDropdown() {
-            // Muestra u oculta el elemento con el id "rolMenu"
             document.getElementById("rolMenu").classList.toggle("show");
         }
 
-        // Opcional: Cerrar el menú si el usuario hace clic fuera de él
         window.onclick = function(event) {
             if (!event.target.matches('.dropdown-btn')) {
                 var dropdowns = document.getElementsByClassName("dropdown-content");
@@ -429,6 +544,52 @@
                 }
             }
         }
+
+        // --- Funciones para el formulario de Compra (Modal) ---
+        function mostrarFormularioCompra(id, nombre, unidad) {
+            document.getElementById('idIngredienteInput').value = id;
+            document.getElementById('nombreIngrediente').textContent = nombre;
+            // Corregido: asumí que el nombre del campo en el JS es 'unidadDeMedida'
+            // Si el nombre del campo en tu modelo/contexto es 'unidad_de_medida', el HTML debe ser ajustado en el bucle 'for'
+            document.getElementById('unidadMedida').textContent = `Unidad: ${unidad}`; 
+            document.getElementById('compraFormContainer').style.display = 'block';
+            document.getElementById('formOverlay').style.display = 'block';
+        }
+
+        function ocultarFormularioCompra() {
+            document.getElementById('compraFormContainer').style.display = 'none';
+            document.getElementById('formOverlay').style.display = 'none';
+            
+            // Limpiar campos del formulario
+            document.getElementById('idIngredienteInput').value = '';
+            document.getElementById('proveedorInput').value = '';
+            document.getElementById('idProveedorInput').value = '';
+            document.getElementById('precioCompra').value = '';
+            document.getElementById('cantidadComprada').value = '';
+            // La fecha se podría dejar, o limpiar si se desea.
+        }
+
+        // Lógica para el datalist de Proveedores
+        const proveedorInput = document.getElementById('proveedorInput');
+        const idProveedorInput = document.getElementById('idProveedorInput');
+
+        proveedorInput.addEventListener('input', function() {
+            const datalist = document.getElementById('proveedores-list');
+            const selectedOption = Array.from(datalist.options).find(option => option.value === this.value);
+            
+            if (selectedOption) {
+                idProveedorInput.value = selectedOption.getAttribute('data-id');
+            } else {
+                idProveedorInput.value = '';
+            }
+        });
     </script>
+
+    <datalist id="proveedores-list">
+        {% for proveedor in proveedores %}
+            <option value="{{ proveedor.nombre }}" data-id="{{ proveedor.idProveedor }}">
+        {% endfor %}
+    </datalist>
+
 </body>
 </html>

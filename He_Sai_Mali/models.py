@@ -122,7 +122,7 @@ class ArticuloInventario(models.Model):
 
     # Agregado
     tipoArticulo = models.CharField(max_length=20)
-    ubicacion = models.CharField(max_length=20)
+    ubicacion = models.CharField(max_length=20, blank=True, null=True)
 
 
     def __str__(self):
@@ -226,5 +226,4 @@ class ArticuloInventario_Proveedor(models.Model):
         return f"{self.ArticuloInventario.nombre} suministrado por {self.proveedor.nombre}"
     
     class Meta:
-        unique_together = ('idArticuloInventario', 'idProveedor')
         db_table = 'ArticuloInventario_Proveedor'

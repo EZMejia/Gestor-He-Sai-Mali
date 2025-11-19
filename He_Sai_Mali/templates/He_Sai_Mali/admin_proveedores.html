@@ -8,11 +8,13 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Admin - Proveedores</title>
     <style>
+        /* ------------------- ESTILOS COPIADOS DE ADMIN - PLATILLOS ------------------- */
         body {
             background-color: #2c3038;
             font-family: 'Roboto', sans-serif;
             margin: 0;
             padding: 0;
+            color: #333; /* Color de texto base para el contenido principal */
         }
         header {
             box-sizing: border-box;
@@ -130,10 +132,6 @@
             border-bottom: 2px solid #f3bb67;
         }
 
-        .show {
-            display: block;
-        }
-
         /*------------------------------*/
         .salir {
             display: flex;
@@ -172,115 +170,106 @@
 
         /*--Fin del Header--*/
 
-        /* Contenedor principal de la vista */
-        .contenido {
-            padding: 20px;
-        }
-
-        /* Estilos para la tarjeta de agregar/listado */
-        .card-custom {
+        /* Estilos principales para el contenido de la administración */
+        .container_admin {
             display: block;
             box-sizing: border-box;
             margin: 20px auto;
             background-color: white;
             box-shadow: 0 0 50px 10px rgba(0, 0, 0, 0.3);
             width: 90%;
+            max-width: 1200px; /* Limite de ancho para la administración */
             border-radius: 5px;
-        }
-        .card-header-custom {
-            background-color: #981a28; /* Rojo oscuro */
-            color: white;
-            padding: 15px;
-            border-radius: 5px 5px 0 0;
-            font-size: 1.2em;
-            font-weight: bold;
-        }
-        .card-body-custom {
             padding: 20px;
         }
 
-        /* Estilos de tabla */
-        .tabla-custom {
-            width: 90%;
-            margin: 20px auto;
-            border-collapse: collapse;
-            background-color: white;
-            box-shadow: 0 0 50px 10px rgba(0, 0, 0, 0.3);
+        .card-custom {
+            border: 1px solid #ddd;
             border-radius: 5px;
-            overflow: hidden; 
+            margin-bottom: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
         }
-        .tabla-custom th, .tabla-custom td {
-            padding: 12px 15px;
-            border-bottom: 1px solid #ddd;
-            text-align: left;
-        }
-        .tabla-custom thead {
-            background-color: #dacfb7; 
-            color: #2c3038;
-        }
-        .tabla-custom tbody tr:nth-child(even) {
-            background-color: #EEEEEE; 
-        }
-        .tabla-custom tbody tr:hover {
-            background-color: #f3bb67; 
-        }
-        
-        /* Títulos */
-        h2, h3 {
-            color: #dacfb7;
-            text-align: center;
-        }
-        .text-center-custom {
-            text-align: center;
-            color: #2c3038;
-            padding: 10px;
-        }
-
-        /* Alertas */
-        .alert {
-            width: 90%; 
-            margin: 10px auto; 
-            padding: 10px; 
-            border-radius: 5px; 
-            
-        }
-
-        /* Botón de Guardar */
-        .btn-success-custom {
-            background-color: #38761d;
+        .card-header-custom {
+            background-color: #981a28; /* Color principal del diseño */
             color: white;
+            padding: 10px 15px;
+            border-bottom: 3px solid #f3bb67; /* Color de acento */
+            border-radius: 5px 5px 0 0;
+            font-weight: bold;
+        }
+        .card-body-custom {
+            padding: 15px;
+        }
+
+        /* Estilos para el botón Guardar */
+        .btn-custom-success {
+            text-decoration: none;
+            color: white;
+            background-color: #38761d;
             padding: 8px 15px;
             border-radius: 5px;
-            font-size: 14px;
-            text-decoration: none;
+            transition: background-color 0.2s;
             border: none;
             cursor: pointer;
-            transition: background-color 0.2s;
-            display: block;
-            width: 100%;
         }
-        .btn-success-custom:hover {
+        .btn-custom-success:hover {
             background-color: #274e13;
         }
-        .btn-success-custom:active {
-            background-color: #38761d;
-        }
         
-        /* Inputs y Labels */
-        .form-label {
+        .form-label-custom {
             display: block;
             margin-bottom: 5px;
             font-weight: bold;
-            color: #2c3038;
         }
-        .form-control {
+        .form-control-custom {
             width: 100%;
             padding: 8px;
+            margin-bottom: 10px;
             border: 1px solid #ccc;
             border-radius: 4px;
-            box-sizing: border-box; 
+            box-sizing: border-box;
+        }
+        textarea.form-control-custom {
+            resize: vertical;
         }
 
+        /* Estilos para la tabla */
+        .table-custom {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 0px;
+        }
+        .table-custom thead tr {
+            background-color: #dacfb7; /* Color claro del diseño */
+            border-bottom: 2px solid #981a28;
+        }
+        .table-custom th, .table-custom td {
+            padding: 10px;
+            text-align: left;
+            border-bottom: 1px solid #eee;
+        }
+        .table-custom tbody tr:nth-child(odd) {
+            background-color: #F8F8F8;
+        }
+        .table-custom tbody tr:nth-child(even) {
+            background-color: #EEEEEE;
+        }
+        .table-custom tbody tr:hover {
+            background-color: #e0e0e0;
+        }
+        
+        /* Estilos de mensajes (adaptados) */
+        .alert-custom {
+            padding: 10px;
+            margin-bottom: 15px;
+            border-radius: 5px;
+            color: white;
+            font-weight: bold;
+        }
+        .alert-error { background-color: #f44336; }
+        .alert-success { background-color: #4CAF50; }
+        .alert-info { background-color: #ff9800; color: black; }
+        
         footer {
             display: flex;
             color: #dacfb7;
@@ -289,15 +278,17 @@
             align-items: center;
             border-bottom: 10px solid #2c3038;
             font-size: 14px;
-            padding: 10px 0;
-            margin-top: 20px;
+            padding: 10px 0; /* Agregado padding para que el footer sea visible */
+            margin-top: 20px; /* Agregado margen para separarlo del contenido */
         }
+
+        /* ------------------- FIN DE ESTILOS COPIADOS ------------------- */
     </style>
 </head>
 <body>
     <header>
         <img src="{% static 'He_Sai_Mali/logo.png' %}" alt="Logo He Sai Mali">
-        <h1 class="Titulo">ADMINISTRAR PROVEEDORES</h1>
+        <h1 class="Titulo">ADMINISTRACIÓN DE PROVEEDORES</h1>
         
         {% if user.rol == "Administrador"%}
             <div class="dropdown-rol">
@@ -324,21 +315,16 @@
         <h1 class="Info">{{ user.nombre }} {{ user.apellido }} ({{ user.rol }})</h1>
     </header>
 
-    <div class="contenido">
+    <div class="container_admin">
         
-        <h1 style="color: white; text-align: left; margin-bottom: 15px; margin-left: 5%;">Administración de Proveedores</h1>
+        <h1 style="color: #981a28; margin-bottom: 20px;">Administración de Proveedores</h1>
 
         {% if messages %}
-            <div style="width: 90%; margin: 10px auto;">
             {% for message in messages %}
-                <div class="alert" 
-                    style="{% if message.tags == 'error' %}background-color: #f44336; color: white;
-                    {% elif message.tags == 'success' %}background-color: #4CAF50; color: white;
-                    {% else %}background-color: #ff9800; color: black;{% endif %}">
+                <div class="alert-custom alert-{{ message.tags }}" role="alert">
                     {{ message }}
                 </div>
             {% endfor %}
-            </div>
         {% endif %}
         
         <div class="card-custom">
@@ -348,29 +334,29 @@
             <div class="card-body-custom">
                 <form method="post">
                     {% csrf_token %}
-                    <div style="display: flex; gap: 20px; flex-wrap: wrap;">
+                    <div style="display: flex; gap: 15px; flex-wrap: wrap;">
                         <div style="flex: 1 1 30%;">
-                            <label for="nombre" class="form-label">Nombre</label>
-                            <input type="text" class="form-control" id="nombre" name="nombre" required>
+                            <label for="nombre" class="form-label-custom">Nombre</label>
+                            <input type="text" class="form-control-custom" id="nombre" name="nombre" required>
                         </div>
                         <div style="flex: 1 1 20%;">
-                            <label for="telefono" class="form-label">Teléfono</label>
-                            <input type="text" class="form-control" id="telefono" name="telefono">
+                            <label for="telefono" class="form-label-custom">Teléfono</label>
+                            <input type="text" class="form-control-custom" id="telefono" name="telefono">
                         </div>
                         <div style="flex: 1 1 30%;">
-                            <label for="direccion" class="form-label">Dirección</label>
-                            <input type="text" class="form-control" id="direccion" name="direccion">
+                            <label for="direccion" class="form-label-custom">Dirección</label>
+                            <input type="text" class="form-control-custom" id="direccion" name="direccion">
                         </div>
                         <div style="flex: 1 1 10%; display: flex; align-items: flex-end;">
-                            <button type="submit" class="btn-success-custom">Guardar</button>
+                            <button type="submit" class="btn-custom-success" style="width: 100%;">Guardar</button>
                         </div>
                     </div>
                 </form>
             </div>
         </div>
 
-        <h2 style="text-align: left; margin-left: 5%; margin-top: 30px;">Listado de Proveedores</h2>
-        <table class="tabla-custom">
+        <h2 style="color: #981a28; margin-top: 30px; border-bottom: 2px solid #dacfb7; padding-bottom: 5px; margin-bottom: 0;">Listado de Proveedores</h2>
+        <table class="table-custom">
             <thead>
                 <tr>
                     <th>ID</th>
@@ -396,21 +382,18 @@
         </table>
 
     </div>
-
+    
     <footer>
         <p>2025 Hê Sãî Mãlî.</p>
     </footer>
     
     <script>
         function toggleDropdown() {
-            // Muestra u oculta el elemento con el id "rolMenu"
             document.getElementById("rolMenu").classList.toggle("show");
         }
 
-        // Opcional: Cerrar el menú si el usuario hace clic fuera de él
         window.onclick = function(event) {
-            // Verifica si el clic NO fue dentro del botón o del contenido del dropdown
-            if (!event.target.matches('.dropdown-btn') && !event.target.closest('.dropdown-rol')) {
+            if (!event.target.matches('.dropdown-btn')) {
                 var dropdowns = document.getElementsByClassName("dropdown-content");
                 for (var i = 0; i < dropdowns.length; i++) {
                     var openDropdown = dropdowns[i];
@@ -421,5 +404,5 @@
             }
         }
     </script>
-</body>
+    </body>
 </html>

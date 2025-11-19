@@ -407,6 +407,9 @@ def vista_registrarpedido(request, pedido_id=None):
             
         id_pedido_a_usar = None
         cliente_a_usar_id = None
+
+        if telefono_cliente == "":
+            telefono_cliente = None
         
         total_a_sumar = 0
         items_registrados = 0
@@ -543,7 +546,6 @@ def vista_registrarpedido(request, pedido_id=None):
                 return redirect('pedidos')
             
         except Exception as e:
-            messages.error(request, e)
             return redirect('registrarpedido')
     
     # ------------------ PETICIÓN GET (Contexto) ------------------
@@ -672,33 +674,113 @@ def platillo_listo(request, pedido_platillo_id):
 @login_required
 def admin_ingredientes(request):
     """
-    Vista para agregar nuevos ingredientes (solo Admin).
+    Vista para ver ingredientes y proveedores.
     """
-    if request.method == 'POST':
-        nombre = request.POST.get('nombre', '').strip()
-        unidad = request.POST.get('unidad', '').strip()
-        stock = request.POST.get('stock', 0)
-        
-        if not nombre or not unidad:
-            messages.error(request, 'El nombre y la unidad de medida son obligatorios.')
-        else:
-            try:
-                ArticuloInventario.objects.create(
-                    nombre=nombre,
-                    unidad_de_medida=unidad,
-                    stock=int(stock) # stock es IntField
-                )
-                messages.success(request, f'Ingrediente "{nombre}" agregado exitosamente.')
-            except Exception as e:
-                messages.error(request, f'Error al guardar el ingrediente: {e}')
-        
-        return redirect('admin_ingredientes')
-
     context = {
         'ingredientes': ArticuloInventario.objects.all().order_by('nombre'),
+        'proveedores': Proveedor.objects.all().order_by('nombre'),
+        'rol_empleado': request.user.rol # Para el menú de navegación
     }
     return render(request, 'He_Sai_Mali/admin_ingredientes.html', context)
 
+@require_POST
+@user_passes_test(es_rol("Administrador"), login_url='login')
+@login_required
+def agregar_ingrediente(request):
+    nombre = request.POST.get('nombre', '').strip()
+    stock_str = request.POST.get('stock', '0')
+    unidad_de_medida = request.POST.get('unidad_de_medida', '').strip()
+    tipoArticulo = request.POST.get('tipo_articulo', '').strip()
+    ubicacion = request.POST.get('ubicacion', '').strip()
+
+    if not all([nombre, unidad_de_medida]):
+        messages.error(request, 'El nombre y la unidad de medida son obligatorios para un nuevo ingrediente.')
+        return redirect('admin_ingredientes')
+    
+    try:
+        stock = float(stock_str)
+        if stock < 0:
+            messages.error(request, 'El stock inicial no puede ser negativo.')
+            return redirect('admin_ingredientes')
+            
+        ArticuloInventario.objects.create(
+            nombre=nombre,
+            stock=stock,
+            unidad_de_medida=unidad_de_medida,
+            tipoArticulo=tipoArticulo,
+            ubicacion=ubicacion
+        )
+        messages.success(request, f'Ingrediente "{nombre}" agregado exitosamente con stock inicial de {stock} {unidad_de_medida}.')
+    except ValueError:
+        messages.error(request, 'El stock debe ser un número válido.')
+    except Exception as e:
+        messages.error(request, f'Error al guardar el ingrediente: El nombre o los datos son inválidos. {e}')
+    
+    return redirect('admin_ingredientes')
+
+@require_POST
+@user_passes_test(es_rol("Administrador"), login_url='login')
+@login_required
+def comprar_ingrediente(request):
+    """
+    Procesa la compra de un ingrediente, registra el ArticuloInventario_Proveedor 
+    y actualiza el stock del ArticuloInventario.
+    """
+    # 1. Obtener y validar datos
+    id_ingrediente = request.POST.get('id_ingrediente')
+    id_proveedor = request.POST.get('id_proveedor_fk') # ID oculto del proveedor
+    precio_compra_str = request.POST.get('precio_compra')
+    cantidad_comprada_str = request.POST.get('cantidad_comprada')
+    fecha_compra = request.POST.get('fecha_compra')
+
+    if not all([id_ingrediente, id_proveedor, precio_compra_str, cantidad_comprada_str, fecha_compra]):
+        messages.error(request, 'Todos los campos son obligatorios.')
+        return redirect('admin_ingredientes')
+
+    try:
+        # Conversión de tipos
+        id_ingrediente = int(id_ingrediente)
+        id_proveedor = int(id_proveedor)
+        precio_compra = float(precio_compra_str)
+        cantidad_comprada = float(cantidad_comprada_str)
+        
+        if cantidad_comprada <= 0 or precio_compra <= 0:
+            messages.error(request, 'La cantidad y el precio deben ser valores positivos.')
+            return redirect('admin_ingredientes')
+
+        with transaction.atomic():
+            # 2. Registrar la compra en la tabla intermedia (ArticuloInventario_Proveedor)
+            # Se usa una consulta SQL directa con connection.cursor() por si el ORM de Django
+            # no maneja un modelo intermedio sin primary key por defecto o para asegurar 
+            # la atomicidad y el orden.
+            with connection.cursor() as cursor:
+                sql_insert_compra = """
+                    INSERT INTO "ArticuloInventario_Proveedor" 
+                    ("idArticuloInventario_id", "idProveedor_id", "precioCompra", "cantidadCompra", "fechaCompra")
+                    VALUES (%s, %s, %s, %s, %s);
+                """
+                cursor.execute(sql_insert_compra, [
+                    id_ingrediente, 
+                    id_proveedor, 
+                    precio_compra, 
+                    cantidad_comprada,
+                    fecha_compra
+                ])
+
+            # 3. Actualizar el stock del ArticuloInventario
+            ArticuloInventario.objects.filter(pk=id_ingrediente).update(
+                stock=F('stock') + cantidad_comprada
+            )
+
+        messages.success(request, f'Compra registrada. Stock de {cantidad_comprada} agregado.')
+
+    except (ValueError, TypeError):
+        messages.error(request, 'Error: El ID, precio y la cantidad deben ser números válidos.')
+    except Exception as e:
+        # Esto captura errores de base de datos o si no existen los IDs
+        messages.error(request, f'Error al procesar la compra: Verifique el ingrediente y proveedor. ({e})')
+
+    return redirect('admin_ingredientes')
 
 @never_cache
 @user_passes_test(es_rol("Administrador"))
@@ -770,7 +852,7 @@ def admin_platillos(request):
     # --- Lógica GET y Contexto ---
     # La categoría ahora se obtiene de la base de datos
     context = {
-        'platillos': ProductoMenu.objects.all().order_by('categoria', 'nombre'),
+        'platillos': ProductoMenu.objects.all().order_by('idProductoMenu'),
         'categorias': ProductoMenu.objects.values_list('categoria', flat=True).distinct(), # Obtener categorías existentes
         'articulos_inventario': articulos_inventario, # Pasar la lista de artículos para el selector
         'rol_empleado': request.user.rol,
@@ -831,7 +913,7 @@ def admin_proveedores(request):
         return redirect('admin_proveedores')
 
     context = {
-        'proveedores': Proveedor.objects.all().order_by('nombre')
+        'proveedores': Proveedor.objects.all().order_by('idProveedor')
     }
     return render(request, 'He_Sai_Mali/admin_proveedores.html', context)
 
