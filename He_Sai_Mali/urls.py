@@ -30,5 +30,7 @@ urlpatterns = [
     path('proveedores/', views.admin_proveedores, name='admin_proveedores'),
     # ----------------------------------------
 
+    path('mesas/', views.admin_mesas, name='admin_mesas'),
+
     path('logout/', views.logout_view, name='logout'),
 ]

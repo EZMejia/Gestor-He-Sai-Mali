@@ -9,6 +9,8 @@ from django.views.decorators.cache import never_cache
 from django.views.decorators.http import require_POST
 from django.db.models import F
 
+from django.http import Http404
+
 from .models import *
 
 import re
@@ -166,7 +168,7 @@ def cambiar_estado_platillo(request, pedido_platillo_id):
 
         messages.success(request, f"Estado de {pedido_ProductoMenu.idProductoMenu.nombre} cambiado a '{next_state}'.")
     else:
-        messages.info(request, f"El estado de {pedido_ProductoMenu.idPlatillo.nombre} es '{current_state}', no se puede cambiar.")
+        messages.info(request, f"El estado de {pedido_ProductoMenu.idProductoMenu.nombre} es '{current_state}', no se puede cambiar.")
 
     # Redirigir a la vista principal de pedidos
     return redirect('pedidos')
@@ -210,8 +212,8 @@ def facturar_pedido(request, pedido_id):
                         # Esto es una advertencia, no debe abortar la facturación.
                         messages.warning(request, f"Advertencia: No se pudo liberar la mesa del pedido. Error: {e}")
                 
-                # 3. Actualizar campos finales del Pedido (opcional)
-                # pedido.MetodoPago = 'Efectivo' # Asignar método de pago si es conocido
+                # 3. Actualizar campos finales del Pedido
+                # pedido.MetodoPago = 'Efectivo'
                 # pedido.save()
 
                 messages.success(request, f"Pedido N°{pedido.idPedido} facturado exitosamente. Todos los platillos están en estado 'Facturado'.")
@@ -398,7 +400,7 @@ def vista_registrarpedido(request, pedido_id=None):
         tipo_cliente = request.POST.get('tipo_cliente') # 'persona' o 'empresa'
         identificacion_cliente = request.POST.get('identificacion_cliente')
 
-        # NUEVO: Obtener la selección de la mesa del "combobox"
+        
         id_mesa_seleccionada = request.POST.get('mesa') 
         
         if not nombre_cliente:
@@ -470,7 +472,7 @@ def vista_registrarpedido(request, pedido_id=None):
                             VALUES (%s, %s, %s, NOW() AT TIME ZONE 'CST', %s)
                             RETURNING "idPedido";
                         """
-                        # NOTA: Python mapea None a NULL en la ejecución de SQL si mesa_id_para_sql es None
+                        
                         cursor.execute(sql_insert_pedido, [cliente_a_usar_id, mesa_id_para_sql, 0.00, 'Pendiente'])
                         id_pedido_a_usar = cursor.fetchone()[0]
                         
@@ -629,7 +631,7 @@ def platillo_listo(request, pedido_platillo_id):
     Marca un platillo específico dentro de un pedido como 'Listo'.
     """
     try:
-        # **USO DE CURSOR PARA SELECT Y UPDATE**
+        # USO DE CURSOR PARA SELECT Y UPDATE
         with connection.cursor() as cursor:
             # 1. Verificar si existe y está en estado 'Registrado'
             sql_select = """
@@ -876,7 +878,7 @@ def toggle_disponibilidad_platillo(request, platillo_id):
             platillo.save()
             
             estado = "Disponible" if platillo.disponible else "No Disponible"
-            messages.success(request, f'Estado de "{platillo.nombre}" cambiado a: **{estado}**.')
+            messages.success(request, f'Estado de "{platillo.nombre}" cambiado a: {estado}.')
         
         except ProductoMenu.DoesNotExist:
             messages.error(request, f'Error: Platillo con ID {platillo_id} no encontrado.')
@@ -916,6 +918,94 @@ def admin_proveedores(request):
         'proveedores': Proveedor.objects.all().order_by('idProveedor')
     }
     return render(request, 'He_Sai_Mali/admin_proveedores.html', context)
+
+@never_cache
+@user_passes_test(es_rol("Administrador"))
+@login_required
+def admin_mesas(request):
+    
+    # Contexto base para el renderizado
+    context = {
+        'mesas': Mesa.objects.all().order_by('idMesa'),
+        'user': request.user,
+        'mesa_seleccionada': None, # Usado para precargar el formulario de edición
+    }
+    
+    if request.method == 'POST':
+        # 1. Obtener datos del formulario
+        id_mesa_str = request.POST.get('idMesa', '').strip()
+        capacidad_str = request.POST.get('capacidad', '').strip()
+        ocupada_str = request.POST.get('ocupada') # 'on' o None
+        action = request.POST.get('action') # 'add', 'edit', 'delete'
+
+        # 2. Validar y Convertir datos básicos
+        try:
+            ocupada = ocupada_str == 'on'
+            id_mesa = int(id_mesa_str) if id_mesa_str.isdigit() and id_mesa_str else None
+            capacidad = int(capacidad_str) if capacidad_str.isdigit() and capacidad_str else None
+            
+        except ValueError:
+            messages.error(request, "Error de datos: El ID y la Capacidad deben ser números enteros válidos.")
+            return redirect('admin_mesas')
+
+        # --- Lógica de Agregar (action='add') ---
+        if action == 'add':
+            if not capacidad or capacidad <= 0:
+                messages.error(request, "Debe especificar una capacidad válida para agregar una mesa.")
+                return redirect('admin_mesas')
+                
+            try:
+                Mesa.objects.create(
+                    capacidad=capacidad,
+                    ocupada=ocupada
+                )
+                messages.success(request, f"Mesa de capacidad {capacidad} agregada exitosamente.")
+            except Exception as e:
+                messages.error(request, f"Error al agregar la mesa: {e}")
+
+        # --- Lógica de Editar (action='edit') ---
+        elif action == 'edit' and id_mesa is not None:
+            if not capacidad or capacidad <= 0:
+                messages.error(request, "Debe especificar una capacidad válida para editar la mesa.")
+                return redirect('admin_mesas')
+                
+            try:
+                mesa = get_object_or_404(Mesa, idMesa=id_mesa)
+                mesa.capacidad = capacidad
+                mesa.ocupada = ocupada
+                mesa.save()
+                messages.success(request, f"Mesa {id_mesa} actualizada exitosamente.")
+            except Http404:
+                messages.error(request, f"Error: No se encontró la Mesa con ID {id_mesa} para editar.")
+            except Exception as e:
+                messages.error(request, f"Error al editar la Mesa {id_mesa}: {e}")
+
+        # --- Lógica de Eliminar (action='delete') ---
+        elif action == 'delete' and id_mesa is not None:
+            try:
+                mesa = get_object_or_404(Mesa, idMesa=id_mesa)
+                mesa.delete()
+                messages.success(request, f"Mesa {id_mesa} eliminada permanentemente.")
+            except Http404:
+                messages.error(request, f"Error: No se encontró la Mesa con ID {id_mesa} para eliminar.")
+            except Exception as e:
+                messages.error(request, f"Error al eliminar la Mesa {id_mesa}: {e}")
+        
+        else:
+            messages.error(request, "Acción no válida o falta el ID de Mesa para la operación solicitada.")
+
+        return redirect('admin_mesas')
+
+    # --- Lógica de Listado (GET) ---
+
+    id_mesa_param = request.GET.get('id', '').strip()
+    if id_mesa_param and id_mesa_param.isdigit():
+        try:
+            context['mesa_seleccionada'] = Mesa.objects.get(idMesa=int(id_mesa_param))
+        except Mesa.DoesNotExist:
+            messages.warning(request, f"La Mesa con ID {id_mesa_param} no existe.")
+            
+    return render(request, 'He_Sai_Mali/mesas.html', context)
 
 @login_required
 def logout_view(request):

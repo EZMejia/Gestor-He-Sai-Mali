@@ -1,0 +1,526 @@
+{% load static %}
+{% load custom_filters %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <link rel="icon" type="image/png" href="{% static 'He_Sai_Mali/logo.png' %}">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin - Mesas</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <style>
+        :root {
+            /* Colores del diseño de la APP (He Sai Mali) */
+            --primary-color: #981a28; /* Rojo Oscuro (Header) */
+            --secondary-color: #f3bb67; /* Amarillo (Acento/Border) */
+            --sidebar-bg: #2b3543; /* Gris Oscuro (Usado para el menú lateral) */
+            --bg-page: #2c3038; /* Gris Oscuro (Fondo de página) */
+            --text-light: #ffffff;
+            --text-accent: #dacfb7;
+            --menu-item-hover: #b12131; /* Rojo más claro para hover */
+            /* Colores de estado de Mesas */
+            --mesa-ocupada: #dc3545; /* Rojo para Ocupada */
+            --mesa-libre: #28a745; /* Verde para Libre */
+            --btn-delete: #dc3545;
+            --btn-edit: #007bff;
+        }
+
+        /* Estilos generales y del body */
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Roboto', sans-serif;
+        }
+
+        body {
+            display: flex;
+            min-height: 100vh;
+            background-color: var(--bg-page);
+            overflow-x: hidden;
+        }
+
+        /* Estilos del Contenedor Principal (Layout) */
+        #app {
+            display: flex;
+            flex-direction: column;
+            width: 100%;
+        }
+
+        /* ---------------------------------------------------- */
+        /* --- Barra de Navegación Superior (HEADER ADAPTADO) --- */
+        /* ---------------------------------------------------- */
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            height: 60px;
+            background-color: var(--primary-color);
+            border-bottom: 8px solid var(--secondary-color);
+            color: var(--text-light);
+            padding: 30px 15px;
+            box-shadow: 0 6px 10px black;
+            position: fixed;
+            width: 100%;
+            z-index: 1000;
+        }
+
+        .header-left {
+            display: flex;
+            align-items: center;
+        }
+
+        .header-menu-toggle {
+            font-size: 24px;
+            margin-right: 15px;
+            cursor: pointer;
+            padding: 5px;
+        }
+
+        .header-title {
+            display: flex;
+            align-items: center;
+            font-size: 1.2em;
+            font-weight: bold;
+            color: var(--text-accent);
+        }
+        .header-title img {
+            height: 40px;
+            margin-right: 10px;
+        }
+
+        .header-right {
+            display: flex;
+            align-items: center;
+        }
+        
+        /* Contenedor de Información de Usuario */
+        .user-info-badge {
+            display: flex;
+            align-items: center;
+            text-align: left;
+            color: var(--text-accent);
+            font-size: 15px;
+            background-color: var(--menu-item-hover);
+            border-radius: 5px;
+            padding: 5px 10px;
+            margin-right: 15px;
+        }
+
+        .user-info-badge img {
+            height: 30px;
+            margin-left: 10px;
+            filter: 
+                brightness(0)
+                invert(1)
+                sepia(0.9)
+                saturate(1000%)
+                hue-rotate(300deg)
+                brightness(1.0)
+                contrast(0.9);
+        }
+
+        /* ---------------------------------------------------- */
+        /* --- Menú Lateral (SIDEBAR ADAPTADO) --- */
+        /* ---------------------------------------------------- */
+        .sidebar {
+            width: 250px;
+            background-color: var(--sidebar-bg); /* Opcional: usar primary-color si se desea mantener el rojo */
+            color: var(--text-light);
+            padding-top: 68px; /* Espacio para el header fijo + borde */
+            position: fixed;
+            top: 0;
+            left: 0;
+            height: 100%;
+            transform: translateX(0); 
+            transition: transform 0.3s ease;
+            z-index: 900;
+        }
+
+        .sidebar.collapsed {
+            transform: translateX(-250px);
+        }
+
+        /* Contenido del usuario dentro del sidebar */
+        .sidebar-user-info {
+            padding: 15px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            display: flex;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .sidebar-user-avatar {
+            width: 45px;
+            height: 45px;
+            border-radius: 50%;
+            background-color: white;
+            overflow: hidden;
+            margin-right: 10px;
+            position: relative;
+        }
+        .sidebar-user-avatar img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        
+        .sidebar-user-details p {
+            margin: 0;
+        }
+
+        .sidebar-user-name {
+            font-weight: bold;
+            font-size: 1.1em;
+        }
+
+        .sidebar-user-status {
+            font-size: 0.85em;
+            color: var(--online-green);
+            display: flex;
+            align-items: center;
+        }
+
+        .sidebar-user-status .fa-circle {
+            font-size: 0.6em;
+            margin-right: 5px;
+        }
+
+        /* Menú de navegación (Adaptado de 'dropdown-content') */
+        .sidebar-nav {
+            padding: 10px 0;
+        }
+        .sidebar-nav-item {
+            display: flex;
+            align-items: center;
+            padding: 12px 15px;
+            text-decoration: none;
+            color: var(--text-light);
+            transition: background-color 0.2s;
+            cursor: pointer;
+        }
+
+        .sidebar-nav-item:hover,
+        .sidebar-nav-item.active {
+            background-color: var(--menu-item-hover);
+            border-left: 5px solid var(--secondary-color);
+            padding-left: 10px;
+        }
+
+        .sidebar-nav-item i {
+            width: 25px;
+            margin-right: 10px;
+            font-size: 1.1em;
+        }
+        
+        .sidebar-menu-title {
+            padding: 10px 15px 5px;
+            font-size: 0.9em;
+            text-transform: uppercase;
+            color: var(--text-accent);
+            font-weight: bold;
+        }
+        /*------------------------*/
+
+        /* MAIN CONTENT */
+        .main-content {
+            flex-grow: 1; padding-top: 68px; background-color: var(--bg-page);
+            margin-left: 250px; transition: margin-left 0.3s ease;
+        }
+        .main-content.sidebar-collapsed { margin-left: 0; }
+        .container_admin {
+            margin: 20px auto; background-color: white; box-shadow: 0 0 50px 10px rgba(0, 0, 0, 0.3);
+            width: 90%; max-width: 1200px; border-radius: 5px; padding: 20px;
+        }
+
+        /* CUSTOM COMPONENTS */
+        .card-custom { border: 1px solid #ddd; border-radius: 5px; margin-bottom: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .card-header-custom {
+            background-color: var(--primary-color); color: white; padding: 10px 15px;
+            border-bottom: 3px solid var(--secondary-color); border-radius: 5px 5px 0 0; font-weight: bold;
+        }
+        .card-body-custom { padding: 15px; }
+
+        /* Form Controls */
+        .form-label-custom { display: block; margin-bottom: 5px; font-weight: bold; }
+        .form-control-custom { width: 100%; padding: 8px; margin-bottom: 10px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; }
+        .form-check-custom { display: flex; align-items: center; margin-top: 10px; }
+        .form-check-custom input[type="checkbox"] { width: 20px; height: 20px; margin-right: 10px; }
+
+        /* Buttons */
+        .btn-custom-edit, .btn-custom-delete, .btn-custom-action {
+            text-decoration: none; color: white; padding: 8px 15px; border-radius: 5px;
+            transition: background-color 0.2s; border: none; cursor: pointer; font-size: 0.9em;
+            margin-right: 5px;
+        }
+        .btn-custom-action { background-color: #38761d; } /* Agregar */
+        .btn-custom-action:hover { background-color: #274e13; }
+        .btn-custom-edit { background-color: var(--btn-edit); }
+        .btn-custom-edit:hover { background-color: #0056b3; }
+        .btn-custom-delete { background-color: var(--btn-delete); }
+        .btn-custom-delete:hover { background-color: #b02a37; }
+
+        /* Table and Status */
+        .table-custom { width: 100%; border-collapse: collapse; }
+        .table-custom thead tr { background-color: #dacfb7; border-bottom: 2px solid #981a28; }
+        .table-custom th, .table-custom td { padding: 10px; text-align: left; border-bottom: 1px solid #eee; }
+        .status-badge { padding: 4px 8px; border-radius: 5px; font-weight: bold; color: white; }
+        .status-libre { background-color: var(--mesa-libre); }
+        .status-ocupada { background-color: var(--mesa-ocupada); }
+        
+        /* Messages */
+        .alert-custom { padding: 10px; margin-bottom: 15px; border-radius: 5px; color: white; font-weight: bold; }
+        .alert-error { background-color: #f44336; }
+        .alert-success { background-color: #4CAF50; }
+        .alert-info { background-color: #ff9800; color: black; }
+
+        /* Footer and Media Queries (manteniendo el diseño original) */
+        footer {
+            display: flex; color: var(--text-accent); background-color: #41444a;
+            justify-content: center; align-items: center; padding: 15px 0;
+            border-top: 5px solid #2c3038; border-bottom: 10px solid #2c3038; font-size: 14px;
+            width: 100%; margin-top: 0;
+        }
+        @media (max-width: 768px) {
+            .sidebar { transform: translateX(-250px); }
+            .sidebar.show { transform: translateX(0); }
+            .main-content { margin-left: 0; }
+            .overlay { display: none; }
+            .overlay.show { display: block; }
+        }
+    </style>
+</head>
+<body>
+    <div id="app">
+        <header class="header">
+            <div class="header-left">
+                <i class="fas fa-bars header-menu-toggle" onclick="toggleSidebar()"></i>
+                <h1 class="header-title">
+                    <img src="{% static 'He_Sai_Mali/logo.png' %}" alt="Logo He Sai Mali">
+                    ADMINISTRACIÓN DE MESAS
+                </h1>
+            </div>
+            
+            <div class="header-right">
+                <div class="user-info-badge">
+                    {{ user.nombre }} {{ user.apellido }}
+                    <img src="{% static 'He_Sai_Mali/avatar.png' %}" alt="Avatar">
+                </div>
+            </div>
+        </header>
+
+        <aside class="sidebar" id="sidebar">
+            <nav class="sidebar-nav">
+                <div class="sidebar-user-info">
+                    <div class="sidebar-user-avatar">
+                        <img src="{% static 'He_Sai_Mali/avatar.png' %}" alt="Avatar">
+                        <span class="online-status"></span>
+                    </div>
+                    <div class="sidebar-user-details">
+                        <p class="sidebar-user-name">{{ user.nombre }} {{ user.apellido }}</p>
+                        <p class="sidebar-user-role">{{ user.rol }}</p>
+                    </div>
+                </div>
+
+                <a href="{% url 'logout' %}" class="sidebar-nav-item"><i class="fas fa-sign-out-alt"></i><span>Cerrar sesión</span></a>
+
+                {% if user.rol == "Administrador"%}
+                    <div class="sidebar-menu-title">VISTAS</div>
+                    <a href="{% url 'pedidos' %}" class="sidebar-nav-item"><i class="fas fa-clipboard-list"></i><span>Pedidos</span></a>
+                    <a href="{% url 'cocina' %}" class="sidebar-nav-item"><i class="fas fa-utensils"></i><span>Cocina</span></a>
+                    <a href="{% url 'admin_ingredientes' %}" class="sidebar-nav-item"><i class="fas fa-leaf"></i><span>Ingredientes</span></a>
+                    <a href="{% url 'admin_platillos' %}" class="sidebar-nav-item"><i class="fas fa-hamburger"></i><span>Platillos</span></a>
+                    <a href="{% url 'admin_proveedores' %}" class="sidebar-nav-item"><i class="fas fa-truck-loading"></i><span>Proveedores</span></a>
+                    <a href="#" class="sidebar-nav-item active"><i class="fas fa-chair"></i><span>Mesas</span></a>
+                    <a href="{% url 'registro' %}" class="sidebar-nav-item"><i class="fas fa-user-plus"></i><span>Registrar Usuario</span></a>
+                    <a href="{% url 'registrarpedido' %}" class="sidebar-nav-item"><i class="fas fa-file-invoice"></i><span>Nuevo Pedido</span></a>
+                {% endif %}
+            </nav>
+        </aside>
+
+        <main class="main-content" id="main-content">
+            <div class="container_admin">
+                
+                <h1 style="color: #981a28; margin-bottom: 20px;">Administración de Mesas</h1>
+
+                {% if messages %}
+                    {% for message in messages %}
+                        <div class="alert-custom alert-{{ message.tags }}" role="alert">
+                            {{ message }}
+                        </div>
+                    {% endfor %}
+                {% endif %}
+                
+                <div class="card-custom">
+                    <div class="card-header-custom" id="form-header">
+                        Mesa (Agregar / Editar / Eliminar)
+                    </div>
+                    <div class="card-body-custom">
+                        <form method="post" action="{% url 'admin_mesas' %}" id="mesa-form" onsubmit="return validateForm()">
+                            {% csrf_token %}
+                            <input type="hidden" name="action" id="action-field" value="add"> 
+
+                            <div style="display: flex; gap: 15px; flex-wrap: wrap; align-items: flex-start;">
+                                
+                                <div style="flex: 1 1 20%;">
+                                    <label for="idMesa" class="form-label-custom">ID Mesa</label>
+                                    <input type="number" class="form-control-custom" id="idMesa" name="idMesa" placeholder="Nuevo / ID a editar"
+                                        value="{% if mesa_seleccionada %}{{ mesa_seleccionada.idMesa }}{% endif %}" min="1">
+                                    <small style="color: gray;">(Dejar vacío para Agregar)</small>
+                                </div>
+
+                                <div style="flex: 1 1 20%;">
+                                    <label for="capacidad" class="form-label-custom">Capacidad (Asientos)</label>
+                                    <input type="number" class="form-control-custom" id="capacidad" name="capacidad" min="1" 
+                                        value="{% if mesa_seleccionada %}{{ mesa_seleccionada.capacidad }}{% endif %}" required>
+                                </div>
+                                
+                                <div style="flex: 1 1 20%; align-self: center;">
+                                    <label class="form-label-custom" style="visibility: hidden;">.</label> <div class="form-check-custom">
+                                        <input type="checkbox" id="ocupada" name="ocupada" 
+                                            {% if mesa_seleccionada and mesa_seleccionada.ocupada %}checked{% endif %}>
+                                        <label for="ocupada" class="form-label-custom" style="margin-bottom: 0;">Ocupada</label>
+                                    </div>
+                                </div>
+                                
+                                <div style="flex: 1 1 30%; display: flex; align-items: flex-end; gap: 5px;">
+                                    <button type="submit" class="btn-custom-action" onclick="setFormAction('add')" title="Agrega una nueva mesa">
+                                        <i class="fas fa-plus"></i> Agregar
+                                    </button>
+                                    <button type="submit" class="btn-custom-edit" onclick="setFormAction('edit')" title="Edita la mesa con el ID especificado">
+                                        <i class="fas fa-edit"></i> Editar
+                                    </button>
+                                    <button type="submit" class="btn-custom-delete" onclick="setFormAction('delete')" title="Elimina la mesa con el ID especificado">
+                                        <i class="fas fa-trash-alt"></i> Eliminar
+                                    </button>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+                <h2 style="color: #981a28; margin-top: 30px; border-bottom: 2px solid #dacfb7; padding-bottom: 5px; margin-bottom: 10px;">Listado de Mesas</h2>
+                
+                <div class="card-custom" style="padding: 0; overflow-x: auto;">
+                    <table class="table-custom">
+                        <thead>
+                            <tr>
+                                <th>ID Mesa</th>
+                                <th>Capacidad</th>
+                                <th>Estado</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for mesa in mesas %} 
+                            <tr>
+                                <td>{{ mesa.idMesa }}</td>
+                                <td>{{ mesa.capacidad }} personas</td>
+                                <td>
+                                    {% if mesa.ocupada %}
+                                        <span class="status-badge status-ocupada">Ocupada</span>
+                                    {% else %}
+                                        <span class="status-badge status-libre">Libre</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="4" style="text-align: center;">No hay mesas registradas.</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            
+            <footer>
+                <p>2025 Hê Sãî Mãlî.</p>
+            </footer>
+        </main>
+
+        <div class="overlay" id="overlay" onclick="toggleSidebar()"></div>
+    </div>
+
+    <script>
+        // Función para manejar el colapso del sidebar (del código original)
+        function toggleSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            const mainContent = document.getElementById('main-content');
+            const overlay = document.getElementById('overlay');
+            const isMobile = window.innerWidth <= 768;
+
+            if (isMobile) {
+                sidebar.classList.toggle('show');
+                overlay.classList.toggle('show');
+                document.body.style.overflow = sidebar.classList.contains('show') ? 'hidden' : 'auto';
+            } else {
+                sidebar.classList.toggle('collapsed');
+                mainContent.classList.toggle('sidebar-collapsed');
+            }
+        }
+        
+        let currentAction = 'add';
+
+        // 1. Establece la acción del formulario al hacer clic en un botón
+        function setFormAction(action) {
+            currentAction = action;
+            document.getElementById('action-field').value = action;
+        }
+        
+        // 2. Valida la acción antes de enviar el formulario
+        function validateForm() {
+            const idMesa = document.getElementById('idMesa').value.trim();
+            const capacidad = document.getElementById('capacidad').value.trim();
+
+            if (currentAction === 'add') {
+                if (idMesa) {
+                    alert('Para agregar una mesa, el campo "ID Mesa" debe estar vacío.');
+                    return false;
+                }
+                if (!capacidad || parseInt(capacidad) <= 0) {
+                    alert('La capacidad es obligatoria y debe ser mayor a 0 para agregar.');
+                    return false;
+                }
+                return true;
+            }
+
+            if (currentAction === 'edit' || currentAction === 'delete') {
+                if (!idMesa) {
+                    alert(`Debe ingresar el ID de la Mesa a ${currentAction === 'edit' ? 'editar' : 'eliminar'}.`);
+                    return false;
+                }
+            }
+
+            if (currentAction === 'edit') {
+                if (!capacidad || parseInt(capacidad) <= 0) {
+                    alert('La capacidad es obligatoria y debe ser mayor a 0 para editar.');
+                    return false;
+                }
+            }
+            
+            if (currentAction === 'delete') {
+                return confirm(`¿Estás seguro de que deseas eliminar la Mesa ${idMesa}?`);
+            }
+            
+            return true;
+        }
+
+        // 3. Carga los datos de una mesa de la tabla al formulario
+        function cargarMesa(id, capacidad, ocupada) {
+            document.getElementById('idMesa').value = id;
+            document.getElementById('capacidad').value = capacidad;
+            document.getElementById('ocupada').checked = ocupada;
+            
+            // Establece la acción de edición por defecto al cargar los datos
+            document.getElementById('action-field').value = 'edit';
+            currentAction = 'edit';
+
+            // Muestra un mensaje al usuario
+            alert(`Datos de la Mesa ${id} cargados para edición. Modifique los campos y haga clic en "Editar".`);
+            
+            // Mueve el scroll al formulario
+            document.getElementById('form-header').scrollIntoView({ behavior: 'smooth' });
+        }
+    </script>
+    </body>
+</html>
