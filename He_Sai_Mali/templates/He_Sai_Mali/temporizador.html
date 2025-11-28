@@ -1,0 +1,248 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Temporizador - Mesa #{{ mesa_id }}</title>
+    
+    <style>
+        :root {
+            /* Colores del diseño de la APP (He Sai Mali) */
+            --primary-color: #981a28; /* Rojo Oscuro (Header) */
+            --secondary-color: #f3bb67; /* Amarillo (Acento/Border) */
+            --sidebar-bg: #2b3543; /* Gris Oscuro (Usado para el menú lateral) */
+            --bg-page: #2c3038; /* Gris Oscuro (Fondo de página) */
+            --text-light: #ffffff;
+            --text-accent: #dacfb7;
+            --menu-item-hover: #b12131; /* Rojo más claro para hover */
+        }
+
+        /* Estilos generales y del body */
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Roboto', sans-serif;
+        }
+
+        body {
+            display: flex;
+            min-height: 100vh;
+        }
+
+        /* Estilos del Contenedor Principal (Layout) */
+        #app {
+            display: flex;
+            flex-direction: column;
+            width: 100%;
+        }
+
+        #app::before {
+            content: '';
+            position: fixed; /* Ocupa toda la ventana y se mantiene fijo */
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            
+            /* Aplicamos la imagen de fondo y el filtro aquí */
+            background-image: url("{% static 'He_Sai_Mali/fondo.png' %}");
+            background-position: center bottom;
+            background-size: cover;
+            background-attachment: fixed;
+            
+            /* APLICACIÓN DEL FILTRO SOLO A LA IMAGEN DE FONDO */
+            filter: grayscale(100%) brightness(110%); 
+            
+            z-index: -1; /* Manda la imagen al fondo, detrás de todo el contenido */
+        }
+        
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            height: 60px;
+            background-color: var(--primary-color);
+            border-bottom: 8px solid var(--secondary-color);
+            color: var(--text-light);
+            padding: 30px 15px;
+            box-shadow: 0 6px 10px black;
+            position: fixed;
+            width: 100%;
+            z-index: 1000;
+        }
+
+        .header-title {
+            display: flex;
+            align-items: center;
+            font-size: 1.2em;
+            font-weight: bold;
+            color: var(--text-accent);
+        }
+        .header-title img {
+            height: 40px;
+            margin-right: 10px;
+        }
+
+        /* Estilos generales del contenedor */
+        .timer-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            padding: 50px;
+            font-family: 'Roboto', sans-serif;
+        }
+
+        /* Contenedor del SVG (Círculo) */
+        .circular-progress-bar {
+            position: relative;
+            width: 300px;
+            height: 300px;
+            margin: 20px;
+        }
+
+        /* SVG Base y Barra de Progreso */
+        .circular-progress-bar svg {
+            width: 100%;
+            height: 100%;
+            transform: rotate(-90deg); /* Inicia la barra desde arriba */
+        }
+
+        .circle-bg {
+            fill: none;
+            stroke: #eee; /* Color de fondo del círculo */
+            stroke-width: 10;
+        }
+
+        .circle-progress {
+            fill: none;
+            stroke: green; /* Color de la barra de progreso (cambia por JS) */
+            stroke-width: 10;
+            stroke-linecap: round;
+            /* La animación de la barra se controla por el atributo stroke-dashoffset */
+            transition: stroke-dashoffset 1s linear; 
+        }
+
+        /* Texto del temporizador en el centro */
+        .timer-text {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 3.5em;
+            font-weight: bold;
+            color: var(--secondary-color);
+        }
+        
+        /* Mensajes */
+        .message {
+            margin-top: 20px;
+            font-size: 1.2em;
+        }
+    </style>
+</head>
+<body>
+    <div id="app">
+        <header class="header">
+                <h1 class="header-title">
+                    <img src="{% static 'He_Sai_Mali/logo.png' %}" alt="Logo He Sai Mali">
+                    Mesa #{{ mesa_id }}
+                </h1>
+            </header>
+        <div class="timer-container" style="margin-top: 30px;">
+            <div class="message">
+                {% if has_active_pedido %}
+                    <p>Tiempo restante para el servicio del pedido.</p>
+                {% else %}
+                    <p style="color: white;">Esperando nuevo pedido confirmado.</p>
+                {% endif %}
+            </div>
+            
+            <div class="circular-progress-bar">
+                <svg viewBox="0 0 100 100">
+                    <circle class="circle-bg" cx="50" cy="50" r="45"></circle>
+                    <circle class="circle-progress" id="progress-circle" cx="50" cy="50" r="45"></circle>
+                </svg>
+                
+                <div class="timer-text" id="timer-display">00:00</div>
+            </div>
+
+        </div>
+    </div>
+
+    <script>
+        // --- Variables inyectadas por Django ---
+        let remainingSeconds = {{ remaining_seconds }}; // Tiempo actual restante
+        const totalSeconds = {{ tiempo_total_segundos }}; // Tiempo total del temporizador (180)
+        const progressCircle = document.getElementById('progress-circle');
+        const timerDisplay = document.getElementById('timer-display');
+
+        // Constantes para el cálculo del círculo
+        const radius = 45;
+        const circumference = 2 * Math.PI * radius;
+        progressCircle.style.strokeDasharray = `${circumference} ${circumference}`;
+
+        function formatTime(totalSecs) {
+            const minutes = Math.floor(totalSecs / 60);
+            const seconds = totalSecs % 60;
+            
+            const displayMinutes = String(minutes).padStart(2, '0');
+            const displaySeconds = String(seconds).padStart(2, '0');
+            
+            return `${displayMinutes}:${displaySeconds}`;
+        }
+
+        function setProgress(percent) {
+            // Calcula cuánto del círculo debe estar vacío (el progreso se resta)
+            const offset = circumference - (percent / 100) * circumference;
+            progressCircle.style.strokeDashoffset = offset;
+        }
+
+        function updateTimer() {
+            if (remainingSeconds <= 0) {
+                timerDisplay.textContent = "00:00";
+                clearInterval(timerInterval);
+                setProgress(0);
+                progressCircle.style.stroke = 'red';
+                return;
+            }
+
+            // 1. Cálculo del porcentaje
+            const percentRemaining = (remainingSeconds / totalSeconds) * 100;
+
+            // 2. Actualizar el círculo y el color
+            setProgress(percentRemaining);
+            
+            if (remainingSeconds <= 30) {
+                progressCircle.style.stroke = 'orange'; // Últimos 30 segundos
+            } else if (remainingSeconds > 30) {
+                progressCircle.style.stroke = 'green'; // Más de 30 segundos
+            }
+
+            // 3. Actualizar el texto
+            timerDisplay.textContent = formatTime(remainingSeconds);
+            
+            // 4. Reducir el contador
+            remainingSeconds--;
+        }
+
+        // --- Ejecución ---
+        if (remainingSeconds > 0) {
+            // Inicializar el display inmediatamente
+            updateTimer(); 
+
+            // Iniciar el intervalo de actualización (cada 1 segundo)
+            const timerInterval = setInterval(updateTimer, 1000);
+        } else {
+            // Si no hay pedido activo o el tiempo restante es 0, mostrar 0 y rojo.
+            timerDisplay.textContent = "00:00";
+            progressCircle.style.stroke = 'red';
+            setProgress(0);
+        }
+
+    </script>
+</body>
+</html>

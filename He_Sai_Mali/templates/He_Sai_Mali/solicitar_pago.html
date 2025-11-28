@@ -1,0 +1,35 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Seleccionar Pago</title>
+    </head>
+<body>
+    <div style="max-width: 400px; margin: 50px auto; padding: 20px; border: 1px solid #ccc;">
+        <h2>Método de Pago para Pedido N°{{ pedido.idPedido }}</h2>
+        <h3>Monto Total: ${{ monto_total|floatformat:2 }}</h3>
+        
+        {% if messages %}
+            <ul class="messages">
+                {% for message in messages %}
+                    <li style="color: red;">{{ message }}</li>
+                {% endfor %}
+            </ul>
+        {% endif %}
+
+        <form method="POST" action="{% url 'facturar_pedido' pedido.idPedido %}">
+            {% csrf_token %}
+            <label for="metodo_pago">Seleccione el Método de Pago:</label>
+            <select id="metodo_pago" name="metodo_pago" required style="width: 100%; padding: 10px; margin: 10px 0;">
+                <option value="">-- Seleccione --</option>
+                {% for metodo in metodos %}
+                <option value="{{ metodo }}">{{ metodo }}</option>
+                {% endfor %}
+            </select>
+            <button type="submit" style="background-color: #3c78d8; color: white; padding: 10px 15px; border: none; cursor: pointer;">Generar Factura</button>
+            <a href="{% url 'pedidos' %}" style="margin-left: 10px;">Cancelar</a>
+        </form>
+    </div>
+</body>
+</html>

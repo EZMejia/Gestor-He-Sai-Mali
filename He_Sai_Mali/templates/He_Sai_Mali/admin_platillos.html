@@ -181,6 +181,13 @@
             margin-right: 5px;
         }
 
+        .linea {
+            margin: 10px 0 0 0;
+            border: none;
+            height: 1px;
+            background-color: rgba(255, 255, 255, 0.1);
+        }
+
         /* Menú de navegación (Adaptado de 'dropdown-content') */
         .sidebar-nav {
             padding: 10px 0;
@@ -385,6 +392,20 @@
             background-color: #b12131;
         }
 
+        .btn-custom-danger {
+            background-color: #f44336; /* Rojo */
+            color: white;
+            padding: 10px 15px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: background-color 0.2s;
+        }
+
+        .btn-custom-danger:hover {
+            background-color: #d32f2f;
+        }
         /* ---------------------------------------------------- */
         /* --- FOOTER ADAPTADO --- */
         /* ---------------------------------------------------- */
@@ -482,41 +503,54 @@
                     <span>Cerrar sesión</span>
                 </a>
 
+                <hr class="linea">
 
                 {% if user.rol == "Administrador"%}
-                    <div class="sidebar-menu-title">VISTAS</div>
+                    <div class="sidebar-menu-title">PEDIDOS Y FACTURACIÓN</div>
                     <a href="{% url 'pedidos' %}" class="sidebar-nav-item">
                         <i class="fas fa-clipboard-list"></i>
                         <span>Pedidos</span>
-                    </a>
-                    <a href="{% url 'cocina' %}" class="sidebar-nav-item">
-                        <i class="fas fa-utensils"></i>
-                        <span>Cocina</span>
-                    </a>
-                    <a href="{% url 'admin_ingredientes' %}" class="sidebar-nav-item">
-                        <i class="fas fa-leaf"></i>
-                        <span>Ingredientes</span>
-                    </a>
-                    <a href="#" class="sidebar-nav-item active">
-                        <i class="fas fa-hamburger"></i>
-                        <span>Platillos</span>
-                    </a>
-                    <a href="{% url 'admin_proveedores' %}" class="sidebar-nav-item">
-                        <i class="fas fa-truck-loading"></i>
-                        <span>Proveedores</span>
-                    </a>
-                    <a href="{% url 'admin_mesas' %}" class="sidebar-nav-item">
-                        <i class="fas fa-chair"></i>
-                        <span>Mesas</span>
-                    </a>
-                    <a href="{% url 'registro' %}" class="sidebar-nav-item">
-                        <i class="fas fa-user-plus"></i>
-                        <span>Registrar Usuario</span>
                     </a>
                     <a href="{% url 'registrarpedido' %}" class="sidebar-nav-item">
                         <i class="fas fa-file-invoice"></i>
                         <span>Nuevo Pedido</span>
                     </a>
+
+                    <hr class="linea">
+                    <div class="sidebar-menu-title">UTILIDADES DE COCINA</div>
+                    <a href="{% url 'cocina' %}" class="sidebar-nav-item">
+                        <i class="fas fa-utensils"></i>
+                        <span>Cocina</span>
+                    </a>
+                    <a href="#" class="sidebar-nav-item active">
+                        <i class="fas fa-hamburger"></i>
+                        <span>Platillos</span>
+                    </a>
+
+                    <hr class="linea">
+                    <div class="sidebar-menu-title">ADMINISTRACIÓN DE LOCAL</div>
+
+                    <a href="{% url 'admin_mesas' %}" class="sidebar-nav-item">
+                        <i class="fas fa-chair"></i>
+                        <span>Mesas</span>
+                    </a>
+                    <a href="{% url 'admin_ingredientes' %}" class="sidebar-nav-item">
+                        <i class="fas fa-leaf"></i>
+                        <span>Ingredientes</span>
+                    </a>
+                    <a href="{% url 'admin_proveedores' %}" class="sidebar-nav-item">
+                        <i class="fas fa-truck-loading"></i>
+                        <span>Proveedores</span>
+                    </a>
+                    <a href="{% url 'admin_dashboard' %}" class="sidebar-nav-item">
+                        <i class="fas fa-chart-line"></i>
+                        <span>Dashboard</span>
+                    </a>
+                    <a href="{% url 'registro' %}" class="sidebar-nav-item">
+                        <i class="fas fa-user-plus"></i>
+                        <span>Registrar Usuario</span>
+                    </a>
+                    
                 {% endif %}
             </nav>
         </aside>
@@ -547,7 +581,7 @@
                                 </div>
                                 <div style="flex: 1 1 20%;">
                                     <label for="precio" class="form-label-custom">Precio (C$)</label>
-                                    <input type="number" step="0.01" class="form-control-custom" id="precio" name="precio" min="0" required>
+                                    <input type="number" step="1" class="form-control-custom" id="precio" name="precio" min="0" required>
                                 </div>
                                 <div style="flex: 1 1 25%;">
                                     <label for="categoria" class="form-label-custom">Categoría</label>
@@ -560,8 +594,8 @@
                                 </div>
 
                                 <div style="flex: 1 1 100%;">
-                                    <label for="receta" class="form-label-custom">Receta / Descripción</label>
-                                    <textarea class="form-control-custom" id="receta" name="receta" rows="2" required></textarea>
+                                    <label for="tiempoPreparacion" class="form-label-custom">Tiempo de preparación (segundos)</label>
+                                    <input type="number" step="10" class="form-control-custom" id="tiempoPreparacion" name="tiempoPreparacion" min="0" required>
                                 </div>
 
                                 <div style="flex: 1 1 100%; border-top: 1px dashed #ccc; padding-top: 15px;">
@@ -592,8 +626,9 @@
                                 <th>Categoría</th>
                                 <th>Nombre</th>
                                 <th>Precio</th>
-                                <th>Descripción</th>
+                                <th>Tiempo de preparación</th>
                                 <th>Disponibilidad</th>
+                                <th></th>
                             </tr>
                         </thead>
                         <tbody>
@@ -603,13 +638,22 @@
                                 <td>{{ platillo.categoria|default:"N/A" }}</td>
                                 <td>{{ platillo.nombre }}</td>
                                 <td>C$ {{ platillo.precio|floatformat:2 }}</td>
-                                <td>{{ platillo.receta|default:"N/A" }}</td>
+                                <td>{{ platillo.tiempoPreparacion }}</td>
                                 <td>
                                     <form method="post" action="{% url 'toggle_disponibilidad_platillo' platillo.idProductoMenu %}" style="margin: 0;">
                                         {% csrf_token %}
                                         <button type="submit" 
                                                 class="btn-toggle-disponible {% if platillo.disponible %}btn-disponible-true{% else %}btn-disponible-false{% endif %}">
                                             {% if platillo.disponible %}Disponible{% else %}No Disponible{% endif %}
+                                        </button>
+                                    </form>
+                                </td>
+                                <td>
+                                    <form action="{% url 'eliminar_platillo' platillo.idProductoMenu %}" method="POST" style="display: inline;" 
+                                        onsubmit="return confirm('¿Está seguro de que desea eliminar el platillo {{ platillo.nombre }} (ID: {{ platillo.idProductoMenu }})? Esta acción no se puede deshacer y fallará si existen pedidos asociados.');">
+                                        {% csrf_token %}
+                                        <button type="submit" class="btn-custom-danger" style="padding: 5px 10px;">
+                                            <i class="fas fa-trash-alt"></i> Eliminar
                                         </button>
                                     </form>
                                 </td>

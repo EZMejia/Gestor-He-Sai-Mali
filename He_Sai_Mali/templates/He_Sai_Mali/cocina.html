@@ -181,6 +181,13 @@
             margin-right: 5px;
         }
 
+        .linea {
+            margin: 10px 0 0 0;
+            border: none;
+            height: 1px;
+            background-color: rgba(255, 255, 255, 0.1);
+        }
+
         /* Menú de navegación (Adaptado de 'dropdown-content') */
         .sidebar-nav {
             padding: 10px 0;
@@ -254,7 +261,7 @@
             background-color: white;
             box-shadow: 0 0 15px 5px rgba(0, 0, 0, 0.2);
             border-radius: 8px;
-            width: 300px;
+            width: 100%;
             overflow: hidden;
             box-sizing: border-box;
             border: 2px solid #f3bb67; /* Añadido borde para coherencia */
@@ -262,7 +269,7 @@
         
         .pedido-mas-antiguo {
             background-color: #fff3cd; /* Amarillo suave */
-            border-color: #ffc107; /* Borde amarillo más fuerte */
+            border-color: var(--secondary-color); /* Borde amarillo más fuerte */
         }
 
         .card-header {
@@ -275,7 +282,7 @@
             border-bottom: 3px solid #f3bb67;
         }
         .pedido-mas-antiguo .card-header {
-            background-color: #ffc107; /* Amarillo */
+            background-color: var(--secondary-color); /* Amarillo */
             color: black;
             border-bottom-color: #981a28;
         }
@@ -418,41 +425,54 @@
                     <span>Cerrar sesión</span>
                 </a>
 
+                <hr class="linea">
 
                 {% if user.rol == "Administrador"%}
-                    <div class="sidebar-menu-title">VISTAS</div>
+                    <div class="sidebar-menu-title">PEDIDOS Y FACTURACIÓN</div>
                     <a href="{% url 'pedidos' %}" class="sidebar-nav-item">
                         <i class="fas fa-clipboard-list"></i>
                         <span>Pedidos</span>
-                    </a>
-                    <a href="#" class="sidebar-nav-item active">
-                        <i class="fas fa-utensils"></i>
-                        <span>Cocina</span>
-                    </a>
-                    <a href="{% url 'admin_ingredientes' %}" class="sidebar-nav-item">
-                        <i class="fas fa-leaf"></i>
-                        <span>Ingredientes</span>
-                    </a>
-                    <a href="{% url 'admin_platillos' %}" class="sidebar-nav-item">
-                        <i class="fas fa-hamburger"></i>
-                        <span>Platillos</span>
-                    </a>
-                    <a href="{% url 'admin_proveedores' %}" class="sidebar-nav-item">
-                        <i class="fas fa-truck-loading"></i>
-                        <span>Proveedores</span>
-                    </a>
-                    <a href="{% url 'admin_mesas' %}" class="sidebar-nav-item">
-                        <i class="fas fa-chair"></i>
-                        <span>Mesas</span>
-                    </a>
-                    <a href="{% url 'registro' %}" class="sidebar-nav-item">
-                        <i class="fas fa-user-plus"></i>
-                        <span>Registrar Usuario</span>
                     </a>
                     <a href="{% url 'registrarpedido' %}" class="sidebar-nav-item">
                         <i class="fas fa-file-invoice"></i>
                         <span>Nuevo Pedido</span>
                     </a>
+
+                    <hr class="linea">
+                    <div class="sidebar-menu-title">UTILIDADES DE COCINA</div>
+                    <a href="#" class="sidebar-nav-item active">
+                        <i class="fas fa-utensils"></i>
+                        <span>Cocina</span>
+                    </a>
+                    <a href="{% url 'admin_platillos' %}" class="sidebar-nav-item">
+                        <i class="fas fa-hamburger"></i>
+                        <span>Platillos</span>
+                    </a>
+
+                    <hr class="linea">
+                    <div class="sidebar-menu-title">ADMINISTRACIÓN DE LOCAL</div>
+
+                    <a href="{% url 'admin_mesas' %}" class="sidebar-nav-item">
+                        <i class="fas fa-chair"></i>
+                        <span>Mesas</span>
+                    </a>
+                    <a href="{% url 'admin_ingredientes' %}" class="sidebar-nav-item">
+                        <i class="fas fa-leaf"></i>
+                        <span>Ingredientes</span>
+                    </a>
+                    <a href="{% url 'admin_proveedores' %}" class="sidebar-nav-item">
+                        <i class="fas fa-truck-loading"></i>
+                        <span>Proveedores</span>
+                    </a>
+                    <a href="{% url 'admin_dashboard' %}" class="sidebar-nav-item">
+                        <i class="fas fa-chart-line"></i>
+                        <span>Dashboard</span>
+                    </a>
+                    <a href="{% url 'registro' %}" class="sidebar-nav-item">
+                        <i class="fas fa-user-plus"></i>
+                        <span>Registrar Usuario</span>
+                    </a>
+                    
                 {% endif %}
             </nav>
         </aside>

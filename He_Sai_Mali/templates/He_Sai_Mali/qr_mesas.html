@@ -1,0 +1,153 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" type="image/png" href="{% static 'He_Sai_Mali/logo.png' %}">
+    <title>Códigos QR de Mesas (Temporizador)</title>
+    <style>
+        :root {
+            /* Colores del diseño de la APP (He Sai Mali) */
+            --primary-color: #981a28; /* Rojo Oscuro (Header) */
+            --secondary-color: #f3bb67; /* Amarillo (Acento/Border) */
+            --sidebar-bg: #2b3543; /* Gris Oscuro (Usado para el menú lateral) */
+            --bg-page: #2c3038; /* Gris Oscuro (Fondo de página) */
+            --text-light: #ffffff;
+            --text-accent: #dacfb7;
+            --menu-item-hover: #b12131; /* Rojo más claro para hover */
+        }
+
+        /* Estilos generales y del body */
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Roboto', sans-serif;
+        }
+
+        body {
+            display: flex;
+            min-height: 100vh;
+        }
+
+        /* Estilos del Contenedor Principal (Layout) */
+        #app {
+            display: flex;
+            flex-direction: column;
+            width: 100%;
+        }
+
+        #app::before {
+            content: '';
+            position: fixed; /* Ocupa toda la ventana y se mantiene fijo */
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            
+            /* Aplicamos la imagen de fondo y el filtro aquí */
+            background-image: url("{% static 'He_Sai_Mali/fondo.png' %}");
+            background-position: center bottom;
+            background-size: cover;
+            background-attachment: fixed;
+            
+            /* APLICACIÓN DEL FILTRO SOLO A LA IMAGEN DE FONDO */
+            filter: grayscale(100%) brightness(110%); 
+            
+            z-index: -1; /* Manda la imagen al fondo, detrás de todo el contenido */
+        }
+        
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            height: 60px;
+            background-color: var(--primary-color);
+            border-bottom: 8px solid var(--secondary-color);
+            color: var(--text-light);
+            padding: 30px 15px;
+            box-shadow: 0 6px 10px black;
+            position: fixed;
+            width: 100%;
+            z-index: 1000;
+        }
+
+        .header-title {
+            display: flex;
+            align-items: center;
+            font-size: 1.2em;
+            font-weight: bold;
+            color: var(--text-accent);
+        }
+        .header-title img {
+            height: 40px;
+            margin-right: 10px;
+        }
+        
+        .qr-list-container {
+            flex-grow: 1; /* Permite que este contenedor use todo el espacio restante */
+            display: flex;
+            justify-content: center;
+            align-items: center; /* Centra vertical y horizontalmente */
+            padding: 20px;
+            overflow: auto; /* Permite scroll si el contenido es demasiado grande */
+        }
+        
+        /* Contenedor individual del QR (que contiene h2, img, p) */
+        .qr-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            
+            /* Estilos originales */
+            border: 1px solid #ccc; 
+            border-radius: 20px;
+            padding: 15px;
+            text-align: center;
+            
+            /* Colores de texto para contraste */
+            background-color: #3f444d; 
+            color: var(--text-light);
+            border: 2px solid var(--secondary-color);
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+            max-width: 90vw; /* Máximo 90% del ancho de la ventana */
+            
+        }
+
+        /* Estilo para la imagen QR */
+        .qr-image {
+            /* Usamos la altura de la ventana (vh) menos el header y el padding. 
+               Se establece un máximo para que sea grande pero no desborde. */
+            max-height: 80vh; 
+            max-width: 80vw;
+            width: auto !important; /* Anula el width fijo de 200px */
+            height: auto !important; /* Anula el height fijo de 200px */
+            border-radius: 10px;
+            /* Asegura que el tamaño esté limitado por el contenedor */
+            object-fit: contain; 
+        }
+
+    </style>
+</head>
+<body>
+    <div id="app">
+        <header class="header">
+            <h1 class="header-title">
+                <img src="{% static 'He_Sai_Mali/logo.png' %}" alt="Logo He Sai Mali">
+                {% if titulo %}{{ titulo }}{% endif %}
+            </h1>
+        </header>
+        <div class="qr-list-container">
+            <div style="display: flex; flex-wrap: wrap; gap: 20px; justify-content: center;">
+                {% for mesa in mesas %}
+                    <div class="qr-container">
+                        <img src="{{ mesa.qr_data }}" alt="QR Code Mesa {{ mesa.idMesa }}" class="qr-image">
+                        <p style="margin-top: 15px;">Escanea para verificar el estado del platillo.</p>
+                    </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</body>
+</html>

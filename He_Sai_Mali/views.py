@@ -7,9 +7,23 @@ from django.contrib import messages
 from django.contrib.auth.hashers import make_password
 from django.views.decorators.cache import never_cache
 from django.views.decorators.http import require_POST
-from django.db.models import F
+from django.db.models import F, Sum, Count
 
 from django.http import Http404
+
+from datetime import timedelta
+import json
+
+from django.utils import timezone
+from django.urls import reverse
+
+import qrcode
+from io import BytesIO
+import base64
+
+from decimal import Decimal
+
+from django.db.models import ProtectedError
 
 from .models import *
 
@@ -190,40 +204,136 @@ def facturar_pedido(request, pedido_id):
     items_servidos = items_pendientes.filter(estado='Servido').count()
 
     if items_facturables > 0 and items_facturables == items_servidos:
-        try:
-            with transaction.atomic():
-                with connection.cursor() as cursor:
-                    # 2. Actualizar el estado de todos los Pedido_ProductoMenu a 'Facturado'
-                    sql_update_facturar = """
-                        UPDATE "Pedido_ProductoMenu"
-                        SET "estado" = 'Facturado'
-                        WHERE "idPedido_id" = %s AND "estado" IN ('Registrado', 'Listo', 'Servido');
-                    """
-                    cursor.execute(sql_update_facturar, [pedido_id])
-                    
-                if pedido.idMesa:
-                    # El pedido tiene una mesa asignada, procedemos a liberarla.
-                    try:
-                        mesa_a_liberar = pedido.idMesa
-                        mesa_a_liberar.ocupada = False
-                        mesa_a_liberar.save()
-                        messages.info(request, f"Mesa N°{mesa_a_liberar.idMesa} liberada exitosamente.")
-                    except Exception as e:
-                        # Esto es una advertencia, no debe abortar la facturación.
-                        messages.warning(request, f"Advertencia: No se pudo liberar la mesa del pedido. Error: {e}")
-                
-                # 3. Actualizar campos finales del Pedido
-                # pedido.MetodoPago = 'Efectivo'
-                # pedido.save()
+        if request.method == 'POST':
+            metodo_pago = request.POST.get('metodo_pago')
+            if not metodo_pago:
+                messages.error(request, "Debe seleccionar un método de pago.")
+                # Si el POST falla, volvemos a mostrar el formulario.
+                # Se necesita la función calcular_monto_total (ver nota en views.py)
+                return render(request, 'He_Sai_Mali/solicitar_pago.html', {
+                    'pedido': pedido, 
+                    'monto_total': calcular_monto_total(pedido_id),
+                    'metodos': ['Efectivo', 'Tarjeta', 'Transferencia']
+                })
 
-                messages.success(request, f"Pedido N°{pedido.idPedido} facturado exitosamente. Todos los platillos están en estado 'Facturado'.")
+            try:
+                with transaction.atomic():
+                    pedido.metodoPago = metodo_pago
+                    pedido.estadoDePago = 0 # Asegurar que esté pendiente
+                    pedido.save()
                 
-        except Exception as e:
-            messages.error(request, f"Error al facturar el pedido: {e}")
-    elif items_facturables == 0:
-        messages.info(request, "El pedido ya está completamente facturado.")
+                return redirect('mostrar_factura', pedido_id=pedido.idPedido)
+
+            except Exception as e:
+                print(e)
+                messages.error(request, f"Error al registrar el método de pago: {e}")
+                return redirect('pedidos')
+        
+        # 2. Manejo del GET (Mostrar Formulario de Selección de Pago)
+        # Nota: Se debe definir la función auxiliar calcular_monto_total en views.py.
+        return render(request, 'He_Sai_Mali/solicitar_pago.html', {
+            'pedido': pedido, 
+            'monto_total': calcular_monto_total(pedido_id),
+            'metodos': ['Efectivo', 'Tarjeta', 'Transferencia']
+        })
+
+def calcular_monto_total(pedido_id):
+    """Función auxiliar para calcular el monto total de un pedido."""
+    with connection.cursor() as cursor:
+        sql_total = """
+            SELECT SUM(pp."cantidad" * pl."precio") AS "montoTotal"
+            FROM "Pedido" p
+            JOIN "Pedido_ProductoMenu" pp ON pp."idPedido_id" = p."idPedido"
+            JOIN "ProductoMenu" pl ON pl."idProductoMenu" = pp."idProductoMenu_id"
+            WHERE p."idPedido" = %s;
+        """
+        cursor.execute(sql_total, [pedido_id])
+        return cursor.fetchone()[0] or 0.0
+    
+@user_passes_test(es_rol("Mesero"), login_url='login')
+def mostrar_factura(request, pedido_id):
+    """
+    Genera y muestra la factura con los detalles y los botones de 'Cancelar' y 'Pagada'.
+    """
+    pedido = get_object_or_404(Pedido, pk=pedido_id)
+
+    # 1. Obtener el monto total usando la función auxiliar
+    monto_total = calcular_monto_total(pedido_id)
+
+    # 2. Obtener el detalle de los platillos del pedido
+    platillos_pedido = Pedido_ProductoMenu.objects.filter(
+        idPedido=pedido
+    ).select_related('idProductoMenu')
+    
+    TASA_IMPUESTO = Decimal('0.15') # 15% de impuesto (1 + 0.15)
+    monto_total_decimal = Decimal(str(monto_total)) # Asegurar que sea Decimal
+
+    # 3. Cálculos de subtotales e impuestos (ejemplo con 15% de impuesto)
+    if monto_total_decimal:
+        # CORRECCIÓN: Dividir Decimal entre Decimal (o float si TASA_IMPUESTO se dejara en 1.15)
+        subtotal = monto_total_decimal
+        impuesto = monto_total_decimal * TASA_IMPUESTO
     else:
-        messages.error(request, "No se puede facturar. Hay ProductoMenu pendientes (no 'Servido') que aún no están facturados.")
+        subtotal = Decimal('0.00')
+        impuesto = Decimal('0.00')
+    
+    # Obtener datos del cliente (Asumo que el modelo Cliente existe)
+    cliente = pedido.idCliente
+
+    context = {
+        'pedido': pedido,
+        'cliente': cliente,
+        'platillos_pedido': platillos_pedido,
+        'monto_total': monto_total + impuesto,
+        'subtotal': subtotal,
+        'impuesto': impuesto,
+        'estado_pago_texto': 'Pagada' if pedido.estadoDePago == 1 else 'Pendiente'
+    }
+    
+    # Renderizar la plantilla de la factura
+    return render(request, 'He_Sai_Mali/factura.html', context)
+
+@require_POST
+@user_passes_test(es_rol("Mesero"), login_url='login')
+def pagar_factura(request, pedido_id):
+    """
+    Marca la factura como pagada (estadoDePago=1), actualiza el estado de platillos a 'Facturado' y libera la mesa.
+    """
+    pedido = get_object_or_404(Pedido, pk=pedido_id)
+
+    if pedido.estadoDePago == 1:
+        messages.info(request, f"El Pedido N°{pedido.idPedido} ya ha sido marcado como pagado.")
+        return redirect('pedidos')
+
+    try:
+        with transaction.atomic():
+            # 1. Actualizar el estado de pago del Pedido
+            pedido.estadoDePago = 1 # Marcar como pagada
+            pedido.save()
+            
+            # 2. Actualizar el estado de *todos* los Pedido_ProductoMenu a 'Facturado'
+            with connection.cursor() as cursor:
+                sql_update_facturar = """
+                    UPDATE "Pedido_ProductoMenu"
+                    SET "estado" = 'Facturado'
+                    WHERE "idPedido_id" = %s AND "estado" IN ('Registrado', 'Listo', 'Servido');
+                """
+                cursor.execute(sql_update_facturar, [pedido_id])
+                    
+            # 3. Liberar la mesa si hay una asignada
+            if pedido.idMesa:
+                try:
+                    mesa_a_liberar = pedido.idMesa
+                    mesa_a_liberar.ocupada = False
+                    mesa_a_liberar.save()
+                    messages.info(request, f"Mesa N°{mesa_a_liberar.idMesa} liberada exitosamente.")
+                except Exception as e:
+                    messages.warning(request, f"Advertencia: No se pudo liberar la mesa del pedido. Error: {e}")
+
+        messages.success(request, f"Pago registrado exitosamente para el Pedido N°{pedido.idPedido}. Factura completada.")
+        
+    except Exception as e:
+        messages.error(request, f"Error al registrar el pago: {e}")
 
     return redirect('pedidos')
 
@@ -348,7 +458,8 @@ def vista_mesero(request):
         'estado_botones': estado_botones, # Nuevo contexto para los botones
         'rol_empleado': request.user.rol,
         'nombre_mesero': request.user.nombre,
-        'apellido_mesero': request.user.apellido
+        'apellido_mesero': request.user.apellido,
+        'metodos': ['Efectivo', 'Tarjeta', 'Transferencia']
     }
     return render(request, 'He_Sai_Mali/pedidos.html', context)
 
@@ -468,8 +579,8 @@ def vista_registrarpedido(request, pedido_id=None):
                     # C. Crear nuevo Pedido (incluyendo IdMesa_id)
                     with connection.cursor() as cursor:
                         sql_insert_pedido = """
-                            INSERT INTO "Pedido" ("idCliente_id", "idMesa_id", "montoTotal", "fecha", "metodoPago")
-                            VALUES (%s, %s, %s, NOW() AT TIME ZONE 'CST', %s)
+                            INSERT INTO "Pedido" ("idCliente_id", "idMesa_id", "montoTotal", "fecha", "metodoPago","estadoDePago")
+                            VALUES (%s, %s, %s, NOW() AT TIME ZONE 'CST', %s, False)
                             RETURNING "idPedido";
                         """
                         
@@ -548,6 +659,7 @@ def vista_registrarpedido(request, pedido_id=None):
                 return redirect('pedidos')
             
         except Exception as e:
+            messages.error(request, e)
             return redirect('registrarpedido')
     
     # ------------------ PETICIÓN GET (Contexto) ------------------
@@ -784,6 +896,33 @@ def comprar_ingrediente(request):
 
     return redirect('admin_ingredientes')
 
+@login_required
+@user_passes_test(es_rol("Administrador"), login_url='login')
+@require_POST
+def eliminar_ingrediente(request, ingrediente_id):
+    """
+    Vista para eliminar un ArticuloInventario (Ingrediente).
+    """
+    try:
+        # 1. Obtener el ingrediente o lanzar 404 si no existe
+        articulo = get_object_or_404(ArticuloInventario, idArticuloInventario=ingrediente_id)
+        
+        # 2. Intentar eliminar
+        articulo_nombre = articulo.nombre
+        articulo.delete()
+        
+        # 3. Mensaje de éxito
+        messages.success(request, f'El ingrediente "{articulo_nombre}" ha sido eliminado correctamente.')
+
+    except Exception as e:
+        # 4. Mensaje de error (por si hay referencias a este ingrediente, p. ej., en ProductoMenu_ArticuloInventario)
+        # Nota: El on_delete=models.PROTECT en ArticuloInventario_Proveedor o ProductoMenu_ArticuloInventario
+        # podría causar una excepción ProtectedError.
+        messages.error(request, f'Error al intentar eliminar el ingrediente: {e}.')
+
+    # 5. Redirigir de vuelta a la lista de ingredientes
+    return redirect('admin_ingredientes')
+
 @never_cache
 @user_passes_test(es_rol("Administrador"))
 @login_required
@@ -796,14 +935,14 @@ def admin_platillos(request):
     if request.method == 'POST':
         nombre = request.POST.get('nombre', '').strip()
         precio = request.POST.get('precio', 0)
-        receta = request.POST.get('receta', '').strip()
+        tiempoPreparacion = request.POST.get('tiempoPreparacion', '').strip()
         categoria = request.POST.get('categoria', '').strip()
 
         articulos_ids = request.POST.getlist('idArticuloInventario[]')
         cantidades = request.POST.getlist('cantidad_usada[]')
 
-        if not nombre or not precio or not receta:
-            messages.error(request, 'El nombre, precio, categoría y receta son obligatorios.')
+        if not nombre or not precio or not tiempoPreparacion:
+            messages.error(request, 'El nombre, precio, categoría y tiempo de preparacion son obligatorios.')
         elif not articulos_ids:
             messages.error(request, 'Debe seleccionar al menos un artículo de inventario.')
         else:
@@ -815,7 +954,7 @@ def admin_platillos(request):
                     nuevo_platillo = ProductoMenu.objects.create(
                         nombre=nombre,
                         precio=precio,
-                        receta=receta,
+                        tiempoPreparacion=tiempoPreparacion,
                         categoria=categoria # Guardar el campo de categoría
                     )
                     
@@ -887,6 +1026,32 @@ def toggle_disponibilidad_platillo(request, platillo_id):
 
     return redirect('admin_platillos')
 
+@require_POST
+@user_passes_test(es_rol("Administrador"), login_url='login')
+@login_required
+def eliminar_platillo(request, platillo_id):
+    """
+    Elimina un ProductoMenu (platillo) y sus ingredientes relacionados.
+    Si el platillo tiene pedidos asociados, la eliminación es bloqueada por ProtectedError.
+    """
+    platillo = get_object_or_404(ProductoMenu, pk=platillo_id)
+    nombre_platillo = platillo.nombre
+    
+    try:
+        with transaction.atomic():
+            # La eliminación también eliminará automáticamente los registros en 
+            # ProductoMenu_ArticuloInventario debido a models.CASCADE.
+            platillo.delete()
+        
+        messages.success(request, f'El platillo "{nombre_platillo}" ha sido eliminado exitosamente.')
+    
+    except ProtectedError as e:
+        messages.error(request, f'{e},No se puede eliminar el platillo "{nombre_platillo}" porque tiene pedidos asociados. Debe eliminar los pedidos relacionados primero.')
+    except Exception as e:
+        messages.error(request, f'Ocurrió un error inesperado al intentar eliminar el platillo: {e}')
+
+    return redirect('admin_platillos')
+
 @never_cache
 @user_passes_test(es_rol("Administrador"))
 @login_required
@@ -919,6 +1084,34 @@ def admin_proveedores(request):
     }
     return render(request, 'He_Sai_Mali/admin_proveedores.html', context)
 
+@require_POST
+@user_passes_test(es_rol("Administrador"), login_url='login')
+@login_required
+def eliminar_proveedor(request, proveedor_id):
+    """
+    Vista para eliminar un Proveedor.
+    """
+    try:
+        # 1. Obtener el proveedor o lanzar 404 si no existe
+        # Usamos pk para buscar por idProveedor
+        proveedor = get_object_or_404(Proveedor, pk=proveedor_id)
+        
+        # 2. Intentar eliminar
+        proveedor_nombre = proveedor.nombre
+        proveedor.delete()
+        
+        # 3. Mensaje de éxito
+        messages.success(request, f'El proveedor "{proveedor_nombre}" ha sido eliminado correctamente.')
+
+    except Exception as e:
+        # 4. Mensaje de error
+        # El on_delete=models.PROTECT en ArticuloInventario_Proveedor causará una excepción 
+        # si hay ingredientes asociados a este proveedor.
+        messages.error(request, f'Error al intentar eliminar el proveedor: {e}. Asegúrate de que no haya ingredientes asociados a este proveedor.')
+
+    # 5. Redirigir de vuelta a la lista de proveedores
+    return redirect('admin_proveedores')
+
 @never_cache
 @user_passes_test(es_rol("Administrador"))
 @login_required
@@ -935,12 +1128,11 @@ def admin_mesas(request):
         # 1. Obtener datos del formulario
         id_mesa_str = request.POST.get('idMesa', '').strip()
         capacidad_str = request.POST.get('capacidad', '').strip()
-        ocupada_str = request.POST.get('ocupada') # 'on' o None
         action = request.POST.get('action') # 'add', 'edit', 'delete'
 
         # 2. Validar y Convertir datos básicos
         try:
-            ocupada = ocupada_str == 'on'
+            ocupada = False
             id_mesa = int(id_mesa_str) if id_mesa_str.isdigit() and id_mesa_str else None
             capacidad = int(capacidad_str) if capacidad_str.isdigit() and capacidad_str else None
             
@@ -956,6 +1148,7 @@ def admin_mesas(request):
                 
             try:
                 Mesa.objects.create(
+                    idMesa=id_mesa,
                     capacidad=capacidad,
                     ocupada=ocupada
                 )
@@ -1006,6 +1199,162 @@ def admin_mesas(request):
             messages.warning(request, f"La Mesa con ID {id_mesa_param} no existe.")
             
     return render(request, 'He_Sai_Mali/mesas.html', context)
+
+# --- VISTA DE DASHBOARD PARA ADMINISTRADOR (NUEVA) ---
+@login_required
+@user_passes_test(es_rol("Administrador"))
+def admin_dashboard(request):
+    # 1. Lógica de Filtrado por Fecha
+    period = request.GET.get('period', 'month') # 'day', 'week', 'month', 'year'
+    today = timezone.now().date()
+    start_date = None
+
+    if period == 'day':
+        start_date = timezone.make_aware(timezone.datetime(today.year, today.month, today.day))
+        period_display = "Hoy"
+    elif period == 'week':
+        # Inicio de la semana (Lunes)
+        start_date = timezone.make_aware(timezone.datetime(today.year, today.month, today.day)) - timedelta(days=today.weekday())
+        period_display = "Esta Semana"
+    elif period == 'month':
+        # Inicio del mes
+        start_date = timezone.make_aware(timezone.datetime(today.year, today.month, 1))
+        period_display = "Este Mes"
+    elif period == 'year':
+        # Inicio del año
+        start_date = timezone.make_aware(timezone.datetime(today.year, 1, 1))
+        period_display = "Este Año"
+    else: # Por defecto: Mes
+        start_date = timezone.make_aware(timezone.datetime(today.year, today.month, 1))
+        period = 'month'
+        period_display = "Este Mes"
+    
+    # Filtro de fecha y estado 'Facturado' (asumiendo que solo pedidos facturados son ventas)
+    date_filter = {'fecha__gte': start_date, 'estadoDePago': True}
+    
+    # 2. Ventas Realizadas (Total Sales)
+    # Total de ventas en el periodo
+    total_sales_agg = Pedido.objects.filter(**date_filter).aggregate(total=Sum('montoTotal'))
+    total_sales = total_sales_agg['total'] if total_sales_agg['total'] else 0.00
+    
+    # 3. Productos del Menú más Populares (Top 5)
+    # Cuenta la cantidad total de cada producto vendido en el periodo
+    top_products_query = Pedido_ProductoMenu.objects.filter(
+        idPedido__in=Pedido.objects.filter(**date_filter).values_list('idPedido', flat=True)
+    ).values(
+        nombre=F('idProductoMenu__nombre')
+    ).annotate(
+        total_quantity=Sum('cantidad')
+    ).order_by('-total_quantity')[:5]
+
+    top_products_labels = [p['nombre'] for p in top_products_query]
+    # Se convierte a lista de números (float) para ser usado en Chart.js
+    top_products_data = [float(p['total_quantity']) for p in top_products_query]
+    
+    # 4. Mesas más Utilizadas (Top Tables)
+    # Cuenta cuántos pedidos facturados se hicieron en cada mesa
+    top_tables_query = Pedido.objects.filter(**date_filter).values(
+    'idMesa' # Agrupamos por idMesa, la clave en el resultado es 'idMesa'
+    ).annotate(
+        total_orders=Count('idMesa')
+    ).order_by('-total_orders')
+
+    # Accedemos a 'idMesa'
+    top_tables_labels = [f"Mesa {t['idMesa']}" for t in top_tables_query] 
+    top_tables_data = [t['total_orders'] for t in top_tables_query]
+
+    # Conteo de pedidos totales en el periodo
+    total_orders = Pedido.objects.filter(**date_filter).count()
+
+    # Conteo de mesas activas (Mesas existentes)
+    total_mesas = Mesa.objects.count()
+
+    context = {
+        'total_sales': total_sales,
+        'total_orders': total_orders,
+        'total_mesas': total_mesas,
+        'period': period,
+        'period_display': period_display,
+        'top_products_labels': json.dumps(top_products_labels),
+        'top_products_data': json.dumps(top_products_data),
+        'top_tables_labels': json.dumps(top_tables_labels),
+        'top_tables_data': json.dumps(top_tables_data),
+    }
+    return render(request, 'He_Sai_Mali/dashboard.html', context)
+
+def vista_qr_mesas(request, mesa_id):
+    mesa = get_object_or_404(Mesa, idMesa=mesa_id)
+    
+    # 2. Construir la URL que contendrá el QR (la del temporizador)
+    # Se asume que 'temporizador_mesas' es el name de la ruta de destino del QR.
+    url_to_embed = request.build_absolute_uri(reverse('temporizador_mesa', args=[mesa.idMesa]))
+    qr_data = url_to_embed
+    
+    # 3. Generar el código QR y codificar en base64
+    qr_img = qrcode.make(qr_data)
+    buffer = BytesIO()
+    qr_img.save(buffer, format="PNG")
+    qr_base64 = base64.b64encode(buffer.getvalue()).decode('utf-8')
+    
+    # 4. Preparar el contexto para la plantilla (como una lista de 1 elemento)
+    mesa_con_qr = {
+        'idMesa': mesa.idMesa,
+        'nombre': f'Mesa {mesa.idMesa}',
+        'qr_data': f'data:image/png;base64,{qr_base64}',
+    }
+    
+    if request.user.is_authenticated:
+        logout(request)
+
+    # 5. Renderizar la plantilla
+    return render(request, 'He_Sai_Mali/qr_mesas.html', {
+        'mesas': [mesa_con_qr], # Se pasa una lista con un solo elemento para compatibilidad con el template
+        'titulo': f'Código QR Mesa {mesa.idMesa}' # Título dinámico para la plantilla
+    })
+
+# =========================================================
+# Temporizador para una mesa específica
+# =========================================================
+def temporizador_mesa(request, mesa_id):
+    """
+    Calcula el tiempo restante para el último pedido de la mesa 
+    y renderiza la vista del temporizador.
+    """
+    # Se verifica que la mesa exista
+    mesa = get_object_or_404(Mesa, idMesa=mesa_id)
+    
+    # 1. Obtener el pedido más reciente para esta mesa
+    # Filtra por la mesa y ordena por `tiempo_inicio` de forma descendente.
+    latest_pedido = Pedido.objects.filter(
+        idMesa=mesa,
+    ).order_by('idPedido').first()
+
+    remaining_seconds = 0
+    
+    if latest_pedido:
+        # Duración total: Usamos la constante de 3 minutos (180s)
+        # A futuro, podrías usar: latest_pedido.tiempo
+        total_duration_seconds = 180
+        
+        start_time = latest_pedido.fecha
+
+        # Hora en que el temporizador debería terminar
+        end_time = start_time + timedelta(seconds=total_duration_seconds)
+
+        # Cálculo del tiempo restante
+        time_difference = end_time - timezone.localtime(timezone.now()) + timedelta(hours=6)
+
+        # Aseguramos que el tiempo restante no sea negativo
+        remaining_seconds = max(0, int(time_difference.total_seconds()))
+    
+    context = {
+        'mesa_id': mesa_id,
+        'remaining_seconds': remaining_seconds, # El tiempo restante en segundos
+        'has_active_pedido': remaining_seconds > 0,
+        'tiempo_total_segundos': 180 # Útil para mostrar la duración total
+    }
+    
+    return render(request, 'He_Sai_Mali/temporizador.html', context)
 
 @login_required
 def logout_view(request):

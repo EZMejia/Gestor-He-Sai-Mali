@@ -182,6 +182,13 @@
             margin-right: 5px;
         }
 
+        .linea {
+            margin: 10px 0 0 0;
+            border: none;
+            height: 1px;
+            background-color: rgba(255, 255, 255, 0.1);
+        }
+
         /* Menú de navegación (Adaptado de 'dropdown-content') */
         .sidebar-nav {
             padding: 10px 0;
@@ -341,9 +348,9 @@
             padding: 0 20px 20px 0;
             margin-left: 20px;
         }
-        .action-buttons .btn-facturar,
-        .action-buttons .btn-agregar,
-        .action-buttons .btn-eliminar {
+        .btn-facturar,
+        .btn-agregar,
+        .btn-eliminar {
             padding: 8px 15px;
             border-radius: 5px;
             font-size: 14px;
@@ -461,6 +468,61 @@
             margin-bottom: 10px;
             border-radius: 5px;
         }
+
+        .overlay-custom {
+            display: none; /* Inicia oculto */
+            position: fixed; 
+            top: 0; 
+            left: 0; 
+            width: 100%; 
+            height: 100%; 
+            background: rgba(0, 0, 0, 0.5); 
+            z-index: 1000;
+        }
+
+        .modal-card-custom {
+            display: none; /* Inicia oculto */
+            position: fixed; 
+            top: 50%; 
+            left: 50%; 
+            transform: translate(-50%, -50%); 
+            z-index: 1001; 
+            width: 400px; 
+            max-width: 90%; 
+            background-color: white;
+            border-radius: 5px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.5);
+            border: 3px solid var(--secondary-color); /* Color de acento */
+        }
+
+        .modal-header-custom {
+            background-color: var(--primary-color); 
+            color: white; 
+            padding: 15px; 
+            border-bottom: 3px solid var(--secondary-color); 
+            border-radius: 5px 5px 0 0;
+            font-weight: bold;
+            text-align: center;
+            font-size: 1.1em;
+        }
+
+        .modal-content-custom {
+            padding: 20px;
+        }
+
+        .form-label-custom {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        .form-control-custom {
+            width: 100%;
+            padding: 8px;
+            margin-bottom: 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
     </style>
 </head>
 <body>
@@ -502,41 +564,54 @@
                     <span>Cerrar sesión</span>
                 </a>
 
+                <hr class="linea">
 
-                {% if rol_empleado == "Administrador"%}
-                    <div class="sidebar-menu-title">VISTAS</div>
+                {% if user.rol == "Administrador"%}
+                    <div class="sidebar-menu-title">PEDIDOS Y FACTURACIÓN</div>
                     <a href="#" class="sidebar-nav-item active">
                         <i class="fas fa-clipboard-list"></i>
                         <span>Pedidos</span>
-                    </a>
-                    <a href="{% url 'cocina' %}" class="sidebar-nav-item">
-                        <i class="fas fa-utensils"></i>
-                        <span>Cocina</span>
-                    </a>
-                    <a href="{% url 'admin_ingredientes' %}" class="sidebar-nav-item">
-                        <i class="fas fa-leaf"></i>
-                        <span>Ingredientes</span>
-                    </a>
-                    <a href="{% url 'admin_platillos' %}" class="sidebar-nav-item">
-                        <i class="fas fa-hamburger"></i>
-                        <span>Platillos</span>
-                    </a>
-                    <a href="{% url 'admin_proveedores' %}" class="sidebar-nav-item">
-                        <i class="fas fa-truck-loading"></i>
-                        <span>Proveedores</span>
-                    </a>
-                    <a href="{% url 'admin_mesas' %}" class="sidebar-nav-item">
-                        <i class="fas fa-chair"></i>
-                        <span>Mesas</span>
-                    </a>
-                    <a href="{% url 'registro' %}" class="sidebar-nav-item">
-                        <i class="fas fa-user-plus"></i>
-                        <span>Registrar Usuario</span>
                     </a>
                     <a href="{% url 'registrarpedido' %}" class="sidebar-nav-item">
                         <i class="fas fa-file-invoice"></i>
                         <span>Nuevo Pedido</span>
                     </a>
+
+                    <hr class="linea">
+                    <div class="sidebar-menu-title">UTILIDADES DE COCINA</div>
+                    <a href="{% url 'cocina' %}" class="sidebar-nav-item">
+                        <i class="fas fa-utensils"></i>
+                        <span>Cocina</span>
+                    </a>
+                    <a href="{% url 'admin_platillos' %}" class="sidebar-nav-item">
+                        <i class="fas fa-hamburger"></i>
+                        <span>Platillos</span>
+                    </a>
+
+                    <hr class="linea">
+                    <div class="sidebar-menu-title">ADMINISTRACIÓN DE LOCAL</div>
+
+                    <a href="{% url 'admin_mesas' %}" class="sidebar-nav-item">
+                        <i class="fas fa-chair"></i>
+                        <span>Mesas</span>
+                    </a>
+                    <a href="{% url 'admin_ingredientes' %}" class="sidebar-nav-item">
+                        <i class="fas fa-leaf"></i>
+                        <span>Ingredientes</span>
+                    </a>
+                    <a href="{% url 'admin_proveedores' %}" class="sidebar-nav-item">
+                        <i class="fas fa-truck-loading"></i>
+                        <span>Proveedores</span>
+                    </a>
+                    <a href="{% url 'admin_dashboard' %}" class="sidebar-nav-item">
+                        <i class="fas fa-chart-line"></i>
+                        <span>Dashboard</span>
+                    </a>
+                    <a href="{% url 'registro' %}" class="sidebar-nav-item">
+                        <i class="fas fa-user-plus"></i>
+                        <span>Registrar Usuario</span>
+                    </a>
+                    
                 {% endif %}
             </nav>
         </aside>
@@ -552,11 +627,10 @@
                     {% endfor %}
                     </div>
                 {% endif %}
-                
+
                 <div class="mb-4">
                     <a href="{% url 'registrarpedido' %}" class="btn">
-                        <img src="{% static 'He_Sai_Mali/mas.png' %}" class="Mas" alt="ImgMas">
-                        Registrar Nuevo Pedido
+                        <i class="fas fa-plus"></i>&nbsp;Registrar Nuevo Pedido
                     </a>
                 </div>
                 {% if cola_pedidos %}
@@ -605,18 +679,18 @@
                             </div>
 
                             <div class="action-buttons">
-                                <form method="POST" action="{% url 'facturar_pedido' pedido.idPedido %}" style="display:inline;">
-                                    {% csrf_token %}
-                                    <button type="submit" 
-                                            class="btn-facturar" 
-                                            {% if not estado.puede_facturar %}disabled{% endif %}
-                                            title="{% if not estado.puede_facturar %}Todos los platillos deben estar en 'Servido' para facturar.{% else %}Facturar y mover todos los platillos a 'Facturado'.{% endif %}">
-                                        Realizar Factura
-                                    </button>
-                                </form>
+                                <button 
+                                    type="button" 
+                                    class="btn-facturar" 
+                                    onclick="mostrarFormularioPago('{{ pedido.idPedido }}', '{{ pedido.montoTotal|floatformat:2 }}', '{% url 'facturar_pedido' pedido.idPedido %}')"
+                                    {% if not estado_botones|get_item:pedido.idPedido|get_item:'puede_facturar' %}disabled{% endif %} 
+                                    title="{% if not estado_botones|get_item:pedido.idPedido|get_item:'puede_facturar' %}El pedido tiene platillos pendientes de servir.{% else %}Facturar y finalizar el pedido.{% endif %}"
+                                >
+                                    <i class="fas fa-receipt card-icon"></i> Facturar Pedido
+                                </button>
 
-                                <a href="{% url 'registrarpedido_agregar' pedido.idPedido %}" class="btn-agregar">
-                                    ➕ Agregar Platillos
+                                <a href="{% url 'registrarpedido_agregar' pedido.idPedido %}" class="btn-agregar" style="text-align: center;">
+                                    <i class="fas fa-plus"></i> Agregar Platillos
                                 </a>
 
                                 <form method="POST" action="{% url 'eliminar_pedido' pedido.idPedido %}" style="display:inline;" onsubmit="return confirm('¿Está seguro de que desea eliminar el Pedido N°{{ pedido.IdPedido }}? Esta acción es irreversible.');">
@@ -625,7 +699,7 @@
                                             class="btn-eliminar" 
                                             {% if not estado.puede_eliminar %}disabled{% endif %}
                                             title="{% if not estado.puede_eliminar %}Solo se puede eliminar si todos los platillos están en 'Registrado'.{% else %}Eliminar el pedido completamente.{% endif %}">
-                                        Eliminar Pedido
+                                        <i class="fas fa-trash-alt"></i> Eliminar Pedido
                                     </button>
                                 </form>
                             </div>
@@ -638,6 +712,40 @@
                     </div>
                 {% endif %}
             </div>
+            
+            {# INICIO DE MODAL / FORMULARIO FLOTANTE DE PAGO #}
+            <div class="overlay-custom" id="formOverlayPago" onclick="ocultarFormularioPago()"></div>
+
+            <div class="modal-card-custom" id="modalFormularioPago">
+                <div class="modal-header-custom">
+                    <h2 id="modalTitle">Método de Pago</h2>
+                </div>
+                <div class="modal-content-custom">
+                    <h3 id="montoTotalDisplay">Monto Total: </h3>
+                    
+                    {# ¡IMPORTANTE! El action se establecerá por JavaScript #}
+                    <form method="POST" action="" id="formularioPago"> 
+                        {% csrf_token %}
+                        <div class="modal-input-group">
+                            <label for="metodo_pago" class="form-label-custom">Seleccione el Método de Pago:</label>
+                            <select id="metodo_pago" name="metodo_pago" required class="form-control-custom">
+                                <option value="">-- Seleccione --</option>
+                                {% for metodo in metodos %}
+                                    <option value="{{ metodo }}">{{ metodo }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        {# ESTE ES EL BOTÓN QUE DISPARA LA REDIRECCIÓN A FACTURA #}
+                        <div class="action-buttons" style="display: flex;">
+                            <button type="submit" class="btn-facturar" style="flex: 50%;">Confirmar Pago</button> 
+                            <button type="button" class="btn-eliminar" style="flex: 50%;" onclick="ocultarFormularioPago()">Cancelar</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+            {# FIN DE MODAL / FORMULARIO FLOTANTE DE PAGO #}
+
             <footer>
                 <p>2025 Hê Sãî Mãlî.</p>
             </footer>
@@ -667,6 +775,34 @@
                 sidebar.classList.toggle('collapsed');
                 mainContent.classList.toggle('sidebar-collapsed');
             }
+        }
+
+        // --- Funciones para el formulario de Pago (Modal) ---
+        function mostrarFormularioPago(id, total, facturarUrl) {
+            // 1. Mostrar el overlay y el modal
+            document.getElementById('formOverlayPago').style.display = 'block';
+            document.getElementById('modalFormularioPago').style.display = 'block';
+
+            // 2. Llenar los datos dinámicos en el modal
+            document.getElementById('modalTitle').textContent = `Método de Pago para Pedido N°${id}`;
+            document.getElementById('montoTotalDisplay').textContent = `Monto Total: $${parseFloat(total).toFixed(2)} + IVA`;
+            
+            // 3. AJUSTE CLAVE: Establecer la acción del formulario
+            const form = document.getElementById('formularioPago');
+            form.action = facturarUrl; // Esto establece la acción a '/pedidos/facturar/<id>/'
+            
+            // Opcional: Centrar la atención en el selector de método
+            document.getElementById('metodo_pago').focus();
+        }
+
+        function ocultarFormularioPago() {
+            // 1. Ocultar el overlay y el modal
+            document.getElementById('formOverlayPago').style.display = 'none';
+            document.getElementById('modalFormularioPago').style.display = 'none';
+            
+            // 2. Limpiar la acción del formulario y la selección (buena práctica)
+            document.getElementById('formularioPago').action = '';
+            document.getElementById('metodo_pago').value = '';
         }
     </script>
 </body>

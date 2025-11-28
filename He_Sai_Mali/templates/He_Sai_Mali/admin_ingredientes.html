@@ -180,6 +180,13 @@
             margin-right: 5px;
         }
 
+        .linea {
+            margin: 10px 0 0 0;
+            border: none;
+            height: 1px;
+            background-color: rgba(255, 255, 255, 0.1);
+        }
+
         /* Menú de navegación (Adaptado de 'dropdown-content') */
         .sidebar-nav {
             padding: 10px 0;
@@ -489,41 +496,54 @@
                     <span>Cerrar sesión</span>
                 </a>
 
+                <hr class="linea">
 
                 {% if user.rol == "Administrador"%}
-                    <div class="sidebar-menu-title">VISTAS</div>
+                    <div class="sidebar-menu-title">PEDIDOS Y FACTURACIÓN</div>
                     <a href="{% url 'pedidos' %}" class="sidebar-nav-item">
                         <i class="fas fa-clipboard-list"></i>
                         <span>Pedidos</span>
-                    </a>
-                    <a href="{% url 'cocina' %}" class="sidebar-nav-item">
-                        <i class="fas fa-utensils"></i>
-                        <span>Cocina</span>
-                    </a>
-                    <a href="#" class="sidebar-nav-item active">
-                        <i class="fas fa-leaf"></i>
-                        <span>Ingredientes</span>
-                    </a>
-                    <a href="{% url 'admin_platillos' %}" class="sidebar-nav-item">
-                        <i class="fas fa-hamburger"></i>
-                        <span>Platillos</span>
-                    </a>
-                    <a href="{% url 'admin_proveedores' %}" class="sidebar-nav-item">
-                        <i class="fas fa-truck-loading"></i>
-                        <span>Proveedores</span>
-                    </a>
-                    <a href="{% url 'admin_mesas' %}" class="sidebar-nav-item">
-                        <i class="fas fa-chair"></i>
-                        <span>Mesas</span>
-                    </a>
-                    <a href="{% url 'registro' %}" class="sidebar-nav-item">
-                        <i class="fas fa-user-plus"></i>
-                        <span>Registrar Usuario</span>
                     </a>
                     <a href="{% url 'registrarpedido' %}" class="sidebar-nav-item">
                         <i class="fas fa-file-invoice"></i>
                         <span>Nuevo Pedido</span>
                     </a>
+
+                    <hr class="linea">
+                    <div class="sidebar-menu-title">UTILIDADES DE COCINA</div>
+                    <a href="{% url 'cocina' %}" class="sidebar-nav-item">
+                        <i class="fas fa-utensils"></i>
+                        <span>Cocina</span>
+                    </a>
+                    <a href="{% url 'admin_platillos' %}" class="sidebar-nav-item">
+                        <i class="fas fa-hamburger"></i>
+                        <span>Platillos</span>
+                    </a>
+
+                    <hr class="linea">
+                    <div class="sidebar-menu-title">ADMINISTRACIÓN DE LOCAL</div>
+
+                    <a href="{% url 'admin_mesas' %}" class="sidebar-nav-item">
+                        <i class="fas fa-chair"></i>
+                        <span>Mesas</span>
+                    </a>
+                    <a href="#" class="sidebar-nav-item active">
+                        <i class="fas fa-leaf"></i>
+                        <span>Ingredientes</span>
+                    </a>
+                    <a href="{% url 'admin_proveedores' %}" class="sidebar-nav-item">
+                        <i class="fas fa-truck-loading"></i>
+                        <span>Proveedores</span>
+                    </a>
+                    <a href="{% url 'admin_dashboard' %}" class="sidebar-nav-item">
+                        <i class="fas fa-chart-line"></i>
+                        <span>Dashboard</span>
+                    </a>
+                    <a href="{% url 'registro' %}" class="sidebar-nav-item">
+                        <i class="fas fa-user-plus"></i>
+                        <span>Registrar Usuario</span>
+                    </a>
+                    
                 {% endif %}
             </nav>
         </aside>
@@ -620,7 +640,7 @@
                                 <small class="form-text-custom">Opcional. Deja en blanco si no aplica.</small>
                             </div>
                             
-                            <button type="submit" class="btn-custom-success" style="padding: 10px 15px; margin-top: 5px;">Guardar Ingrediente</button>
+                            <button type="submit" class="btn-custom-success" style="padding: 10px 15px; margin-bottom: 30px;">Guardar Ingrediente</button>
                         </form>
                     </div>
                 </div>
@@ -638,6 +658,7 @@
                                 <th>Unidad de Medida</th>
                                 <th>Ubicación</th>
                                 <th></th>
+                                <th></th>
                             </tr>
                         </thead>
                         <tbody>
@@ -652,9 +673,16 @@
                                     <td>{{ articulo.unidad_de_medida }}</td>
                                     <td>{{ articulo.ubicacion|default:"-" }}</td> 
                                     <td>
-                                        <button type="button" class="btn-custom-success" onclick="event.stopPropagation(); mostrarFormularioCompra({{ articulo.idArticuloInventario }}, '{{ articulo.nombre }}', '{{ articulo.unidadDeMedida }}')">
+                                        <button type="button" style="font-weight: bold; padding: 5px 10px;" class="btn-custom-success" onclick="event.stopPropagation(); mostrarFormularioCompra({{ articulo.idArticuloInventario }}, '{{ articulo.nombre }}', '{{ articulo.unidadDeMedida }}')">
                                             Comprar
                                         </button>
+                                    </td>
+                                    <td>
+                                        <form action="{% url 'eliminar_ingrediente' articulo.idArticuloInventario %}" method="POST" style="display: inline;" onsubmit="return confirm('¿Estás seguro de que quieres eliminar {{ ingrediente.nombre }}? Esta acción es irreversible.');">
+                                            {% csrf_token %}
+                                            <button type="submit" class="btn-custom-danger" title="Eliminar Ingrediente" style="font-weight: bold; padding: 5px 10px;">
+                                                <i class="fas fa-trash-alt"></i> Eliminar</button>
+                                        </form>
                                     </td>
                                 </tr>
                             {% empty %}

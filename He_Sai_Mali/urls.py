@@ -14,7 +14,11 @@ urlpatterns = [
 
     # --- Opciones para pedidos Pedidos ---
     path('pedidos/cambiar_estado/<int:pedido_platillo_id>/', views.cambiar_estado_platillo, name='cambiar_estado_platillo'),
+    
     path('pedidos/facturar/<int:pedido_id>/', views.facturar_pedido, name='facturar_pedido'),
+    path('pedidos/factura/<int:pedido_id>/', views.mostrar_factura, name='mostrar_factura'), 
+    path('pedidos/pagar/<int:pedido_id>/', views.pagar_factura, name='pagar_factura'),
+
     path('pedidos/eliminar/<int:pedido_id>/', views.eliminar_pedido, name='eliminar_pedido'),
     # ------------------------------------------
     
@@ -25,12 +29,21 @@ urlpatterns = [
     path('ingredientes/', views.admin_ingredientes, name='admin_ingredientes'),
     path('ingredientes/agregar/', views.agregar_ingrediente, name='agregar_ingrediente'),
     path('ingredientes/comprar/', views.comprar_ingrediente, name='comprar_ingrediente'),
+    path('ingredientes/eliminar/<int:ingrediente_id>/', views.eliminar_ingrediente, name='eliminar_ingrediente'),
     path('platillos/', views.admin_platillos, name='admin_platillos'),
     path('platillos/toggle/<int:platillo_id>/', views.toggle_disponibilidad_platillo, name='toggle_disponibilidad_platillo'),
+    path('platillos/eliminar/<int:platillo_id>/', views.eliminar_platillo, name='eliminar_platillo'),
     path('proveedores/', views.admin_proveedores, name='admin_proveedores'),
+    path('proveedores/eliminar/<int:proveedor_id>/', views.eliminar_proveedor, name='eliminar_proveedor'),
+    path('dashboard/', views.admin_dashboard, name='admin_dashboard'),
     # ----------------------------------------
 
     path('mesas/', views.admin_mesas, name='admin_mesas'),
+
+    path('mesas/qr/<int:mesa_id>', views.vista_qr_mesas, name='qr_mesas'),
+    
+    # Vista del temporizador individual (el destino del código QR).
+    path('temporizador/<int:mesa_id>/', views.temporizador_mesa, name='temporizador_mesa'),
 
     path('logout/', views.logout_view, name='logout'),
 ]

@@ -186,6 +186,13 @@
             margin-right: 5px;
         }
 
+        .linea {
+            margin: 10px 0 0 0;
+            border: none;
+            height: 1px;
+            background-color: rgba(255, 255, 255, 0.1);
+        }
+
         /* Menú de navegación (Adaptado de 'dropdown-content') */
         .sidebar-nav {
             padding: 10px 0;
@@ -318,22 +325,65 @@
                     </div>
                     <div class="sidebar-user-details">
                         <p class="sidebar-user-name">{{ user.nombre }} {{ user.apellido }}</p>
-                        <p class="sidebar-user-role">{{ user.rol }}</p>
+                        <p class="sidebar-user-role">
+                            {{ user.rol }}
+                        </p>
                     </div>
                 </div>
 
-                <a href="{% url 'logout' %}" class="sidebar-nav-item"><i class="fas fa-sign-out-alt"></i><span>Cerrar sesión</span></a>
+                <a href="{% url 'logout' %}" class="sidebar-nav-item">
+                    <i class="fas fa-sign-out-alt"></i>
+                    <span>Cerrar sesión</span>
+                </a>
+
+                <hr class="linea">
 
                 {% if user.rol == "Administrador"%}
-                    <div class="sidebar-menu-title">VISTAS</div>
-                    <a href="{% url 'pedidos' %}" class="sidebar-nav-item"><i class="fas fa-clipboard-list"></i><span>Pedidos</span></a>
-                    <a href="{% url 'cocina' %}" class="sidebar-nav-item"><i class="fas fa-utensils"></i><span>Cocina</span></a>
-                    <a href="{% url 'admin_ingredientes' %}" class="sidebar-nav-item"><i class="fas fa-leaf"></i><span>Ingredientes</span></a>
-                    <a href="{% url 'admin_platillos' %}" class="sidebar-nav-item"><i class="fas fa-hamburger"></i><span>Platillos</span></a>
-                    <a href="{% url 'admin_proveedores' %}" class="sidebar-nav-item"><i class="fas fa-truck-loading"></i><span>Proveedores</span></a>
-                    <a href="#" class="sidebar-nav-item active"><i class="fas fa-chair"></i><span>Mesas</span></a>
-                    <a href="{% url 'registro' %}" class="sidebar-nav-item"><i class="fas fa-user-plus"></i><span>Registrar Usuario</span></a>
-                    <a href="{% url 'registrarpedido' %}" class="sidebar-nav-item"><i class="fas fa-file-invoice"></i><span>Nuevo Pedido</span></a>
+                    <div class="sidebar-menu-title">PEDIDOS Y FACTURACIÓN</div>
+                    <a href="{% url 'pedidos' %}" class="sidebar-nav-item">
+                        <i class="fas fa-clipboard-list"></i>
+                        <span>Pedidos</span>
+                    </a>
+                    <a href="{% url 'registrarpedido' %}" class="sidebar-nav-item">
+                        <i class="fas fa-file-invoice"></i>
+                        <span>Nuevo Pedido</span>
+                    </a>
+
+                    <hr class="linea">
+                    <div class="sidebar-menu-title">UTILIDADES DE COCINA</div>
+                    <a href="{% url 'cocina' %}" class="sidebar-nav-item">
+                        <i class="fas fa-utensils"></i>
+                        <span>Cocina</span>
+                    </a>
+                    <a href="{% url 'admin_platillos' %}" class="sidebar-nav-item">
+                        <i class="fas fa-hamburger"></i>
+                        <span>Platillos</span>
+                    </a>
+
+                    <hr class="linea">
+                    <div class="sidebar-menu-title">ADMINISTRACIÓN DE LOCAL</div>
+
+                    <a href="#" class="sidebar-nav-item active">
+                        <i class="fas fa-chair"></i>
+                        <span>Mesas</span>
+                    </a>
+                    <a href="{% url 'admin_ingredientes' %}" class="sidebar-nav-item">
+                        <i class="fas fa-leaf"></i>
+                        <span>Ingredientes</span>
+                    </a>
+                    <a href="{% url 'admin_proveedores' %}" class="sidebar-nav-item">
+                        <i class="fas fa-truck-loading"></i>
+                        <span>Proveedores</span>
+                    </a>
+                    <a href="{% url 'admin_dashboard' %}" class="sidebar-nav-item">
+                        <i class="fas fa-chart-line"></i>
+                        <span>Dashboard</span>
+                    </a>
+                    <a href="{% url 'registro' %}" class="sidebar-nav-item">
+                        <i class="fas fa-user-plus"></i>
+                        <span>Registrar Usuario</span>
+                    </a>
+                    
                 {% endif %}
             </nav>
         </aside>
@@ -362,28 +412,20 @@
 
                             <div style="display: flex; gap: 15px; flex-wrap: wrap; align-items: flex-start;">
                                 
-                                <div style="flex: 1 1 20%;">
+                                <div style="flex-grow: 1; min-width: 300px;">
                                     <label for="idMesa" class="form-label-custom">ID Mesa</label>
                                     <input type="number" class="form-control-custom" id="idMesa" name="idMesa" placeholder="Nuevo / ID a editar"
                                         value="{% if mesa_seleccionada %}{{ mesa_seleccionada.idMesa }}{% endif %}" min="1">
                                     <small style="color: gray;">(Dejar vacío para Agregar)</small>
                                 </div>
 
-                                <div style="flex: 1 1 20%;">
+                                <div style="flex-grow: 1; min-width: 300px;">
                                     <label for="capacidad" class="form-label-custom">Capacidad (Asientos)</label>
                                     <input type="number" class="form-control-custom" id="capacidad" name="capacidad" min="1" 
                                         value="{% if mesa_seleccionada %}{{ mesa_seleccionada.capacidad }}{% endif %}" required>
                                 </div>
                                 
-                                <div style="flex: 1 1 20%; align-self: center;">
-                                    <label class="form-label-custom" style="visibility: hidden;">.</label> <div class="form-check-custom">
-                                        <input type="checkbox" id="ocupada" name="ocupada" 
-                                            {% if mesa_seleccionada and mesa_seleccionada.ocupada %}checked{% endif %}>
-                                        <label for="ocupada" class="form-label-custom" style="margin-bottom: 0;">Ocupada</label>
-                                    </div>
-                                </div>
-                                
-                                <div style="flex: 1 1 30%; display: flex; align-items: flex-end; gap: 5px;">
+                                <div style="flex-grow: 1; min-width: 400px; display: flex; align-items: center; gap: 5px; margin-top: 24px;">
                                     <button type="submit" class="btn-custom-action" onclick="setFormAction('add')" title="Agrega una nueva mesa">
                                         <i class="fas fa-plus"></i> Agregar
                                     </button>
@@ -408,6 +450,7 @@
                                 <th>ID Mesa</th>
                                 <th>Capacidad</th>
                                 <th>Estado</th>
+                                <th>QR de Mesas</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -421,6 +464,13 @@
                                     {% else %}
                                         <span class="status-badge status-libre">Libre</span>
                                     {% endif %}
+                                </td>
+                                <td>
+                                    <form action="{% url 'qr_mesas' mesa.idMesa %}" method="POST" style="display: inline;" >
+                                        {% csrf_token %}
+                                        <button type="submit" class="btn-custom-action" style="font-weight: bold; padding: 5px 10px;">
+                                            <i class="fas fa-qrcode"></i> Ir al QR</button>
+                                    </form>
                                 </td>
                             </tr>
                             {% empty %}
@@ -473,10 +523,6 @@
             const capacidad = document.getElementById('capacidad').value.trim();
 
             if (currentAction === 'add') {
-                if (idMesa) {
-                    alert('Para agregar una mesa, el campo "ID Mesa" debe estar vacío.');
-                    return false;
-                }
                 if (!capacidad || parseInt(capacidad) <= 0) {
                     alert('La capacidad es obligatoria y debe ser mayor a 0 para agregar.');
                     return false;

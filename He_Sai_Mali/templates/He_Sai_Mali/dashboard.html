@@ -1,13 +1,14 @@
 {% load static %}
-{% load custom_filters %}
 <!DOCTYPE html>
 <html lang="es">
 <head>
     <meta charset="UTF-8">
     <link rel="icon" type="image/png" href="{% static 'He_Sai_Mali/logo.png' %}">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Admin - Proveedores</title>
+    <title>Panel de Control</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <!-- Chart.js CDN para gráficos -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js"></script>
     <style>
         :root {
             /* Colores del diseño de la APP (He Sai Mali) */
@@ -18,6 +19,11 @@
             --text-light: #ffffff;
             --text-accent: #dacfb7;
             --menu-item-hover: #b12131; /* Rojo más claro para hover */
+            /* Colores de estado */
+            --success-color: #28a745;
+            --info-color: #17a2b8;
+            --warning-color: #ffc107;
+            --danger-color: #dc3545;
         }
 
         /* Estilos generales y del body */
@@ -239,126 +245,103 @@
             margin-left: 0;
         }
 
-        /* Estilos principales para el contenido de la administración */
-        .container_admin {
-            display: block;
-            box-sizing: border-box;
-            margin: 20px auto;
-            background-color: white;
-            box-shadow: 0 0 50px 10px rgba(0, 0, 0, 0.3);
-            width: 90%;
-            max-width: 1200px; /* Limite de ancho para la administración */
-            border-radius: 5px;
-            padding: 20px;
-        }
-
-        .card-custom {
-            border: 1px solid #ddd;
-            border-radius: 5px;
+        /* Mensajes (Alertas de Django) */
+        .messages {
+            list-style: none;
+            padding: 0;
             margin-bottom: 20px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        }
-        .card-header-custom {
-            background-color: #981a28; /* Color principal del diseño */
-            color: white;
-            padding: 10px 15px;
-            border-bottom: 3px solid #f3bb67; /* Color de acento */
-            border-radius: 5px 5px 0 0;
-            font-weight: bold;
-        }
-        .card-body-custom {
-            padding: 15px;
         }
 
-        /* Estilos para el botón Guardar */
-        .btn-custom-success {
-            text-decoration: none;
-            color: white;
-            background-color: #38761d;
-            padding: 8px 15px;
-            border-radius: 5px;
-            transition: background-color 0.2s;
-            border: none;
-            cursor: pointer;
-        }
-        .btn-custom-success:hover {
-            background-color: #274e13;
-        }
-        
-        .form-label-custom {
-            display: block;
-            margin-bottom: 5px;
-            font-weight: bold;
-        }
-        .form-control-custom {
-            width: 100%;
-            padding: 8px;
+        .messages li {
+            padding: 10px 15px;
+            border-radius: 8px;
             margin-bottom: 10px;
-            border: 1px solid #ccc;
-            border-radius: 4px;
-            box-sizing: border-box;
-        }
-        textarea.form-control-custom {
-            resize: vertical;
+            font-weight: bold;
         }
 
-        /* Estilos para la tabla */
-        .table-custom {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 0px;
-        }
-        .table-custom thead tr {
-            background-color: #dacfb7; /* Color claro del diseño */
-            border-bottom: 2px solid #981a28;
-        }
-        .table-custom th, .table-custom td {
-            padding: 10px;
-            text-align: left;
-            border-bottom: 1px solid #eee;
-        }
-        .table-custom tbody tr:nth-child(odd) {
-            background-color: #F8F8F8;
-        }
-        .table-custom tbody tr:nth-child(even) {
-            background-color: #EEEEEE;
-        }
-        .table-custom tbody tr:hover {
-            background-color: #e0e0e0;
-        }
+        .messages .error { background-color: var(--danger-color); color: var(--text-light); }
+        .messages .warning { background-color: var(--warning-color); color: #333; }
+        .messages .success { background-color: var(--success-color); color: var(--text-light); }
+        .messages .info { background-color: var(--info-color); color: var(--text-light); }
         
-        /* Estilos de mensajes (adaptados) */
-        .alert-custom {
-            padding: 10px;
+        /* Contenedor de Dashboard */
+        .dashboard-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 20px;
+        }
+
+        .card {
+            background-color: var(--text-light);
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.4);
+            min-width: 0;
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
             margin-bottom: 15px;
-            border-radius: 5px;
-            color: white;
-            font-weight: bold;
+            padding-bottom: 10px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
         }
-        .alert-error { background-color: #f44336; }
-        .alert-success { background-color: #4CAF50; }
-        .alert-info { background-color: #ff9800; color: black; }
+
+        .card h3 {
+            margin: 0;
+            font-size: 1.2rem;
+            color: var(--primary-color);
+        }
+
+        .card-value {
+            font-size: 2.5rem;
+            font-weight: bold;
+            color: black;
+        }
+
+        .card-icon {
+            font-size: 2rem;
+            color: var(--primary-color);
+        }
         
-        .card-custom {
-            border: 1px solid #ddd;
-            border-radius: 5px;
+        /* Filtro de Periodo */
+        .filter-section {
+            display: flex;
+            justify-content: flex-end;
+            align-items: center;
             margin-bottom: 20px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            gap: 10px;
+            padding: 15px;
+            background-color: var(--text-light);
+            border-radius: 8px;
         }
 
-        .btn-custom-danger {
-            background-color: #f44336; /* Rojo */
-            color: white;
-            padding: 10px 15px;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
+        .filter-section label {
             font-weight: bold;
-            transition: background-color 0.2s;
+            color: var(--primary-color);
         }
 
-        .btn-custom-danger:hover {
-            background-color: #d32f2f;
+        .filter-section select {
+            padding: 8px;
+            border-radius: 5px;
+            border: 2px solid var(--secondary-color);
+            background-color: white;
+            color: black;
+            cursor: pointer;
+        }
+
+        /* Sección de Gráficos (Grid de 2x1) */
+        .chart-grid {
+            margin-top: 20px;
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 20px;
+        }
+
+        .contenido {
+            margin: 0 20px;
+            margin-bottom: 10px;
         }
 
         /* ---------------------------------------------------- */
@@ -419,7 +402,7 @@
                 <i class="fas fa-bars header-menu-toggle" onclick="toggleSidebar()"></i>
                 <h1 class="header-title">
                     <img src="{% static 'He_Sai_Mali/logo.png' %}" alt="Logo He Sai Mali">
-                    ADMINISTRACIÓN DE INGREDIENTES
+                    COLA DE PEDIDOS
                 </h1>
             </div>
             
@@ -486,11 +469,11 @@
                         <i class="fas fa-leaf"></i>
                         <span>Ingredientes</span>
                     </a>
-                    <a href="#" class="sidebar-nav-item active">
+                    <a href="{% url 'admin_proveedores' %}" class="sidebar-nav-item">
                         <i class="fas fa-truck-loading"></i>
                         <span>Proveedores</span>
                     </a>
-                    <a href="{% url 'admin_dashboard' %}" class="sidebar-nav-item">
+                    <a href="#" class="sidebar-nav-item active">
                         <i class="fas fa-chart-line"></i>
                         <span>Dashboard</span>
                     </a>
@@ -503,90 +486,102 @@
             </nav>
         </aside>
 
-        <main class="main-content" id="main-content">
-            <div class="container_admin">
-                
-                <h1 style="color: #981a28; margin-bottom: 20px;">Administración de Proveedores</h1>
-
-                {% if messages %}
+        <!-- Contenido Principal -->
+        <main class="main-content" id="main-content">         
+            <div class="contenido">
+                <!-- Mensajes de Django -->
+                <ul class="messages">
                     {% for message in messages %}
-                        <div class="alert-custom alert-{{ message.tags }}" role="alert">
-                            {{ message }}
-                        </div>
+                        <li class="{{ message.tags }}">{{ message }}</li>
                     {% endfor %}
-                {% endif %}
+                </ul>
                 
-                <div class="card-custom">
-                    <div class="card-header-custom">
-                        Agregar Nuevo Proveedor
-                    </div>
-                    <div class="card-body-custom">
-                        <form method="post">
-                            {% csrf_token %}
-                            <div style="display: flex; gap: 15px; flex-wrap: wrap;">
-                                <div style="flex: 1 1 30%;">
-                                    <label for="nombre" class="form-label-custom">Nombre</label>
-                                    <input type="text" class="form-control-custom" id="nombre" name="nombre" required>
-                                </div>
-                                <div style="flex: 1 1 20%;">
-                                    <label for="telefono" class="form-label-custom">Teléfono</label>
-                                    <input type="text" class="form-control-custom" id="telefono" name="telefono">
-                                </div>
-                                <div style="flex: 1 1 30%;">
-                                    <label for="direccion" class="form-label-custom">Dirección</label>
-                                    <input type="text" class="form-control-custom" id="direccion" name="direccion">
-                                </div>
-                                <div style="flex: 1 1 10%; display: flex; align-items: flex-end;">
-                                    <button type="submit" class="btn-custom-success" style="width: 100%;margin-bottom: 12px;">Guardar</button>
-                                </div>
-                            </div>
-                        </form>
-                    </div>
+                <!-- Sección de Filtro de Periodo -->
+                <div class="filter-section">
+                    <form id="filterForm" method="GET" action="{% url 'admin_dashboard' %}">
+                        <label for="period-select">Periodo de Análisis:</label>
+                        <select id="period-select" name="period" onchange="document.getElementById('filterForm').submit()">
+                            <option value="day" {% if period == 'day' %}selected{% endif %}>Hoy</option>
+                            <option value="week" {% if period == 'week' %}selected{% endif %}>Semana</option>
+                            <option value="month" {% if period == 'month' %}selected{% endif %}>Mes</option>
+                            <option value="year" {% if period == 'year' %}selected{% endif %}>Año</option>
+                        </select>
+                    </form>
                 </div>
 
-                <h2 style="color: #981a28; margin-top: 30px; border-bottom: 2px solid #dacfb7; padding-bottom: 5px; margin-bottom: 10px;">Listado de Proveedores</h2>
-                <div class="card-custom" style="padding: 0; overflow-x: auto;">
-                    <table class="table-custom">
-                        <thead>
-                            <tr>
-                                <th>ID</th>
-                                <th>Nombre</th>
-                                <th>Teléfono</th>
-                                <th>Dirección</th>
-                                <th></th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for prov in proveedores %}
-                            <tr>
-                                <td>{{ prov.idProveedor }}</td>
-                                <td>{{ prov.nombre }}</td>
-                                <td>{{ prov.telefono|default:"N/A" }}</td>
-                                <td>{{ prov.direccion|default:"N/A" }}</td>
-                                <td>
-                                    <form action="{% url 'eliminar_proveedor' prov.idProveedor %}" method="POST" style="display: inline;" onsubmit="return confirm('¿Estás seguro de que quieres eliminar al proveedor {{ proveedor.nombre }}?');">
-                                        {% csrf_token %}
-                                        <button type="submit" class="btn-custom-danger" title="Eliminar Proveedor" style="font-weight: bold; padding: 5px 10px;">
-                                            <i class="fas fa-trash"></i> Eliminar
-                                        </button>
-                                    </form>
-                                </td>
-                            </tr>
-                            {% empty %}
-                            <tr>
-                                <td colspan="4" class="text-center-custom">No hay proveedores registrados.</td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
+                <h2 style="color: var(--secondary-color); margin-bottom: 10px ;margin-top: 0; border-bottom: 2px solid var(--primary-color); padding-bottom: 10px;">Métricas Clave: {{ period_display }}</h2>
+
+                <!-- Contenedor de Métricas Clave (Cards) -->
+                <div class="dashboard-container">
+                    <!-- Card 1: Total de Ventas -->
+                    <div class="card" style="border-left: 5px solid var(--success-color);">
+                        <div class="card-header">
+                            <h3>Ventas Totales</h3>
+                            <i class="fas fa-dollar-sign card-icon" style="color: var(--success-color);"></i>
+                        </div>
+                        <div class="card-value">${{ total_sales|floatformat:2 }}</div>
+                        <p style="color: #6c757d; font-size: 0.9rem;">Total facturado en el periodo.</p>
+                    </div>
+
+                    <!-- Card 2: Pedidos Realizados -->
+                    <div class="card" style="border-left: 5px solid var(--info-color);">
+                        <div class="card-header">
+                            <h3>Pedidos Facturados</h3>
+                            <i class="fas fa-receipt card-icon" style="color: var(--info-color);"></i>
+                        </div>
+                        <div class="card-value">{{ total_orders }}</div>
+                        <p style="color: #6c757d; font-size: 0.9rem;">Órdenes completadas y pagadas.</p>
+                    </div>
+
+                    <!-- Card 3: Mesas Totales -->
+                    <div class="card" style="border-left: 5px solid var(--warning-color);">
+                        <div class="card-header">
+                            <h3>Mesas Registradas</h3>
+                            <i class="fas fa-chair card-icon" style="color: var(--warning-color);"></i>
+                        </div>
+                        <div class="card-value">{{ total_mesas }}</div>
+                        <p style="color: #6c757d; font-size: 0.9rem;">Capacidad total del restaurante.</p>
+                    </div>
+                    
+                    <!-- Card 4: Ejemplo de otra métrica (podría ser Platillos Disponibles) -->
+                    <div class="card" style="border-left: 5px solid var(--primary-color);">
+                        <div class="card-header">
+                            <h3>Platillos en el Menú</h3>
+                            <i class="fas fa-list-alt card-icon" style="color: var(--primary-color);"></i>
+                        </div>
+                        <div class="card-value">{{ top_products_labels|length }}</div>
+                        <p style="color: #6c757d; font-size: 0.9rem;">Variedad de productos activos.</p>
+                    </div>
+
                 </div>
-            </div>
-            
+
+                <!-- Sección de Gráficos -->
+                <div class="chart-grid">
+                    
+                    <!-- Gráfico 1: Productos más populares -->
+                    <div class="card">
+                        <div class="card-header">
+                            <h3>Productos más Vendidos</h3>
+                        </div>
+                        <!-- El canvas donde se dibujará el gráfico -->
+                        <canvas id="popularProductsChart"></canvas>
+                    </div>
+
+                    <!-- Gráfico 2: Mesas más utilizadas -->
+                    <div class="card">
+                        <div class="card-header">
+                            <h3>Mesas más Usadas (Órdenes)</h3>
+                        </div>
+                        <canvas id="popularTablesChart"></canvas>
+                    </div>
+
+                </div>
+            </div>   
             <footer>
                 <p>2025 Hê Sãî Mãlî.</p>
             </footer>
         </main>
-
+        
         <div class="overlay" id="overlay" onclick="toggleSidebar()"></div>
     </div>
 
@@ -612,6 +607,108 @@
                 mainContent.classList.toggle('sidebar-collapsed');
             }
         }
+
+        // Datos de Django (se pasan como JSON seguro)
+        const topProductsLabels = JSON.parse('{{ top_products_labels|safe }}');
+        const topProductsData = JSON.parse('{{ top_products_data|safe }}');
+        const topTablesLabels = JSON.parse('{{ top_tables_labels|safe }}');
+        const topTablesData = JSON.parse('{{ top_tables_data|safe }}');
+        
+        // Colores principales de la aplicación
+        const primaryColor = getComputedStyle(document.documentElement).getPropertyValue('--primary-color').trim();
+        const secondaryColor = getComputedStyle(document.documentElement).getPropertyValue('--primary-color').trim();
+        const infoColor = getComputedStyle(document.documentElement).getPropertyValue('--info-color').trim();
+        const dangerColor = getComputedStyle(document.documentElement).getPropertyValue('--danger-color').trim();
+
+        // 1. Gráfico de Productos más Populares (Gráfico de Barras)
+        const ctxProducts = document.getElementById('popularProductsChart').getContext('2d');
+        const popularProductsChart = new Chart(ctxProducts, {
+            type: 'bar',
+            data: {
+                labels: topProductsLabels,
+                datasets: [{
+                    label: 'Cantidad Vendida',
+                    data: topProductsData,
+                    // Usamos colores primarios y un acento
+                    backgroundColor: [primaryColor, secondaryColor, infoColor, dangerColor, '#6c757d'],
+                    borderColor: [primaryColor, secondaryColor, infoColor, dangerColor, '#6c757d'],
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                aspectRatio: 5,
+                maintainAspectRatio: true,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        title: {
+                            display: true,
+                            text: 'Unidades Vendidas',
+                            color: secondaryColor
+                        },
+                        ticks: { color: secondaryColor }
+                    },
+                    x: {
+                        ticks: { color: secondaryColor }
+                    }
+                },
+                plugins: {
+                    legend: {
+                        display: false
+                    },
+                    title: {
+                        display: false,
+                    }
+                }
+            }
+        });
+
+        // 2. Gráfico de Mesas más Utilizadas (Gráfico de Barras Horizontales)
+        const ctxTables = document.getElementById('popularTablesChart').getContext('2d');
+        const popularTablesChart = new Chart(ctxTables, {
+            type: 'bar',
+            data: {
+                labels: topTablesLabels,
+                datasets: [{
+                    label: 'Número de Órdenes',
+                    data: topTablesData,
+                    backgroundColor: infoColor,
+                    borderColor: infoColor,
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                indexAxis: 'y', // Hace el gráfico horizontal
+                responsive: true,
+                aspectRatio: 5,
+                maintainAspectRatio: true,
+                scales: {
+                    x: {
+                        beginAtZero: true,
+                        title: {
+                            display: true,
+                            text: 'Número de Órdenes',
+                            color: secondaryColor
+                        },
+                        ticks: { color: secondaryColor }
+                    },
+                    y: {
+                        ticks: { color: secondaryColor }
+                    }
+                },
+                plugins: {
+                    legend: {
+                        display: false
+                    },
+                    title: {
+                        display: false,
+                    }
+                }
+            }
+        });
+        
+        // Evitar el uso de alert/confirm. No es necesario en este contexto, pero se mantiene la directriz.
     </script>
-    </body>
+</body>
 </html>

@@ -1,0 +1,81 @@
+{% load static %}
+{% load custom_filters %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Factura Pedido N°{{ pedido.idPedido }}</title>
+    <style>
+        /* Estilos básicos de la factura (ajustar a su CSS real) */
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .factura-container { max-width: 600px; margin: 0 auto; border: 1px solid #ccc; padding: 20px; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
+        .header-factura { text-align: center; margin-bottom: 20px; }
+        table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
+        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+        .totales-container { text-align: right; }
+        .totales-container p { margin: 5px 0; }
+        .btn-accion { padding: 10px 15px; border: none; cursor: pointer; color: white; border-radius: 5px; margin-left: 10px; text-decoration: none; }
+        .btn-pagada { background-color: #38761d; font-size: 16px; } /* Verde */
+        .btn-cancelar { background-color: #cc0000; } /* Rojo */
+    </style>
+</head>
+<body>
+    <div class="factura-container">
+        <div class="header-factura">
+            <h2>Hê Sãî Mãlî - Factura</h2>
+            <p><strong>Pedido N°:</strong> {{ pedido.idPedido }}</p>
+            <p><strong>Fecha:</strong> {{ pedido.fecha|date:"d/m/Y H:i" }}</p>
+        </div>
+        
+        <p><strong>Cliente:</strong> {{ cliente.nombre }} {{ cliente.apellido }}</p>
+        {% if cliente.tipoCliente == "empresa" %}
+            <p><strong>RUC:</strong> {{ cliente.identificacion }}</p>
+        {% endif %}
+        <p><strong>Método de Pago:</strong> {{ pedido.metodoPago|default:"N/A" }}</p>
+        <hr>
+        
+        <table>
+            <thead>
+                <tr>
+                    <th>Platillo</th>
+                    <th>Cant.</th>
+                    <th>Precio Unit.</th>
+                    <th>Total</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in platillos_pedido %}
+                <tr>
+                    <td>{{ item.idProductoMenu.nombre }}</td>
+                    <td>{{ item.cantidad }}</td>
+                    <td>${{ item.idProductoMenu.precio|floatformat:2 }}</td>
+                    <td>${{ item.cantidad|mul:item.idProductoMenu.precio|floatformat:2 }}</td> 
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        
+        <div class="totales-container">
+            <p>Subtotal: ${{ subtotal|floatformat:2 }}</p>
+            <p>Impuesto (IVA 15%): ${{ impuesto|floatformat:2 }}</p>
+            <hr>
+            <h3>Total a Pagar: ${{ monto_total|floatformat:2 }}</h3>
+        </div>
+        
+    </div>
+    
+        <div style="text-align: center; margin-top: 20px;">
+            {% if pedido.estadoDePago == 0 %}
+            <a href="{% url 'pedidos' %}" class="btn-accion btn-cancelar">Volver a pedidos</a>
+            
+            <form method="POST" action="{% url 'pagar_factura' pedido.idPedido %}" style="display:inline;">
+                {% csrf_token %}
+                <button type="submit" class="btn-accion btn-pagada">Marcar como pagada</button>
+            </form>
+            {% else %}
+            <p><strong>Factura pagada y cerrada.</strong></p>
+            <a href="{% url 'pedidos' %}" class="btn-accion btn-pagada">Volver a Pedidos</a>
+            {% endif %}
+        </div>
+</body>
+</html>

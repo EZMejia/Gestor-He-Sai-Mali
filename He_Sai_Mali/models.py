@@ -57,9 +57,8 @@ class ProductoMenu(models.Model):
     idProductoMenu = models.AutoField(primary_key=True)
     nombre = models.CharField(max_length=100, unique=True)
     categoria = models.CharField(max_length=20)
-    receta = models.CharField(max_length=1000)
     precio = models.DecimalField(max_digits=10, decimal_places=2)
-
+    tiempoPreparacion = models.IntegerField()
     # Agregado
     disponible = models.BooleanField(default=1)
 
@@ -89,7 +88,7 @@ class Cliente(models.Model):
 
 # 4. Modelo Mesa
 class Mesa(models.Model):
-    idMesa = models.AutoField(primary_key=True)
+    idMesa = models.IntegerField(primary_key=True)
     capacidad = models.IntegerField()
     ocupada = models.BooleanField(default=False)
 
@@ -157,7 +156,7 @@ class Pedido_ProductoMenu(models.Model):
     idPedido = models.ForeignKey(Pedido, on_delete=models.CASCADE, related_name='items')
     
     # FK IdProductoMenu
-    idProductoMenu = models.ForeignKey(ProductoMenu, on_delete=models.PROTECT)
+    idProductoMenu = models.ForeignKey(ProductoMenu, on_delete=models.CASCADE)
     
     # Campo 'Estado'
     ESTADOS = [
@@ -200,7 +199,7 @@ class ProductoMenu_ArticuloInventario(models.Model):
     idProductoMenu_ArticuloInventario = models.AutoField(primary_key=True)
 
     idProductoMenu = models.ForeignKey(ProductoMenu, on_delete=models.CASCADE)
-    idArticuloInventario = models.ForeignKey(ArticuloInventario, on_delete=models.PROTECT)
+    idArticuloInventario = models.ForeignKey(ArticuloInventario, on_delete=models.CASCADE)
     cantidad_usada = models.DecimalField(max_digits=10, decimal_places=2)
 
     def __str__(self):
