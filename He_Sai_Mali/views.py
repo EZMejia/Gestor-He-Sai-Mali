@@ -1327,19 +1327,24 @@ def temporizador_mesa(request, mesa_id):
     # Filtra por la mesa y ordena por `tiempo_inicio` de forma descendente.
     latest_pedido = Pedido.objects.filter(
         idMesa=mesa,
-    ).order_by('idPedido').first()
+    ).order_by('idPedido').last()
 
     remaining_seconds = 0
     
     if latest_pedido:
-        # Duración total: Usamos la constante de 3 minutos (180s)
-        # A futuro, podrías usar: latest_pedido.tiempo
-        total_duration_seconds = 180
+        total_duration_seconds = Pedido_ProductoMenu.objects.filter(
+            idPedido=latest_pedido.idPedido,
+        ).aggregate(
+        # Aplica la función Sum al campo 'tiempo'
+        suma_tiempos=Sum(F('cantidad') * F('idProductoMenu__tiempoPreparacion')),
+        total_quantity=Sum('cantidad')
+        )
         
         start_time = latest_pedido.fecha
 
+        tiempo_total_segundos = int(total_duration_seconds.get('suma_tiempos')/(total_duration_seconds.get('total_quantity') - 1)) + 5*60
         # Hora en que el temporizador debería terminar
-        end_time = start_time + timedelta(seconds=total_duration_seconds)
+        end_time = start_time + timedelta(seconds=tiempo_total_segundos)
 
         # Cálculo del tiempo restante
         time_difference = end_time - timezone.localtime(timezone.now()) + timedelta(hours=6)
@@ -1351,7 +1356,7 @@ def temporizador_mesa(request, mesa_id):
         'mesa_id': mesa_id,
         'remaining_seconds': remaining_seconds, # El tiempo restante en segundos
         'has_active_pedido': remaining_seconds > 0,
-        'tiempo_total_segundos': 180 # Útil para mostrar la duración total
+        'tiempo_total_segundos': tiempo_total_segundos # Útil para mostrar la duración total
     }
     
     return render(request, 'He_Sai_Mali/temporizador.html', context)
