@@ -39,6 +39,7 @@ def main(request):
 
 # Vista para el registro de nuevos empleados
 @never_cache
+@user_passes_test(es_rol("Administrador"), login_url='login')
 def registro(request):
     if request.method == 'POST':
         # --- Obtener datos ---
