@@ -57,11 +57,6 @@ def registro(request):
 
         if contrasena1 != contrasena2:
             errores.append("Las contraseñas no coinciden.")
-        with connection.cursor() as cursor:
-            sql_select_correo = """SELECT COUNT(*) FROM "Empleado" WHERE "correo" = %s"""
-            cursor.execute(sql_select_correo, [correo])
-            if cursor.fetchone()[0] > 0:
-                errores.append("Este correo ya está registrado.")
 
         # --- Generar Usuario ---
         usuario = None
@@ -115,7 +110,19 @@ def registro(request):
             # Si el INSERT fue exitoso
             return redirect('login')
 
-    return render(request, 'He_Sai_Mali/registro.html')
+    correos = list(Empleado.objects.values_list('correo', flat=True))
+    telefonos = list(Empleado.objects.values_list('telefono', flat=True))
+    cedulas = list(Empleado.objects.values_list('cedula', flat=True))
+    usuarios = list(Empleado.objects.values_list('usuario', flat=True))
+    
+    context = {
+        'correos_existentes': correos,
+        'telefonos_existentes': telefonos,
+        'cedulas_existentes': cedulas,
+        'usuarios_existentes': usuarios,
+    }
+
+    return render(request, 'He_Sai_Mali/registro.html', context)
 
 # Vista para el login de los empleados
 @never_cache

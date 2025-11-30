@@ -230,8 +230,8 @@
                 <input type="email" name="correo" id="correo" value="{{ valores.correo }}" placeholder="nombre@dominio.com" required autocomplete="off">
             </p>
             <p>
-                <label>Teléfono (opcional):</label>
-                <input type="text" name="telefono" id="telefono" value="{{ valores.telefono }}" placeholder="00000000" autocomplete="off">
+                <label>Teléfono:</label>
+                <input type="text" name="telefono" id="telefono" value="{{ valores.telefono }}" placeholder="00000000" required autocomplete="off">
             </p>
             <p>
                 <label>Cédula:</label>
@@ -290,6 +290,14 @@
     </form>
 
     <script>
+        // ----------------------------------------------------------------------------------
+        // 1. OBTENCIÓN DE DATOS EXISTENTES DESDE DJANGO
+        // ----------------------------------------------------------------------------------
+        const existingEmails = {{ correos_existentes|safe|default:"[]" }};
+        const existingPhones = {{ telefonos_existentes|safe|default:"[]" }};
+        const existingCedulas = {{ cedulas_existentes|safe|default:"[]" }};
+        const existingUsernames = {{ usuarios_existentes|safe|default:"[]" }}; // NUEVA VARIABLE
+
         // Función para mostrar el paso actual y ocultar los demás
         function showStep(stepNumber) {
             // Ocultar el mensaje de error al cambiar de paso
@@ -301,20 +309,43 @@
             document.getElementById(`step-${stepNumber}`).style.display = 'block';
         }
 
-        // Función para mostrar el error
+        // Función para mostrar el error (corregida para usar innerHTML)
         function displayError(message) {
             const errorDiv = document.getElementById('form-error-message');
-            errorDiv.textContent = message;
+            errorDiv.innerHTML = message; // Se usa innerHTML para renderizar los <br> y permitir mensajes multilínea
             errorDiv.style.display = 'block';
         }
 
-        // Función para generar el nombre de usuario
-        function generateUsername(nombre, apellido, rol) {
+        // ----------------------------------------------------------------------------------
+        // LÓGICA DE GENERACIÓN DE NOMBRE DE USUARIO (MODIFICADA)
+        // ----------------------------------------------------------------------------------
+        // 1. Genera el nombre de usuario base (ej: juanadmHSM)
+        function generateBaseUsername(nombre, apellido, rol) {
             const n = nombre.trim().substring(0, 2).toLowerCase();
             const a = apellido.trim().substring(0, 2).toLowerCase();
             const r = rol.trim(); 
-            return n + a + r + "HSL";
+            return n + a + r + "HSM";
         }
+
+        // 2. Itera y agrega un sufijo numérico si el nombre de usuario ya existe
+        function generateUniqueUsername(nombre, apellido, rol, existingUsernames) {
+            const baseUser = generateBaseUsername(nombre, apellido, rol);
+            let potentialUsername = baseUser;
+            let counter = 1;
+
+            // El primer nombre de usuario (sin número) debe chequearse primero.
+            while (existingUsernames.includes(potentialUsername)) {
+                // Si existe, añade el contador y lo prueba de nuevo en la siguiente iteración
+                potentialUsername = baseUser + counter;
+                counter++;
+            }
+            
+            return potentialUsername;
+        }
+
+        // ----------------------------------------------------------------------------------
+        // LÓGICA DE PASOS
+        // ----------------------------------------------------------------------------------
 
         // Función para ir al siguiente paso, con validación mejorada
         function nextStep(currentStep) {
@@ -347,14 +378,20 @@
             // Si hay campos vacíos, no continuar con validaciones de formato
             if (isValid) {
             
-                // --- 2. Validaciones de formato por Paso (Solo si isValid es true) ---
+                // --- 2. Validaciones de formato y UNICIDAD por Paso ---
                 if (currentStep === 1) {
                     const nombre = document.getElementById('nombre').value;
                     const apellido = document.getElementById('apellido').value;
+                    const rol = document.getElementById('rol').value; // Usar el valor para la validación
                     // Expresión regular para letras (a-z, A-Z), letras acentuadas, ñ, Ñ y espacios
                     const nameRegex = /^[a-zA-Z\u00C0-\u017F\sñÑ]*$/; 
 
-                    if (!nameRegex.test(nombre)) {
+                    if (!rol) {
+                        isValid = false;
+                        errorMessage = "Debes seleccionar un Rol para continuar.";
+                        document.getElementById('rol').classList.add('error-highlight');
+                        if (!firstInvalidInput) firstInvalidInput = document.getElementById('rol');
+                    } else if (!nameRegex.test(nombre)) {
                         isValid = false;
                         errorMessage = "El nombre solo puede contener letras y espacios.";
                         document.getElementById('nombre').classList.add('error-highlight');
@@ -369,6 +406,9 @@
                     const correo = document.getElementById('correo').value.trim();
                     const telefono = document.getElementById('telefono').value.trim();
                     const cedula = document.getElementById('cedula').value.trim();
+                    
+                    // Convertir el teléfono a número para asegurar la comparación de tipo
+                    const telefonoNum = Number(telefono); 
                     
                     // RegEx para formato de correo electrónico estándar
                     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/; 
@@ -390,6 +430,24 @@
                     } else if (!cedulaRegex.test(cedula)) {
                         isValid = false;
                         errorMessage = "El formato de Cédula debe ser 000-000000-0000X.";
+                        document.getElementById('cedula').classList.add('error-highlight');
+                        if (!firstInvalidInput) firstInvalidInput = document.getElementById('cedula');
+                    } 
+                    
+                    // VALIDACIÓN DE UNICIDAD (Existencia en BD)
+                    else if (existingEmails.includes(correo)) {
+                        isValid = false;
+                        errorMessage = "El correo ya está registrado por otro empleado. Por favor, verifica el dato.";
+                        document.getElementById('correo').classList.add('error-highlight');
+                        if (!firstInvalidInput) firstInvalidInput = document.getElementById('correo');
+                    } else if (existingPhones.includes(telefonoNum)) { 
+                        isValid = false;
+                        errorMessage = "El número de teléfono ya está registrado por otro empleado. Por favor, verifica el dato.";
+                        document.getElementById('telefono').classList.add('error-highlight');
+                        if (!firstInvalidInput) firstInvalidInput = document.getElementById('telefono');
+                    } else if (existingCedulas.includes(cedula)) {
+                        isValid = false;
+                        errorMessage = "La cédula ya está registrada por otro empleado. Por favor, verifica el dato.";
                         document.getElementById('cedula').classList.add('error-highlight');
                         if (!firstInvalidInput) firstInvalidInput = document.getElementById('cedula');
                     }
@@ -445,14 +503,13 @@
         function updateSummary() {
             const nombre = document.getElementById('nombre').value;
             const apellido = document.getElementById('apellido').value;
-            // Corregido para obtener el texto del rol seleccionado
             const rolSelect = document.getElementById('rol');
             const rol = rolSelect.options[rolSelect.selectedIndex].text;
             const correo = document.getElementById('correo').value;
             const cedula = document.getElementById('cedula').value;
 
-            // 1. Generar y mostrar el USUARIO
-            const usuario = generateUsername(nombre, apellido, rol);
+            // 1. Generar y mostrar el USUARIO (USA LA NUEVA LÓGICA DE UNICIDAD)
+            const usuario = generateUniqueUsername(nombre, apellido, rol, existingUsernames);
             document.getElementById('summary-usuario').textContent = usuario;
 
             // 2. Mostrar la demás información en el resumen
