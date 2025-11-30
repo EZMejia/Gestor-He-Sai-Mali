@@ -515,6 +515,14 @@
                 
                 <!-- Sección de Filtro de Periodo -->
                 <div class="filter-section">
+                    <a id="generatePdfButton" 
+                    href="{% url 'generate_dashboard_pdf' %}?period={{ period }}" 
+                    target="_blank"
+                    class="btn-accion" 
+                    style="background-color: var(--primary-color); color: white; padding: 8px 15px; border-radius: 5px; text-decoration: none; font-weight: bold;">
+                        <i class="fas fa-file-pdf"></i> Generar PDF
+                    </a>
+
                     <form id="filterForm" method="GET" action="{% url 'admin_dashboard' %}">
                         <label for="period-select">Periodo de Análisis:</label>
                         <select id="period-select" name="period" onchange="document.getElementById('filterForm').submit()">
@@ -536,7 +544,7 @@
                             <h3>Ventas Totales</h3>
                             <i class="fas fa-dollar-sign card-icon" style="color: var(--success-color);"></i>
                         </div>
-                        <div class="card-value">${{ total_sales|floatformat:2 }}</div>
+                        <div class="card-value">C${{ total_sales|floatformat:2 }}</div>
                         <p style="color: #6c757d; font-size: 0.9rem;">Total facturado en el periodo.</p>
                     </div>
 

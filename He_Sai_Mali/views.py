@@ -7,7 +7,7 @@ from django.contrib import messages
 from django.contrib.auth.hashers import make_password
 from django.views.decorators.cache import never_cache
 from django.views.decorators.http import require_POST
-from django.db.models import F, Sum, Count, ProtectedError
+from django.db.models import F, Sum, Count, ProtectedError, FloatField
 from itertools import groupby
 from operator import attrgetter
 from datetime import timedelta
@@ -20,20 +20,24 @@ import base64
 from decimal import Decimal
 import re
 
-from reportlab.pdfgen import canvas
+# Importaciones para generar pdf
+from django.contrib.staticfiles.finders import find
 from reportlab.lib.pagesizes import letter
 from reportlab.lib.units import inch
-from reportlab.lib.styles import getSampleStyleSheet
-from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
+from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, Image
+from reportlab.platypus.flowables import Flowable
 from reportlab.lib import colors
 
+# Estructura de tablas y decoradores
 from .models import *
 from .decorators import *
 
-# Create your views here.
+# Vista principal (Bienvenida)
 def main(request):
     return render(request, 'He_Sai_Mali/main.html')
 
+# Vista para el registro de nuevos empleados
 @never_cache
 def registro(request):
     if request.method == 'POST':
@@ -112,12 +116,15 @@ def registro(request):
 
     return render(request, 'He_Sai_Mali/registro.html')
 
+# Vista para el login de los empleados
 @never_cache
 def login_view(request):
+    # Si ya tenia sesion activa, redirige automaticamente
     if request.user.is_authenticated:
         # El usuario se autentica con la tabla Empleado, su rol se determina
         # al buscarlo en la tabla Empleado
         rol = (request.user.rol or '').strip().lower()
+        # Redirige a una vista principal para cada tipo de empleado
         if rol == "administrador":
             return redirect('admin_dashboard')
         elif rol == "mesero":
@@ -126,16 +133,19 @@ def login_view(request):
             return redirect('cocina')
     
     if request.method == 'POST':
+        # Obtiene los datos
         usuario = request.POST.get('usuario', '').strip()
         contrasena = request.POST.get('contrasena')
 
         if not usuario or not contrasena:
             messages.error(request, 'Usuario y contraseña son obligatorios.')
         else:
+            # Verifica que el usuario sea correcto
             user = authenticate(request, username=usuario, password=contrasena)
             if user is not None:
                 login(request, user)
                 rol = (user.rol or '').strip().lower()
+                # Redirige a una vista principal para cada tipo de empleado
                 if rol == "administrador":
                     return redirect('pedidos')
                 elif rol == "mesero":
@@ -149,12 +159,11 @@ def login_view(request):
 
     return render(request, 'He_Sai_Mali/login.html')
 
-# --- Botones de pedido ---
-
+# Funciones de los botones para la vista de pedidos
 @require_POST
 @user_passes_test(es_rol("Mesero"), login_url='login')
 def cambiar_estado_platillo(request, pedido_platillo_id):
-    """Cambia el estado de un ProductoMenu dentro de un Pedido (Pedido_ProductoMenu)."""
+    # Cambia el estado de un ProductoMenu dentro de un Pedido (Pedido_ProductoMenu)
     # Usamos get_object_or_404 para manejar el caso de ID no encontrado
     pedido_ProductoMenu = get_object_or_404(Pedido_ProductoMenu, pk=pedido_platillo_id)
     
@@ -183,12 +192,9 @@ def cambiar_estado_platillo(request, pedido_platillo_id):
 @require_POST
 @user_passes_test(es_rol("Mesero"), login_url='login')
 def facturar_pedido(request, pedido_id):
-    """
-    Cambia el estado de *todos* los ProductoMenu de un pedido a 'Facturado'
-    solo si todos los ProductoMenu no facturados están en estado 'Servido'.
-    
-    LÓGICA DE MESA IMPLEMENTADA: Libera la mesa si el pedido tiene una asignada.
-    """
+    #Cambia el estado de todos los ProductoMenu de un pedido a 'Facturado' si todos estan en 'Servido'
+    # Libera la mesa si el pedido tiene una asignada
+
     pedido = get_object_or_404(Pedido, pk=pedido_id)
     
     # 1. Contar ProductoMenu pendientes de facturar y sus estados
@@ -199,15 +205,6 @@ def facturar_pedido(request, pedido_id):
     if items_facturables > 0 and items_facturables == items_servidos:
         if request.method == 'POST':
             metodo_pago = request.POST.get('metodo_pago')
-            if not metodo_pago:
-                messages.error(request, "Debe seleccionar un método de pago.")
-                # Si el POST falla, volvemos a mostrar el formulario.
-                # Se necesita la función calcular_monto_total (ver nota en views.py)
-                return render(request, 'He_Sai_Mali/solicitar_pago.html', {
-                    'pedido': pedido, 
-                    'monto_total': calcular_monto_total(pedido_id),
-                    'metodos': ['Efectivo', 'Tarjeta', 'Transferencia']
-                })
 
             try:
                 with transaction.atomic():
@@ -218,12 +215,10 @@ def facturar_pedido(request, pedido_id):
                 return redirect('mostrar_factura', pedido_id=pedido.idPedido)
 
             except Exception as e:
-                print(e)
                 messages.error(request, f"Error al registrar el método de pago: {e}")
                 return redirect('pedidos')
         
         # 2. Manejo del GET (Mostrar Formulario de Selección de Pago)
-        # Nota: Se debe definir la función auxiliar calcular_monto_total en views.py.
         return render(request, 'He_Sai_Mali/solicitar_pago.html', {
             'pedido': pedido, 
             'monto_total': calcular_monto_total(pedido_id),
@@ -231,7 +226,7 @@ def facturar_pedido(request, pedido_id):
         })
 
 def calcular_monto_total(pedido_id):
-    """Función auxiliar para calcular el monto total de un pedido."""
+    # Función auxiliar para calcular el monto total de un pedido.
     with connection.cursor() as cursor:
         sql_total = """
             SELECT SUM(pp."cantidad" * pl."precio") AS "montoTotal"
@@ -246,9 +241,8 @@ def calcular_monto_total(pedido_id):
 @never_cache
 @user_passes_test(es_rol("Mesero"), login_url='login')
 def mostrar_factura(request, pedido_id):
-    """
-    Genera y muestra la factura con los detalles y los botones de 'Cancelar' y 'Pagada'.
-    """
+    # Genera y muestra la factura con los detalles y los botones de 'Cancelar' y 'Pagar'.
+
     pedido = get_object_or_404(Pedido, pk=pedido_id)
 
     # 1. Obtener el monto total usando la función auxiliar
@@ -264,14 +258,14 @@ def mostrar_factura(request, pedido_id):
 
     # 3. Cálculos de subtotales e impuestos (ejemplo con 15% de impuesto)
     if monto_total_decimal:
-        # CORRECCIÓN: Dividir Decimal entre Decimal (o float si TASA_IMPUESTO se dejara en 1.15)
+        # Dividir Decimal entre Decimal
         subtotal = monto_total_decimal
         impuesto = monto_total_decimal * TASA_IMPUESTO
     else:
         subtotal = Decimal('0.00')
         impuesto = Decimal('0.00')
     
-    # Obtener datos del cliente (Asumo que el modelo Cliente existe)
+    # Obtener datos del cliente
     cliente = pedido.idCliente
 
     context = {
@@ -287,13 +281,20 @@ def mostrar_factura(request, pedido_id):
     # Renderizar la plantilla de la factura
     return render(request, 'He_Sai_Mali/factura.html', context)
 
+# Funcion para generar lineas en el PDF
+class Line(Flowable):
+    def __init__(self, width, height=0):
+        Flowable.__init__(self)
+        self.width = width
+        self.height = height
+
+    def draw(self):
+        self.canv.line(0, self.height, self.width, self.height)
+
+
+# Funcion para generar PDF de la factura
 def generar_pdf_factura(pedido_id):
-    """
-    Genera el PDF de la factura para un pedido dado.
-    Retorna un HttpResponse con el contenido del PDF.
-    """
-    
-    # 1. Obtener datos (similar a mostrar_factura)
+    # 1. Obtener datos
     pedido = get_object_or_404(Pedido, pk=pedido_id)
     monto_total_sin_impuesto = calcular_monto_total(pedido_id)
     monto_total_decimal = Decimal(str(monto_total_sin_impuesto))
@@ -302,73 +303,154 @@ def generar_pdf_factura(pedido_id):
     subtotal = monto_total_decimal
     impuesto = monto_total_decimal * TASA_IMPUESTO
     total_con_impuesto = subtotal + impuesto
-    
-    cliente = pedido.idCliente # Asumo que el cliente está asociado
-    
-    platillos_pedido = Pedido_ProductoMenu.objects.filter(
-        idPedido=pedido
-    ).select_related('idProductoMenu')
+    cliente = pedido.idCliente 
+    platillos_pedido = Pedido_ProductoMenu.objects.filter(idPedido=pedido).select_related('idProductoMenu')
     
     # --- Configuración del PDF ---
     response = HttpResponse(content_type='application/pdf')
     filename = f"factura_pedido_{pedido_id}.pdf"
     response['Content-Disposition'] = f'attachment; filename="{filename}"'
 
+    # Se usa el margen por defecto de SimpleDocTemplate (1 inch)
     doc = SimpleDocTemplate(response, pagesize=letter)
     story = []
     styles = getSampleStyleSheet()
+    
+    # Estilos Personalizados
+    style_center_h1 = ParagraphStyle(name='CenterH1', alignment=1, fontSize=18)
+    style_center_h2 = ParagraphStyle(name='CenterH2', alignment=1, fontSize=14)
+    style_details = styles['Normal'] # Detalles a la izquierda
 
-    # --- 2. Encabezado ---
-    story.append(Paragraph("<b>Hê Sãî Mãlî - Factura</b>", styles['h1']))
-    story.append(Spacer(1, 0.25 * inch))
-    story.append(Paragraph(f"<b>Pedido N°:</b> {pedido.idPedido}", styles['Normal']))
-    story.append(Paragraph(f"<b>Fecha:</b> {pedido.fecha.strftime('%d/%m/%Y %H:%M')}", styles['Normal']))
-    story.append(Spacer(1, 0.1 * inch))
-    story.append(Paragraph(f"<b>Cliente:</b> {cliente.nombre}", styles['Normal']))
+    # Ancho utilizable (letter width 8.5 inch - 2 inch de márgenes)
+    PAGE_WIDTH = 6.5 * inch
+    
+    # --- 1. ENCABEZADO: Logo y Título Principal ---
+    logo_path = find('He_Sai_Mali/logo.png') 
+    LOGO_WIDTH = 0.8 * inch 
+    LOGO_HEIGHT = 0.8 * inch
+    
+    # Contenido de la tabla de encabezado
+    header_data = []
+
+    # 1a Columna: Logo
+    if logo_path:
+        logo = Image(logo_path, width=LOGO_WIDTH, height=LOGO_HEIGHT)
+        logo.hAlign = 'LEFT'
+        header_data.append(logo)
+    else:
+        # Columna vacía si no hay logo para mantener la estructura
+        header_data.append(Paragraph("", styles['Normal'])) 
+
+    # 2a Columna: Títulos Centrados (ocupando el resto del ancho)
+    titulo_bloque = [
+        Paragraph("<b>Hê Sãî Mãlî</b>", style_center_h1), # Título Principal
+        Spacer(1, 0.05 * inch),
+        Paragraph("Factura de Pedido", style_center_h2), # Título Secundario
+    ]
+    header_data.append(titulo_bloque)
+
+    # Tabla de encabezado: Columna 1 (Logo) pequeña, Columna 2 (Título) grande.
+    header_table = Table(
+        data=[header_data], 
+        colWidths=[1.5 * inch, 5.0 * inch] # Se mantiene para que el título se pueda centrar en 5.0 inch
+    )
+
+    header_table.setStyle(TableStyle([
+        ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+        ('ALIGN', (0, 0), (0, 0), 'LEFT'), # Logo alineado a la izquierda
+        ('ALIGN', (1, 0), (1, 0), 'CENTER'), # Texto alineado al centro de su columna
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 10),
+    ]))
+    
+    story.append(header_table)
+
+    # --- 2. LÍNEA SEPARADORA SUPERIOR ---
+    story.append(Line(PAGE_WIDTH, 1)) # Línea gruesa de 1 punto de altura
+    story.append(Spacer(1, 0.15 * inch))
+
+    # --- 3. DETALLES DEL PEDIDO ---
+    # Usamos saltos de línea (br) para la disposición
+    detalle_texto = f"""
+    <b>ID Pedido:</b> {pedido.idPedido}<br/>
+    <b>Cliente:</b> {cliente.nombre} <br/>
+    <b>Fecha:</b> {pedido.fecha.strftime('%d/%m/%Y %H:%M')}<br/>
+    <b>Teléfono:</b> {cliente.telefono or 'N/A'}<br/>
+    <b>Dirección:</b> {cliente.direccion or 'N/A'}<br/>
+    <b>Método de Pago:</b> {pedido.metodoPago or 'N/A'}
+    """
     if cliente.tipoCliente == "empresa":
-        story.append(Paragraph(f"<b>RUC:</b> {cliente.identificacion}", styles['Normal']))
-    story.append(Paragraph(f"<b>Método de Pago:</b> {pedido.metodoPago or 'N/A'}", styles['Normal']))
-    story.append(Spacer(1, 0.25 * inch))
+        detalle_texto += f"<br/><b>RUC:</b> {cliente.identificacion}"
 
-    # --- 3. Detalles de Productos (Tabla) ---
-    data = [['Producto', 'Cant.', 'Precio Unit.', 'Total']]
+    story.append(Paragraph(detalle_texto, style_details))
+    story.append(Spacer(1, 0.15 * inch))
+
+    # --- 4. LÍNEA SEPARADORA INFERIOR DE DETALLES ---
+    story.append(Line(PAGE_WIDTH, 1))
+    story.append(Spacer(1, 0.15 * inch))
+
+    # --- 5. TABLA DE PRODUCTOS (Alineación y formato fiel) ---
+    data = [['Producto', 'Cant.', 'Precio Unit.', 'Subtotal']]
+    
     for item in platillos_pedido:
         nombre = item.idProductoMenu.nombre
         cantidad = str(item.cantidad)
-        precio_unit = f"${item.idProductoMenu.precio:.2f}"
+        precio_unit = f"C${item.idProductoMenu.precio:.2f}"
         total_item = item.cantidad * item.idProductoMenu.precio
-        total_item_str = f"${total_item:.2f}"
+        total_item_str = f"C${total_item:.2f}"
         data.append([nombre, cantidad, precio_unit, total_item_str])
 
-    table = Table(data, colWidths=[3*inch, 0.7*inch, 1*inch, 1*inch])
+    # ColWidths ajustados para el ancho de la página (6.5 in)
+    table = Table(data, colWidths=[3*inch, 1*inch, 1*inch, 1.5*inch])
     table.setStyle(TableStyle([
-        ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
-        ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
-        ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
-        ('ALIGN', (1, 1), (2, -1), 'CENTER'), # Cantidad y Precio unitario
-        ('ALIGN', (3, 1), (3, -1), 'RIGHT'), # Total
+        # Headers: Sin color de fondo (blanco si se desea)
+        ('BACKGROUND', (0, 0), (-1, 0), colors.white),
+        ('TEXTCOLOR', (0, 0), (-1, 0), colors.black),
+        # Bordes: SOLO línea inferior para la cabecera (como en el ejemplo)
+        ('LINEBELOW', (0, 0), (-1, 0), 1, colors.black), 
+        # Alineación del contenido
+        ('ALIGN', (0, 0), (0, -1), 'LEFT'),      
+        ('ALIGN', (1, 1), (1, -1), 'CENTER'),    
+        ('ALIGN', (2, 0), (2, -1), 'RIGHT'),     
         ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-        ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
-        ('GRID', (0, 0), (-1, -1), 1, colors.black),
+        ('BOTTOMPADDING', (0, 0), (-1, 0), 6),
+        ('TOPPADDING', (0, 0), (-1, -1), 6),
+        ('GRID', (0, 0), (-1, -1), 0.1, colors.white), # Elimina todos los otros bordes
     ]))
     story.append(table)
     story.append(Spacer(1, 0.25 * inch))
 
-    # --- 4. Totales ---
-    totales_data = [
-        ['Subtotal:', f"${subtotal:.2f}"],
-        [f"Impuesto (IVA {int(TASA_IMPUESTO*100)}%):", f"${impuesto:.2f}"],
-        [f"Total a Pagar:", f"${total_con_impuesto:.2f}"],
-    ]
+    # --- 6. TOTALES (Tabla para alineación a la derecha) ---
     
-    totales_table = Table(totales_data, colWidths=[4*inch, 1.7*inch])
-    totales_table.setStyle(TableStyle([
+    # 7.5 inch es demasiado ancho, el ancho de los datos debe sumar el ancho utilizable (6.5 inch)
+    totales_data = [
+        ['Subtotal:', f"C${subtotal:.2f}"],
+        [f"Impuesto (IVA {int(TASA_IMPUESTO * 100)}%):", f"C${impuesto:.2f}"],
+    ]
+
+    # Tabla para subtotales e impuesto (sin línea)
+    totales_table_1 = Table(totales_data, colWidths=[5*inch, 1.5*inch]) 
+    totales_table_1.setStyle(TableStyle([
         ('ALIGN', (0, 0), (-1, -1), 'RIGHT'),
-        ('FONTNAME', (0, 2), (-1, 2), 'Helvetica-Bold'),
-        ('LINEBELOW', (0, 1), (-1, 1), 1, colors.black),
-        ('LEFTPADDING', (0, 0), (0, -1), 100) # Empujar a la derecha
+        ('LEFTPADDING', (0, 0), (0, -1), 0),
+        ('RIGHTPADDING', (1, 0), (1, -1), 0),
     ]))
-    story.append(totales_table)
+    story.append(totales_table_1)
+    
+    story.append(Spacer(1, 0.05 * inch))
+    
+    # Total a Pagar (separado para controlar la línea de forma precisa)
+    total_final_data = [['Total a Pagar:', f"C${total_con_impuesto:.2f}"]]
+    total_final_table = Table(total_final_data, colWidths=[5*inch, 1.5*inch])
+    total_final_table.setStyle(TableStyle([
+        ('ALIGN', (0, 0), (-1, -1), 'RIGHT'),
+        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+        # Línea de 1pt arriba del Total a Pagar
+        ('LINEABOVE', (0, 0), (-1, 0), 1, colors.black), 
+        ('BOTTOMPADDING', (0, 0), (-1, 0), 0),
+        ('TOPPADDING', (0, 0), (-1, 0), 5),
+    ]))
+
+    story.append(total_final_table)
     
     doc.build(story)
     return response
@@ -376,14 +458,8 @@ def generar_pdf_factura(pedido_id):
 @require_POST
 @user_passes_test(es_rol("Mesero"), login_url='login')
 def pagar_factura(request, pedido_id):
-    """
-    Marca la factura como pagada (estadoDePago=1), actualiza el estado de platillos a 'Facturado' y libera la mesa.
-    """
+    # Marca la factura como pagada (estadoDePago=1), actualiza el estado de platillos a 'Facturado' y libera la mesa.
     pedido = get_object_or_404(Pedido, pk=pedido_id)
-
-    if pedido.estadoDePago == 1:
-        messages.info(request, f"El Pedido N°{pedido.idPedido} ya ha sido marcado como pagado.")
-        return redirect('pedidos')
 
     try:
         with transaction.atomic():
@@ -407,36 +483,30 @@ def pagar_factura(request, pedido_id):
                     mesa_a_liberar.ocupada = False
                     mesa_a_liberar.save()
                 except Exception as e:
-                    messages.warning(request, f"Advertencia: No se pudo liberar la mesa del pedido. Error: {e}")
+                    messages.warning(request, f"Advertencia: {e}")
 
         messages.success(request, f"Pago registrado exitosamente para el Pedido N°{pedido.idPedido}. Factura completada.")
         
     except Exception as e:
-        messages.error(request, f"Error al registrar el pago: {e}")
+        messages.error(request, f"Error en el pago: {e}")
 
     return redirect('pedidos')
 
+# Vista dedicada solo a generar y servir el archivo PDF
 @user_passes_test(es_rol("Mesero"), login_url='login')
-def descargar_pdf_factura(request, pedido_id):
-    """
-    Vista dedicada solo a generar y servir el archivo PDF.
-    """
-    # Usamos la misma lógica de generar_pdf_factura definida previamente.
+def descargar_pdf_factura(pedido_id):
     return generar_pdf_factura(pedido_id)
 
 @require_POST
 @user_passes_test(es_rol("Mesero"), login_url='login')
 def eliminar_pedido(request, pedido_id):
-    """
-    Elimina un Pedido si *todos* sus ProductoMenu están aún en estado 'Registrado'.
-    """
+    # Elimina un Pedido si *todos* sus ProductoMenu estan aun en estado 'Registrado'.
+
     pedido = get_object_or_404(Pedido, pk=pedido_id)
 
-    # 1. Verificar si todos los ProductoMenu están en 'Registrado'
-    # Contamos cuántos NO están en 'Registrado'
     with connection.cursor() as cursor:
-        # 1. Verificar si todos los ProductoMenu están en 'Registrado'
-        # Contamos cuántos NO están en 'Registrado'
+        # 1. Verificar si todos los ProductoMenu estan en 'Registrado'
+        # Se cuentan cuantos NO estan en 'Registrado'
         sql_items_no_registrados = """
             SELECT COUNT(*) FROM "Pedido_ProductoMenu" 
             WHERE "idPedido_id" = %s AND "estado" NOT IN ('Registrado');
@@ -472,18 +542,19 @@ def eliminar_pedido(request, pedido_id):
                 
             messages.success(request, f"Pedido N°{pedido_id} eliminado exitosamente.")
     else:
-        messages.error(request, f"No se puede eliminar el Pedido N°{pedido_id}. Algunos platillos ya han cambiado de estado (Listo/Servido/Facturado).")
+        messages.error(request, f"No se puede eliminar el Pedido N°{pedido_id}")
 
     return redirect('pedidos')
 
-# --- Fin de Vistas de Acción ---
+# --- Fin de vistas de los botones ---
 
+# Vista para ver los pedidos activos
 @never_cache
 @user_passes_test(es_rol("Mesero"), login_url='login')
 def vista_mesero(request):
-    """Muestra la cola de pedidos activos y obtiene el estado de facturación/registro para los botones."""
+    # Muestra la cola de pedidos activos y obtiene el estado de facturación/registro para los botones.
     
-    # 1. Obtener los pedidos que tienen al menos un ProductoMenu no facturado
+    # 1. Obtener los pedidos que tienen ProductoMenu no facturado
     cola_pedidos = Pedido.objects.raw("""
         SELECT p."idPedido", p."fecha", p."metodoPago", c."nombre", p."idMesa_id",
         SUM(pp."cantidad" * pl."precio") AS "montoTotal"
@@ -500,7 +571,6 @@ def vista_mesero(request):
     """)
 
     # 2. Obtener el detalle de platillos para los pedidos
-    # Solo necesitamos los platillos que pertenecen a los pedidos en cola
     pedidos_ids = [p.idPedido for p in cola_pedidos]
     ProductoMenu_query = Pedido_ProductoMenu.objects.filter(idPedido__in=pedidos_ids).select_related('idProductoMenu').order_by('idPedido_id')
     
@@ -542,7 +612,7 @@ def vista_mesero(request):
         'cola_pedidos': cola_pedidos,
         # Pasamos el diccionario pre-procesado a la plantilla
         'platillos_por_pedido': ProductoMenu_por_pedido, 
-        'estado_botones': estado_botones, # Nuevo contexto para los botones
+        'estado_botones': estado_botones, # Contexto para los botones
         'rol_empleado': request.user.rol,
         'nombre_mesero': request.user.nombre,
         'apellido_mesero': request.user.apellido,
@@ -550,16 +620,14 @@ def vista_mesero(request):
     }
     return render(request, 'He_Sai_Mali/pedidos.html', context)
 
+# Vista para registrar nuevos pedidos y agregar productos a un pedido existente
 @never_cache
 @user_passes_test(es_rol("Mesero"), login_url='login')
 def vista_registrarpedido(request, pedido_id=None):
-    """
-    Permite registrar un nuevo pedido o agregar platillos a un pedido existente (si se pasa pedido_id).
-    
-    LÓGICA DE MESA IMPLEMENTADA: Filtra mesas disponibles, asigna la mesa al crear el pedido 
-    y la marca como OCUPADA.
-    """
-    # ------------------ CAMBIO 1: Obtener y Agrupar Platillos por Categoría ------------------
+    # Permite registrar un nuevo pedido o agregar platillos a un pedido existente (si se pasa pedido_id).
+    # Filtra mesas disponibles, asigna la mesa al crear el pedido y la marca como OCUPADA.
+
+    # ------------------ Obtener y Agrupar Platillos por Categoría ------------------
     # Obtener todos los platillos disponibles y ordenarlos por categoría y luego por nombre
     all_menu_ProductoMenu = list(ProductoMenu.objects.raw("""SELECT * FROM "ProductoMenu" WHERE "disponible" = 'true' ORDER BY "categoria", "nombre" """))
     
@@ -571,17 +639,17 @@ def vista_registrarpedido(request, pedido_id=None):
     
     # Se usa la lista original para la lógica POST (donde se itera sobre todos)
     menu_ProductoMenu = all_menu_ProductoMenu 
-    # ------------------ FIN: CAMBIO 1 -----------------------------------------------------
+    # ----------------------------------------------------------------------------
 
     pedido_existente = None
     if pedido_id:
+        # Si se ingresa un id (agregan productos) se busca la informacion del pedido
         sql_pedido_existente = """
             SELECT p."idPedido", p."idCliente_id", p."idMesa_id", p."montoTotal", p."fecha", c."nombre" AS "cliente_nombre", c."telefono" AS "cliente_telefono"
             FROM "Pedido" p
             JOIN "Cliente" c ON c."idCliente" = p."idCliente_id"
             WHERE p."idPedido" = %s;
         """
-        # Se asume que 'Pedido.objects.raw' y la lógica de PedidoData está correctamente definida o es parte del código existente
         pedido_raw = list(Pedido.objects.raw(sql_pedido_existente, [pedido_id]))
 
         if pedido_raw:
@@ -602,7 +670,7 @@ def vista_registrarpedido(request, pedido_id=None):
             pedido_existente = PedidoData()
 
 
-    # ------------------ LOGICA POST (Se mantiene la lógica existente) ------------------
+    # ------------------ LOGICA POST ------------------
     if request.method == 'POST':
         nombre_cliente = request.POST.get('nombre_cliente')
         telefono_cliente = request.POST.get('telefono_cliente')
@@ -610,11 +678,10 @@ def vista_registrarpedido(request, pedido_id=None):
 
         tipo_cliente = request.POST.get('tipo_cliente') # 'persona' o 'empresa'
         identificacion_cliente = request.POST.get('identificacion_cliente')
-
         
         id_mesa_seleccionada = request.POST.get('mesa') 
         
-        # Filtra platillos seleccionados (MOVÍ ESTA LÓGICA AQUÍ PARA USARLA EN LA VALIDACIÓN)
+        # Filtra platillos seleccionados
         productos_a_registrar = {}
         for productoMenu in menu_ProductoMenu:
             cantidad = request.POST.get(f'cantidad_{productoMenu.idProductoMenu}', 0)
@@ -624,13 +691,13 @@ def vista_registrarpedido(request, pedido_id=None):
                 cantidad = 0
             if cantidad > 0:
                 productos_a_registrar[productoMenu.idProductoMenu] = cantidad
-        # --- FIN: Filtra platillos seleccionados ---
+        # --- FIN Filtra platillos seleccionados ---
 
         if not nombre_cliente:
             messages.error(request, 'El nombre del cliente es obligatorio.')
             return redirect('registrarpedido')
             
-        # Validación de 0 productos (LÓGICA EXISTENTE, REQUERÍA 'productos_a_registrar')
+        # Validación de 0 productos
         if not productos_a_registrar and not pedido_existente:
              messages.error(request, 'Debe seleccionar al menos un platillo para registrar un nuevo pedido.')
              return redirect('registrarpedido')
@@ -712,7 +779,7 @@ def vista_registrarpedido(request, pedido_id=None):
                         cursor.execute(sql_insert_empleado_pedido, [request.user.idEmpleado, id_pedido_a_usar])
                 
                 # -------------------------------------------------------------------
-                # ** INICIO DE LA FUNCIONALIDAD AÑADIDA: VALIDACIÓN DE STOCK **
+                # VALIDACIÓN DE STOCK
                 # -------------------------------------------------------------------
                 ingredientes_requeridos = {}
                 
@@ -766,11 +833,10 @@ def vista_registrarpedido(request, pedido_id=None):
                                     raise ValueError(f"Stock insuficiente para '{nombre_ingrediente}'. Requerido: {cantidad_requerida:.2f}, Disponible: {stock_decimal:.2f}.")
 
                 # -------------------------------------------------------------------
-                # ** FIN DE LA FUNCIONALIDAD AÑADIDA **
+                # FIN DE LA FUNCIONALIDAD
                 # -------------------------------------------------------------------
                 
                 # 2. Procesar los ProductosMenu seleccionados (Detalle)
-                # MODIFICACIÓN: Ya no se itera sobre menu_ProductoMenu, sino sobre productos_a_registrar
                 for producto_id, cantidad in productos_a_registrar.items():
                     # Buscar el ProductoMenu en la lista inicial
                     productoMenu = next((p for p in menu_ProductoMenu if p.idProductoMenu == producto_id), None)
@@ -844,11 +910,11 @@ def vista_registrarpedido(request, pedido_id=None):
     # ------------------ PETICIÓN GET (Contexto) ------------------
     mesas_disponibles = Mesa.objects.filter(ocupada=False).order_by('idMesa') 
 
-    # ------------------ CAMBIO 2: Pasar el nuevo diccionario agrupado ------------------
+    # ------------------ Pasar el nuevo diccionario agrupado ------------------
     # Petición GET
     context = {
-        'platillos': menu_ProductoMenu, # Se mantiene por si se usa en otra lógica, aunque ahora agruparemos en el template
-        'platillos_agrupados': platillos_agrupados, # <--- **NUEVO CONTEXTO**
+        'platillos': menu_ProductoMenu,
+        'platillos_agrupados': platillos_agrupados,
         # Si es un pedido existente (para agregar), pre-rellenar el nombre del cliente
         'nombre_cliente_previo': pedido_existente.idCliente.nombre if pedido_existente else '',
         'telefono_cliente_previo': pedido_existente.idCliente.telefono if pedido_existente else '',
@@ -861,6 +927,7 @@ def vista_registrarpedido(request, pedido_id=None):
     # ------------------ FIN: CAMBIO 2 -------------------------------------------------
     return render(request, 'He_Sai_Mali/registrarpedido.html', context)
 
+# Vista de la cocina
 @never_cache
 @user_passes_test(es_rol("Cocinero"), login_url='login')
 def vista_cocinero(request):
@@ -916,12 +983,12 @@ def vista_cocinero(request):
     }
     return render(request, 'He_Sai_Mali/cocina.html', context)
 
+# Funcionalidad en vista cocina para marcar como Listo
 @require_POST
 @user_passes_test(es_rol("Cocinero"), login_url='login')
 def platillo_listo(request, pedido_platillo_id):
-    """
-    Marca un platillo específico dentro de un pedido como 'Listo'.
-    """
+    # Marca un platillo específico dentro de un pedido como 'Listo'.
+    
     try:
         # USO DE CURSOR PARA SELECT Y UPDATE
         with connection.cursor() as cursor:
@@ -963,11 +1030,12 @@ def platillo_listo(request, pedido_platillo_id):
     # Redirigir de vuelta a la cola de la cocina
     return redirect('cocina')
 
+# Vistas para el control de los articulos del inventario
 @never_cache
 @user_passes_test(es_rol("Administrador"), login_url='login')
 def admin_ingredientes(request):
     """
-    Vista para ver ingredientes y proveedores.
+    Vista para ver articulos del inventario y proveedores.
     """
     context = {
         'ingredientes': ArticuloInventario.objects.all().order_by('nombre'),
@@ -979,6 +1047,7 @@ def admin_ingredientes(request):
 @require_POST
 @user_passes_test(es_rol("Administrador"), login_url='login')
 def agregar_ingrediente(request):
+    # Obtiene los datos
     nombre = request.POST.get('nombre', '').strip()
     stock_str = request.POST.get('stock', '0')
     unidad_de_medida = request.POST.get('unidad_de_medida', '').strip()
@@ -994,7 +1063,8 @@ def agregar_ingrediente(request):
         if stock < 0:
             messages.error(request, 'El stock inicial no puede ser negativo.')
             return redirect('admin_ingredientes')
-            
+        
+        # Crea el articulo del inventario
         ArticuloInventario.objects.create(
             nombre=nombre,
             stock=stock,
@@ -1013,10 +1083,8 @@ def agregar_ingrediente(request):
 @require_POST
 @user_passes_test(es_rol("Administrador"), login_url='login')
 def comprar_ingrediente(request):
-    """
-    Procesa la compra de un ingrediente, registra el ArticuloInventario_Proveedor 
-    y actualiza el stock del ArticuloInventario.
-    """
+    # Procesa la compra de un ingrediente, registra el ArticuloInventario_Proveedor y actualiza el stock del ArticuloInventario.
+    
     # 1. Obtener y validar datos
     id_ingrediente = request.POST.get('id_ingrediente')
     id_proveedor = request.POST.get('id_proveedor_fk') # ID oculto del proveedor
@@ -1041,8 +1109,7 @@ def comprar_ingrediente(request):
 
         with transaction.atomic():
             # 2. Registrar la compra en la tabla intermedia (ArticuloInventario_Proveedor)
-            # Se usa una consulta SQL directa con connection.cursor() por si el ORM de Django
-            # no maneja un modelo intermedio sin primary key por defecto o para asegurar 
+            # Se usa una consulta SQL directa con connection.cursor() y se asegura
             # la atomicidad y el orden.
             with connection.cursor() as cursor:
                 sql_insert_compra = """
@@ -1076,9 +1143,8 @@ def comprar_ingrediente(request):
 @require_POST
 @user_passes_test(es_rol("Administrador"), login_url='login')
 def eliminar_ingrediente(request, ingrediente_id):
-    """
-    Vista para eliminar un ArticuloInventario (Ingrediente).
-    """
+    # Vista para eliminar un ArticuloInventario.
+
     try:
         # 1. Obtener el ingrediente o lanzar 404 si no existe
         articulo = get_object_or_404(ArticuloInventario, idArticuloInventario=ingrediente_id)
@@ -1092,8 +1158,6 @@ def eliminar_ingrediente(request, ingrediente_id):
 
     except Exception as e:
         # 4. Mensaje de error (por si hay referencias a este ingrediente, p. ej., en ProductoMenu_ArticuloInventario)
-        # Nota: El on_delete=models.PROTECT en ArticuloInventario_Proveedor o ProductoMenu_ArticuloInventario
-        # podría causar una excepción ProtectedError.
         messages.error(request, f'Error al intentar eliminar el ingrediente: {e}.')
 
     # 5. Redirigir de vuelta a la lista de ingredientes
@@ -1101,10 +1165,9 @@ def eliminar_ingrediente(request, ingrediente_id):
 
 @user_passes_test(es_rol("Administrador"), login_url='login')
 def editar_ingrediente(request, ingrediente_id):
-    """
-    Vista para editar un artículo de inventario (ingrediente).
-    Carga el ingrediente en el formulario o procesa la actualización.
-    """
+    # Vista para editar un artículo de inventario.
+    # Carga el artículo en el formulario.
+    
     ingrediente = get_object_or_404(ArticuloInventario, idArticuloInventario=ingrediente_id)
     
     if request.method == 'POST':
@@ -1139,25 +1202,22 @@ def editar_ingrediente(request, ingrediente_id):
     articulos_inventario = ArticuloInventario.objects.all().order_by('nombre')
     
     context = {
-        # Objeto a editar (se usa en el HTML para precargar datos y cambiar el título/acción)
+        # Se usa en el HTML para precargar datos y cambiar el título
         'articulo_a_editar': ingrediente, 
         
         # Datos generales para la lista
         'ingredientes': articulos_inventario,
         'proveedores': proveedores,
-        
-        # Datos para el formulario de Compra
-        'compras_recientes': ArticuloInventario_Proveedor.objects.select_related('idArticuloInventario', 'idProveedor').order_by('-fechaCompra')[:10],
     }
     
     return render(request, 'He_Sai_Mali/admin_ingredientes.html', context)
 
+# Vistas para el control de los productos del menu
 @never_cache
 @user_passes_test(es_rol("Administrador"), login_url='login')
 def admin_platillos(request):
-    """
-    Vista para agregar nuevos platillos (solo Admin).
-    """
+    # Vista para agregar nuevos platillos (solo Admin).
+    
     articulos_inventario = ArticuloInventario.objects.all().order_by('nombre')
 
     if request.method == 'POST':
@@ -1219,10 +1279,9 @@ def admin_platillos(request):
         return redirect('admin_platillos')
 
     # --- Lógica GET y Contexto ---
-    # La categoría ahora se obtiene de la base de datos
     context = {
         'platillos': ProductoMenu.objects.all().order_by('idProductoMenu'),
-        'categorias': ProductoMenu.objects.values_list('categoria', flat=True).distinct(), # Obtener categorías existentes
+        'categorias': ProductoMenu.objects.values_list('categoria', flat=True).distinct(),
         'articulos_inventario': articulos_inventario, # Pasar la lista de artículos para el selector
         'rol_empleado': request.user.rol,
         'nombre_empleado': request.user.nombre,
@@ -1233,9 +1292,8 @@ def admin_platillos(request):
 @never_cache
 @user_passes_test(es_rol("Administrador"), login_url='login')
 def toggle_disponibilidad_platillo(request, platillo_id):
-    """
-    Alterna el estado 'disponible' de un platillo.
-    """
+    # Alterna el estado 'disponible' de un platillo.
+
     if request.method == 'POST':
         try:
             platillo = ProductoMenu.objects.get(pk=platillo_id)
@@ -1256,10 +1314,8 @@ def toggle_disponibilidad_platillo(request, platillo_id):
 @require_POST
 @user_passes_test(es_rol("Administrador"), login_url='login')
 def eliminar_platillo(request, platillo_id):
-    """
-    Elimina un ProductoMenu (platillo) y sus ingredientes relacionados.
-    Si el platillo tiene pedidos asociados, la eliminación es bloqueada por ProtectedError.
-    """
+    # Elimina un ProductoMenu y sus ingredientes relacionados.
+
     platillo = get_object_or_404(ProductoMenu, pk=platillo_id)
     nombre_platillo = platillo.nombre
     
@@ -1281,9 +1337,8 @@ def eliminar_platillo(request, platillo_id):
 @never_cache
 @user_passes_test(es_rol("Administrador"), login_url='login')
 def editar_platillo(request, platillo_id):
-    """
-    Vista para editar un ProductoMenu (platillo) existente.
-    """
+    # Vista para editar un ProductoMenu existente.
+
     # Intentar obtener el platillo, si no existe devuelve un 404
     platillo = get_object_or_404(ProductoMenu, pk=platillo_id)
     
@@ -1356,13 +1411,14 @@ def editar_platillo(request, platillo_id):
     # Reutilizar la plantilla admin_platillos.html
     return render(request, 'He_Sai_Mali/admin_platillos.html', context)
 
+# Vistas para el control de los proveedores
 @never_cache
 @user_passes_test(es_rol("Administrador"), login_url='login')
 def admin_proveedores(request):
-    """
-    Vista para agregar nuevos proveedores (solo Admin).
-    """
+    # Vista para agregar nuevos proveedores (solo Admin).
+
     if request.method == 'POST':
+        # Obtiene los datos
         nombre = request.POST.get('nombre', '').strip()
         telefono = request.POST.get('telefono', '').strip()
         direccion = request.POST.get('direccion', '').strip()
@@ -1371,6 +1427,7 @@ def admin_proveedores(request):
             messages.error(request, 'El nombre del proveedor es obligatorio.')
         else:
             try:
+                # Inserta el proveedor a la tabla
                 Proveedor.objects.create(
                     nombre=nombre,
                     telefono=telefono or None,
@@ -1389,9 +1446,8 @@ def admin_proveedores(request):
 
 @user_passes_test(es_rol("Administrador"), login_url='login')
 def editar_proveedor(request, proveedor_id):
-    """
-    Vista para editar un Proveedor existente.
-    """
+    # Vista para editar un Proveedor existente.
+
     # 1. Obtener el objeto a editar, si no existe lanza 404
     proveedor = get_object_or_404(Proveedor, idProveedor=proveedor_id)
     
@@ -1434,9 +1490,8 @@ def editar_proveedor(request, proveedor_id):
 @require_POST
 @user_passes_test(es_rol("Administrador"), login_url='login')
 def eliminar_proveedor(request, proveedor_id):
-    """
-    Vista para eliminar un Proveedor.
-    """
+    # Vista para eliminar un Proveedor.
+    
     try:
         # 1. Obtener el proveedor o lanzar 404 si no existe
         # Usamos pk para buscar por idProveedor
@@ -1451,18 +1506,17 @@ def eliminar_proveedor(request, proveedor_id):
 
     except Exception as e:
         # 4. Mensaje de error
-        # El on_delete=models.PROTECT en ArticuloInventario_Proveedor causará una excepción 
-        # si hay ingredientes asociados a este proveedor.
         messages.error(request, f'Error al intentar eliminar el proveedor: {e}. Asegúrate de que no haya ingredientes asociados a este proveedor.')
 
     # 5. Redirigir de vuelta a la lista de proveedores
     return redirect('admin_proveedores')
 
+# Vistas para el control de las mesas y ver disponibilidad de mesas en el caso del mesero
 @never_cache
 @user_passes_test(es_rol_y_administrador("Mesero"), login_url='login')
 def admin_mesas(request):
     mesas = Mesa.objects.all().order_by('idMesa')
-    mesa_a_editar = None # Esta vista siempre inicia en modo 'Agregar'
+    mesa_a_editar = None
 
     # Lógica de POST: AGREGAR Nueva Mesa
     if request.method == 'POST':
@@ -1516,7 +1570,7 @@ def editar_mesa(request, mesa_id):
     if request.method == 'POST':
         # --- Lógica de Actualización (POST) ---
         try:
-            # No se recibe idMesa directamente, se usa el objeto ya cargado
+            # Se usa el objeto ya cargado
             capacidad = request.POST.get('capacidad', '').strip()
 
             if not capacidad:
@@ -1556,6 +1610,7 @@ def eliminar_mesa(request, mesa_id):
     mesa = get_object_or_404(Mesa, pk=mesa_id)
 
     try:
+        # Elimina la mesa usando delete()
         mesa.delete()
         messages.success(request, f"Mesa '{mesa.idMesa}' eliminada exitosamente.")
     except ProtectedError:
@@ -1565,7 +1620,7 @@ def eliminar_mesa(request, mesa_id):
 
     return redirect('admin_mesas')
 
-# --- VISTA DE DASHBOARD PARA ADMINISTRADOR ---
+# Vista del dashboard para el administrador
 @never_cache
 @user_passes_test(es_rol("Administrador"), login_url='login')
 def admin_dashboard(request):
@@ -1598,12 +1653,15 @@ def admin_dashboard(request):
         period = 'month'
         period_display = "Este Mes"
     
-    # Filtro de fecha y estado 'Facturado' (asumiendo que solo pedidos facturados son ventas)
+    # Filtro de fecha y estado 'Facturado' (1)
     date_filter = {'fecha__gte': start_date, 'estadoDePago': True}
     
     # 2. Ventas Realizadas (Total Sales)
     # Total de ventas en el periodo
-    total_sales_agg = Pedido.objects.filter(**date_filter).aggregate(total=Sum('montoTotal'))
+    TASA_IMPUESTO_FACTOR = 1.15
+    total_sales_agg = Pedido.objects.filter(**date_filter).aggregate(
+    total=Sum(F('montoTotal') * TASA_IMPUESTO_FACTOR, output_field=FloatField())
+    )    
     total_sales = total_sales_agg['total'] if total_sales_agg['total'] else 0.00
     
     # 3. Productos del Menú más Populares (Top 5)
@@ -1617,7 +1675,7 @@ def admin_dashboard(request):
     ).annotate(
         total_quantity=Sum('cantidad') # Calculamos la cantidad vendida total
     ).filter(
-        total_quantity__gt=0 # <-- AÑADIR ESTE FILTRO: Solo platillos que tengan ventas > 0
+        total_quantity__gt=0 # Solo platillos que tengan ventas > 0
     ).order_by('-total_quantity')[:5]
 
     top_products_labels = [p['nombre'] for p in top_products_query]
@@ -1628,9 +1686,9 @@ def admin_dashboard(request):
     top_tables_query = Pedido.objects.filter(
         **date_filter
     ).exclude(
-        idMesa__isnull=True # <-- ¡CAMBIO CRUCIAL AQUÍ! Excluye los pedidos sin mesa.
+        idMesa__isnull=True # Excluye los pedidos sin mesa.
     ).values(
-        'idMesa' # Agrupamos por idMesa, la clave en el resultado es 'idMesa'
+        'idMesa' # Agrupamos por idMesa
     ).annotate(
         total_orders=Count('idMesa')
     ).order_by('-total_orders')
@@ -1661,11 +1719,177 @@ def admin_dashboard(request):
     }
     return render(request, 'He_Sai_Mali/dashboard.html', context)
 
+@user_passes_test(es_rol("Administrador"), login_url='login')
+def generate_dashboard_pdf(request):
+    # --- 1. Misma logica de filtro que en admin_dashboard ---
+    TASA_IMPUESTO_FACTOR = 1.15
+
+    period = request.GET.get('period', 'month')
+
+    tiempo_generacion = timezone.localtime(timezone.now()) - timedelta(hours=6)
+    tiempo_generacion_str = tiempo_generacion.strftime('%d/%m/%Y %H:%M:%S')
+
+    now = timezone.localtime(timezone.now())
+    today = timezone.now().date()
+    start_date = None
+
+    if period == 'day':
+        start_date = now.replace(hour=0, minute=0, second=0, microsecond=0)
+        period_display = "Hoy"
+    elif period == 'week':
+        start_date = timezone.make_aware(timezone.datetime(today.year, today.month, today.day)) - timedelta(days=today.weekday())
+        period_display = "Esta Semana"
+    elif period == 'month':
+        start_date = timezone.make_aware(timezone.datetime(today.year, today.month, 1))
+        period_display = "Este Mes"
+    elif period == 'year':
+        start_date = timezone.make_aware(timezone.datetime(today.year, 1, 1))
+        period_display = "Este Año"
+    else:
+        start_date = timezone.make_aware(timezone.datetime(today.year, today.month, 1))
+        period_display = "Este Mes"
+    
+    date_filter = {'fecha__gte': start_date, 'estadoDePago': True}
+    
+    # --- 2. Obtener Métricas y Pedidos ---
+    total_sales_agg = Pedido.objects.filter(**date_filter).aggregate(
+    total=Sum(F('montoTotal') * TASA_IMPUESTO_FACTOR, output_field=FloatField())
+    )
+    total_sales = total_sales_agg['total'] if total_sales_agg['total'] else 0.00
+    total_orders = Pedido.objects.filter(**date_filter).count()
+    total_mesas = Mesa.objects.count()
+    platillos_en_menu = ProductoMenu.objects.filter(disponible=True).count()
+    
+    # Obtener la lista detallada de pedidos (ordenar por fecha descendente)
+    pedidos_list = Pedido.objects.filter(**date_filter).select_related('idCliente', 'idMesa').order_by('-fecha')
+
+    # --- 3. Generación del PDF (ReportLab) ---
+    response = HttpResponse(content_type='application/pdf')
+    filename = f"dashboard_reporte_{period}_{timezone.now().strftime('%Y%m%d')}.pdf"
+    response['Content-Disposition'] = f'attachment; filename="{filename}"'
+
+    doc = SimpleDocTemplate(response, pagesize=letter)
+    story = []
+    styles = getSampleStyleSheet()
+
+    # Estilos Personalizados
+    style_center_h1 = ParagraphStyle(name='CenterH1', alignment=1, fontSize=18)
+    style_center_h2 = ParagraphStyle(name='CenterH2', alignment=1, fontSize=14)
+    PAGE_WIDTH = 6.5 * inch # Ancho utilizable
+    
+    # --- ENCABEZADO (Mismo formato que la factura) ---
+    logo_path = find('He_Sai_Mali/logo.png') 
+    LOGO_WIDTH = 0.8 * inch 
+    LOGO_HEIGHT = 0.8 * inch
+
+    header_data = []
+
+    if logo_path:
+        logo = Image(logo_path, width=LOGO_WIDTH, height=LOGO_HEIGHT)
+        logo.hAlign = 'LEFT'
+        header_data.append(logo)
+    else:
+        header_data.append(Paragraph("", styles['Normal'])) 
+
+    titulo_bloque = [
+        Paragraph("<b>Hê Sãî Mãlî</b>", style_center_h1),
+        Spacer(1, 0.05 * inch), # Espaciador para separar
+        Paragraph("Reporte de Dashboard", style_center_h2),
+    ]
+    header_data.append(titulo_bloque)
+
+    header_table = Table(
+        data=[header_data], 
+        colWidths=[1.5 * inch, 5.0 * inch] 
+    )
+
+    header_table.setStyle(TableStyle([
+        ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+        ('ALIGN', (0, 0), (0, 0), 'LEFT'),
+        ('ALIGN', (1, 0), (1, 0), 'CENTER'),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 10),
+    ]))
+    
+    story.append(header_table)
+    story.append(Line(PAGE_WIDTH, 1))
+    story.append(Spacer(1, 0.15 * inch))
+
+    story.append(Paragraph(f"Generado el: <b>{tiempo_generacion_str}</b>", styles['Normal']))
+    story.append(Spacer(1, 0.15 * inch))
+    
+    # --- SECCIÓN DE MÉTRICAS CLAVE ---
+    story.append(Paragraph(f"<b>Métricas Clave ({period_display})</b>", styles['h2']))
+    story.append(Spacer(1, 0.1 * inch))
+    
+    metrics_data = [
+        ['Ventas Totales:', f"C${total_sales:.2f}", 'Pedidos Facturados:', f"{total_orders}"],
+        ['Mesas Registradas:', f"{total_mesas}", 'Productos en el Menú:', f"{platillos_en_menu}"],
+    ]
+    
+    # 4 columnas para el layout de las métricas
+    metrics_table = Table(
+        metrics_data, 
+        colWidths=[2 * inch, 1.25 * inch, 1.5 * inch, 1.75 * inch]
+    )
+    metrics_table.setStyle(TableStyle([
+        ('ALIGN', (1, 0), (1, -1), 'RIGHT'),
+        ('ALIGN', (3, 0), (3, -1), 'RIGHT'),
+        ('FONTNAME', (0, 0), (0, -1), 'Helvetica-Bold'),
+        ('FONTNAME', (2, 0), (2, -1), 'Helvetica-Bold'),
+        ('LEFTPADDING', (0, 0), (0, -1), 0),
+        ('RIGHTPADDING', (1, 0), (1, -1), 0),
+        ('RIGHTPADDING', (3, 0), (3, -1), 0),
+    ]))
+    
+    story.append(metrics_table)
+    story.append(Spacer(1, 0.25 * inch))
+
+    # --- LISTADO DETALLADO DE PEDIDOS ---
+    story.append(Paragraph("<b>Listado Detallado de Pedidos Facturados</b>", styles['h2']))
+    story.append(Spacer(1, 0.1 * inch))
+    
+    if pedidos_list.exists():
+        pedidos_data = [
+            ['ID', 'Fecha', 'Cliente', 'Mesa', 'Total']
+        ]
+        
+        for pedido in pedidos_list:
+            cliente_nombre = f"{pedido.idCliente.nombre}" if pedido.idCliente else "N/A"
+            mesa_label = f"Mesa {pedido.idMesa.idMesa}" if pedido.idMesa else "Sin Mesa"
+            total_con_iva = Decimal(str(pedido.montoTotal)) * Decimal(str(TASA_IMPUESTO_FACTOR))
+            
+            pedidos_data.append([
+                f"{pedido.idPedido}",
+                pedido.fecha.strftime('%d/%m/%Y %H:%M'),
+                cliente_nombre,
+                mesa_label,
+                f"C${total_con_iva:.2f}",
+            ])
+
+        # ColWidths para 5 columnas (suma 6.5 inch)
+        pedidos_table = Table(pedidos_data, colWidths=[0.75*inch, 1.75*inch, 1.75*inch, 1.25*inch, 1*inch])
+        pedidos_table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#41444a')), # Fondo Gris Oscuro
+            ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+            ('ALIGN', (0, 0), (3, -1), 'LEFT'), 
+            ('ALIGN', (4, 1), (4, -1), 'RIGHT'), # Total alineado a la derecha
+            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+            ('GRID', (0, 0), (-1, -1), 0.25, colors.black),
+        ]))
+        story.append(pedidos_table)
+        
+    else:
+        story.append(Paragraph("No hay pedidos facturados en el periodo seleccionado.", styles['Normal']))
+
+    doc.build(story)
+    return response
+
+# Vista para ver los QR asignados a cada mesa
 def vista_qr_mesas(request, mesa_id):
     mesa = get_object_or_404(Mesa, idMesa=mesa_id)
     
     # 2. Construir la URL que contendrá el QR (la del temporizador)
-    # Se asume que 'temporizador_mesas' es el name de la ruta de destino del QR.
+    # 'temporizador_mesa' es el name de la ruta de destino del QR.
     url_to_embed = request.build_absolute_uri(reverse('temporizador_mesa', args=[mesa.idMesa]))
     qr_data = url_to_embed
     
@@ -1691,19 +1915,15 @@ def vista_qr_mesas(request, mesa_id):
         'titulo': f'Código QR Mesa {mesa.idMesa}' # Título dinámico para la plantilla
     })
 
-# =========================================================
 # Temporizador para una mesa específica
-# =========================================================
 def temporizador_mesa(request, mesa_id):
-    """
-    Calcula el tiempo restante para el último pedido de la mesa 
-    y renderiza la vista del temporizador.
-    """
+    # Calcula el tiempo restante para el último pedido de la mesa
+
     # Se verifica que la mesa exista
     mesa = get_object_or_404(Mesa, idMesa=mesa_id)
     
     # 1. Obtener el pedido más reciente para esta mesa
-    # Filtra por la mesa y ordena por `tiempo_inicio` de forma descendente.
+    # Filtra por la mesa y ordena por "tiempo_inicio" de forma descendente.
     latest_pedido = Pedido.objects.filter(
         idMesa=mesa,
     ).order_by('idPedido').last()
@@ -1729,7 +1949,7 @@ def temporizador_mesa(request, mesa_id):
         # Cálculo del tiempo restante
         time_difference = end_time - timezone.localtime(timezone.now()) + timedelta(hours=6)
 
-        # Aseguramos que el tiempo restante no sea negativo
+        # Asegurar que el tiempo restante no sea negativo
         remaining_seconds = max(0, int(time_difference.total_seconds()))
     
     context = {
@@ -1741,12 +1961,12 @@ def temporizador_mesa(request, mesa_id):
     
     return render(request, 'He_Sai_Mali/temporizador.html', context)
 
+# Vistas para administrar los empleados
 @never_cache
 @user_passes_test(es_rol("Administrador"), login_url='login')
 def admin_empleados(request):
-    """
-    Lista todos los empleados para la gestión administrativa.
-    """
+    # Lista todos los empleados para la gestion administrativa.
+
     empleados = Empleado.objects.all().order_by('apellido', 'nombre')
 
     context = {
@@ -1760,9 +1980,8 @@ def admin_empleados(request):
 
 @user_passes_test(es_rol("Administrador"), login_url='login')
 def editar_empleado(request, empleado_id):
-    """
-    Vista para editar un empleado. Reutiliza la plantilla admin_empleados.html.
-    """
+    # Vista para editar un empleado. Reutiliza la plantilla admin_empleados.html.
+
     empleado = get_object_or_404(Empleado, pk=empleado_id)
     empleados = Empleado.objects.all().order_by('apellido', 'nombre')
 
@@ -1818,9 +2037,8 @@ def editar_empleado(request, empleado_id):
 @require_POST
 @user_passes_test(es_rol("Administrador"), login_url='login')
 def eliminar_empleado(request, empleado_id):
-    """
-    Intenta eliminar un Empleado. Si hay referencias (ProtectedError), lo desactiva.
-    """
+    # Intenta eliminar un Empleado.
+
     empleado = get_object_or_404(Empleado, pk=empleado_id)
 
     if empleado.idEmpleado == request.user.idEmpleado:
@@ -1845,6 +2063,7 @@ def eliminar_empleado(request, empleado_id):
 
     return redirect('admin_empleados')
 
+# Funcionaliad para cerra sesion
 @login_required
 def logout_view(request):
     logout(request)
