@@ -6,7 +6,7 @@
     <meta charset="UTF-8">
     <link rel="icon" type="image/png" href="{% static 'He_Sai_Mali/logo.png' %}">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% if pedido_existente %}Añadir Platillos a Pedido N°{{ pedido_existente.idPedido }}{% else %}Registrar Nuevo Pedido{% endif %}</title>
+    <title>{% if pedido_existente %}Añadir productos a Pedido N°{{ pedido_existente.idPedido }}{% else %}Registrar Nuevo Pedido{% endif %}</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     
     <style>
@@ -436,7 +436,7 @@
                 <i class="fas fa-bars header-menu-toggle" onclick="toggleSidebar()"></i>
                 <h1 class="header-title">
                     <img src="{% static 'He_Sai_Mali/logo.png' %}" alt="Logo He Sai Mali">
-                    {% if pedido_existente %}AÑADIR PLATILLOS{% else %}REGISTRAR PEDIDO{% endif %}
+                    {% if pedido_existente %}AÑADIR PRODUCTOS{% else %}REGISTRAR PEDIDO{% endif %}
                 </h1>
             </div>
             
@@ -470,38 +470,53 @@
 
                 <hr class="linea">
 
-                {% if user.rol == "Administrador"%}
+                {% if user.rol == "Mesero" %}
                     <div class="sidebar-menu-title">PEDIDOS Y FACTURACIÓN</div>
                     <a href="{% url 'pedidos' %}" class="sidebar-nav-item">
                         <i class="fas fa-clipboard-list"></i>
                         <span>Pedidos</span>
                     </a>
-                    <a href="#" class="sidebar-nav-item active">
+                {% endif %}
+                {% if user.rol == "Mesero" %}
+                    <a href="{% url 'registrarpedido' %}" class="sidebar-nav-item active">
                         <i class="fas fa-file-invoice"></i>
                         <span>Nuevo Pedido</span>
                     </a>
 
                     <hr class="linea">
+                    
+                {% endif %}
+                
+                {% if user.rol == "Administrador" or user.rol == "Cocinero" %}
                     <div class="sidebar-menu-title">UTILIDADES DE COCINA</div>
+                {% endif %}
+                {% if user.rol == "Cocinero" %}
                     <a href="{% url 'cocina' %}" class="sidebar-nav-item">
                         <i class="fas fa-utensils"></i>
                         <span>Cocina</span>
                     </a>
+                {% endif %}
+                {% if user.rol == "Administrador" %}
                     <a href="{% url 'admin_platillos' %}" class="sidebar-nav-item">
                         <i class="fas fa-hamburger"></i>
-                        <span>Platillos</span>
+                        <span>Productos</span>
                     </a>
-
+                
                     <hr class="linea">
+                
+                {% endif %}
+                {% if user.rol == "Administrador" or user.rol == "Mesero" %}
                     <div class="sidebar-menu-title">ADMINISTRACIÓN DE LOCAL</div>
 
                     <a href="{% url 'admin_mesas' %}" class="sidebar-nav-item">
                         <i class="fas fa-chair"></i>
                         <span>Mesas</span>
                     </a>
+                {% endif %}
+                {% if user.rol == "Administrador" %}
                     <a href="{% url 'admin_ingredientes' %}" class="sidebar-nav-item">
                         <i class="fas fa-leaf"></i>
-                        <span>Ingredientes</span>
+                        <span>Inventario</span>
                     </a>
                     <a href="{% url 'admin_proveedores' %}" class="sidebar-nav-item">
                         <i class="fas fa-truck-loading"></i>
@@ -510,6 +525,10 @@
                     <a href="{% url 'admin_dashboard' %}" class="sidebar-nav-item">
                         <i class="fas fa-chart-line"></i>
                         <span>Dashboard</span>
+                    </a>
+                    <a href="{% url 'admin_empleados' %}" class="sidebar-nav-item">
+                        <i class="fas fa-user-friends"></i>
+                        <span>Empleados</span>
                     </a>
                     <a href="{% url 'registro' %}" class="sidebar-nav-item">
                         <i class="fas fa-user-plus"></i>
@@ -538,7 +557,7 @@
                 
                 <h1 class="Titulo-Registro">
                     {% if pedido_existente %}
-                        Añadir Platillos a Pedido N°{{ pedido_existente.idPedido }}
+                        Añadir Productos a Pedido N°{{ pedido_existente.idPedido }}
                         <p style="font-size: 0.7em; color: #555; margin-top: 5px;">
                             Cliente: {{ pedido_existente.idCliente.nombre }} | Telefono: {% if pedido_existente.idCliente.telefono %}{{ pedido_existente.idCliente.telefono }}{% else %}Ninguno{% endif %} | Mesa: {% if pedido_existente.idMesa %}{{ pedido_existente.idMesa.idMesa }}{% else %}Ninguna{% endif %}
                         </p>
@@ -579,7 +598,7 @@
                                 
                                 <div>
                                     <label for="telefono_cliente" class="form-label">Teléfono</label>
-                                    <input type="text" class="form-control" id="telefono_cliente" name="telefono_cliente" value="{{ telefono_cliente_previo }}" autocomplete="off">
+                                    <input type="text" class="form-control" id="telefono_cliente" name="telefono_cliente" value="{{ telefono_cliente_previo }}" autocomplete="off" inputmode="numeric" pattern="[0-9]{8}" title="El teléfono debe contener exactamente 8 dígitos numéricos.">
                                 </div>
                                 <div>
                                     <label for="correo_cliente" class="form-label">Correo</label>
@@ -608,35 +627,46 @@
 
                     <div>
                         <div class="section-header">
-                            Selección de Platillos
+                            Selección de Productos
                         </div>
                         <div class="card-body">
-                            <table class="table">
-                                <thead>
-                                    <tr>
-                                        <th>Platillo</th>
-                                        <th>Precio</th>
-                                        <th style="width: 150px; text-align: center;">Cantidad</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {% for platillo in platillos %}
+                            {# Itera sobre el diccionario de platillos agrupados por categoría #}
+                            {% for categoria, lista_platillos in platillos_agrupados.items %}
+                                
+                                <h4 style="color: var(--primary-color); border-bottom: 2px solid var(--secondary-color); padding-top: 15px; margin-bottom: 10px;">
+                                    {{ categoria|upper }}
+                                </h4>
+
+                                <table class="table">
+                                    <thead>
                                         <tr>
-                                            <td>{{ platillo.nombre }}</td>
-                                            <td><span class="badge-info">C$ {{ platillo.precio|floatformat:2 }}</span></td>
-                                            <td>
-                                                <input type="number" 
-                                                        name="cantidad_{{ platillo.idProductoMenu }}" 
-                                                        min="0" 
-                                                        value="0" 
-                                                        class="form-control"
-                                                        style="text-align: center;"
-                                                        onchange="if(this.value < 0) this.value = 0;">
-                                            </td>
+                                            <th>Producto</th>
+                                            <th>Precio</th>
+                                            <th style="width: 50px; text-align: center;">Cantidad</th>
                                         </tr>
-                                    {% endfor %}
-                                </tbody>
-                            </table>
+                                    </thead>
+                                    <tbody>
+                                        {# Itera sobre los platillos dentro de cada categoría #}
+                                        {% for platillo in lista_platillos %}
+                                            <tr>
+                                                <td>{{ platillo.nombre }}</td>
+                                                <td><span class="badge-info">C$ {{ platillo.precio|floatformat:2 }}</span></td>
+                                                <td>
+                                                    <input type="number" 
+                                                            name="cantidad_{{ platillo.idProductoMenu }}" 
+                                                            min="0" 
+                                                            value="0" 
+                                                            class="form-control"
+                                                            style="text-align: center;"
+                                                            onchange="if(this.value < 0) this.value = 0;">
+                                                </td>
+                                            </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            {% empty %}
+                                <p>No hay productos disponibles para ordenar en este momento.</p>
+                            {% endfor %}
                         </div>
                     </div>
 
@@ -644,7 +674,7 @@
                         <a href="{% url 'pedidos' %}" class="btn-secondary-lg">Cancelar y Volver</a>
                         <button type="submit" class="btn-success-lg">
                             {% if pedido_existente %}
-                                Añadir Platillos a Pedido
+                                Añadir Productos a Pedido
                             {% else %}
                                 Guardar Pedido y Enviar a Cocina
                             {% endif %}

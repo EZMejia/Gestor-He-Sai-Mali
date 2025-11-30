@@ -1,11 +1,12 @@
 {% load static %}
+{% load custom_filters %}
 <!DOCTYPE html>
 <html lang="es">
 <head>
     <meta charset="UTF-8">
     <link rel="icon" type="image/png" href="{% static 'He_Sai_Mali/logo.png' %}">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Admin - Inventario</title>
+    <title>Admin - Empleados</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <style>
         :root {
@@ -42,15 +43,15 @@
         }
 
         /* ---------------------------------------------------- */
-        /* --- Barra de Navegación Superior (HEADER ADAPTADO) --- */
+        /* --- Barra de Navegación Superior (HEADER) --- */
         /* ---------------------------------------------------- */
         .header {
             display: flex;
             justify-content: space-between;
             align-items: center;
             height: 60px;
-            background-color: var(--primary-color);
-            border-bottom: 8px solid var(--secondary-color);
+            background-color: var(--primary-color); 
+            border-bottom: 8px solid var(--secondary-color); 
             color: var(--text-light);
             padding: 30px 15px;
             box-shadow: 0 6px 10px black;
@@ -115,13 +116,13 @@
         }
 
         /* ---------------------------------------------------- */
-        /* --- Menú Lateral (SIDEBAR ADAPTADO) --- */
+        /* --- Menú Lateral (SIDEBAR) --- */
         /* ---------------------------------------------------- */
         .sidebar {
             width: 250px;
-            background-color: var(--sidebar-bg); /* Opcional: usar primary-color si se desea mantener el rojo */
+            background-color: var(--sidebar-bg); 
             color: var(--text-light);
-            padding-top: 68px; /* Espacio para el header fijo + borde */
+            padding-top: 68px; 
             position: fixed;
             top: 0;
             left: 0;
@@ -187,7 +188,7 @@
             background-color: rgba(255, 255, 255, 0.1);
         }
 
-        /* Menú de navegación (Adaptado de 'dropdown-content') */
+        /* Menú de navegación */
         .sidebar-nav {
             padding: 10px 0;
         }
@@ -228,7 +229,7 @@
         /* ---------------------------------------------------- */
         .main-content {
             flex-grow: 1;
-            padding-top: 68px; /* Espacio para el header fijo + borde */
+            padding-top: 68px; 
             background-color: var(--bg-page);
             margin-left: 250px; 
             transition: margin-left 0.3s ease;
@@ -246,7 +247,7 @@
             background-color: white;
             box-shadow: 0 0 50px 10px rgba(0, 0, 0, 0.3);
             width: 90%;
-            max-width: 1200px; /* Limite de ancho para la administración */
+            max-width: 1200px; 
             border-radius: 5px;
             padding: 20px;
         }
@@ -258,10 +259,10 @@
             box-shadow: 0 2px 4px rgba(0,0,0,0.1);
         }
         .card-header-custom {
-            background-color: #981a28; /* Color principal del diseño */
+            background-color: #981a28; 
             color: white;
             padding: 10px 15px;
-            border-bottom: 3px solid #f3bb67; /* Color de acento */
+            border-bottom: 3px solid #f3bb67; 
             border-radius: 5px 5px 0 0;
             font-weight: bold;
         }
@@ -282,20 +283,6 @@
         }
         .btn-custom-success:hover {
             background-color: #274e13;
-        }
-        
-        .btn-custom-danger { 
-            text-decoration: none;
-            color: white;
-            background-color: #f44336; 
-            padding: 8px 15px;
-            border-radius: 5px;
-            transition: background-color 0.2s;
-            border: none;
-            cursor: pointer;
-        }
-        .btn-custom-danger:hover {
-            background-color: #b12131;
         }
         
         .form-label-custom {
@@ -320,10 +307,9 @@
             width: 100%;
             border-collapse: collapse;
             margin-top: 0px;
-            color: #333; /* Color de texto para la tabla */
         }
         .table-custom thead tr {
-            background-color: #dacfb7; /* Color claro del diseño */
+            background-color: #dacfb7; 
             border-bottom: 2px solid #981a28;
         }
         .table-custom th, .table-custom td {
@@ -341,7 +327,7 @@
             background-color: #e0e0e0;
         }
         
-        /* Estilos de mensajes (adaptados) */
+        /* Estilos de mensajes */
         .alert-custom {
             padding: 10px;
             margin-bottom: 15px;
@@ -352,65 +338,34 @@
         .alert-error { background-color: #f44336; }
         .alert-success { background-color: #4CAF50; }
         .alert-info { background-color: #ff9800; color: black; }
-
-        .form-text-custom {
-            color: #6c757d;
-            display: block;
-            margin-top: -5px;
-            margin-bottom: 10px;
-            font-size: 0.85em;
-        }
-
-        /* Estilos del Modal/Overlay de Compra */
-        .overlay-custom {
-            display: none; 
-            position: fixed; 
-            top: 0; 
-            left: 0; 
-            width: 100%; 
-            height: 100%; 
-            background: rgba(0, 0, 0, 0.5); 
-            z-index: 1000;
-        }
-
-        .modal-card-custom {
-            display: none; 
-            position: fixed; 
-            top: 50%; 
-            left: 50%; 
-            transform: translate(-50%, -50%); 
-            z-index: 1001; 
-            width: 400px; 
-            max-width: 90%; 
-            background-color: white;
-            border-radius: 5px;
-            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.5);
-            border: 3px solid #f3bb67;
-        }
-
-        .modal-header-custom {
-            background-color: #981a28; 
-            color: white;
-            padding: 15px;
-            border-bottom: 3px solid #f3bb67;
-            border-radius: 5px 5px 0 0;
-            font-weight: bold;
-            font-size: 1.2em;
-        }
-        .modal-body-custom {
-            padding: 15px;
-            color: #333;
-        }
-        .modal-input-group {
-            margin-bottom: 15px;
-        }
-        /* Fin de Estilos del Modal/Overlay */
         
+        .card-custom {
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .btn-custom-danger {
+            background-color: #f44336; 
+            color: white;
+            padding: 10px 15px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: background-color 0.2s;
+        }
+
+        .btn-custom-danger:hover {
+            background-color: #d32f2f;
+        }
+
         .btn-custom-edit:hover { background-color: #0056b3; }
         .btn-custom-edit { background-color: #007bff; }
-
+        
         /* ---------------------------------------------------- */
-        /* --- FOOTER ADAPTADO --- */
+        /* --- FOOTER --- */
         /* ---------------------------------------------------- */
         footer {
             display: flex;
@@ -423,11 +378,11 @@
             border-bottom: 10px solid #2c3038;
             font-size: 14px;
             width: 100%;
-            margin-top: 0; /* Lo gestiona el main-content */
+            margin-top: 0; 
         }
 
         /* ---------------------------------------------------- */
-        /* --- Comportamiento en MÓVIL (Max-width: 768px) --- */
+        /* --- Comportamiento en MÓVIL --- */
         /* ---------------------------------------------------- */
         @media (max-width: 768px) {
             .sidebar {
@@ -467,7 +422,7 @@
                 <i class="fas fa-bars header-menu-toggle" onclick="toggleSidebar()"></i>
                 <h1 class="header-title">
                     <img src="{% static 'He_Sai_Mali/logo.png' %}" alt="Logo He Sai Mali">
-                    ADMINISTRACIÓN DE INVENTARIO
+                    ADMINISTRACIÓN DE EMPLEADOS
                 </h1>
             </div>
             
@@ -543,7 +498,7 @@
                         <i class="fas fa-chair"></i>
                         <span>Mesas</span>
                     </a>
-                    <a href="{% url 'admin_ingredientes' %}" class="sidebar-nav-item active">
+                    <a href="{% url 'admin_ingredientes' %}" class="sidebar-nav-item">
                         <i class="fas fa-leaf"></i>
                         <span>Inventario</span>
                     </a>
@@ -555,7 +510,7 @@
                         <i class="fas fa-chart-line"></i>
                         <span>Dashboard</span>
                     </a>
-                    <a href="{% url 'admin_empleados' %}" class="sidebar-nav-item">
+                    <a href="{% url 'admin_empleados' %}" class="sidebar-nav-item active">
                         <i class="fas fa-user-friends"></i>
                         <span>Empleados</span>
                     </a>
@@ -570,9 +525,9 @@
 
         <main class="main-content" id="main-content">
             <div class="container_admin">
-                <h1 style="color: #981a28; margin-bottom: 20px;">Administración de Inventario</h1>
+                
+                <h1 style="color: #981a28; margin-bottom: 20px;">Administración de Empleados</h1>
 
-                {# Mensajes de Django adaptados al nuevo estilo #}
                 {% if messages %}
                     {% for message in messages %}
                         <div class="alert-custom alert-{{ message.tags }}" role="alert">
@@ -581,171 +536,126 @@
                     {% endfor %}
                 {% endif %}
                 
-                {# MODAL / FORMULARIO FLOTANTE DE COMPRA #}
-                <div id="formOverlay" class="overlay-custom"></div>
-
-                <div id="compraFormContainer" class="modal-card-custom">
-                    <div class="modal-header-custom">
-                        Registrar Compra para: <span id="nombreIngrediente" style="font-weight: normal;"></span>
-                    </div>
-                    <div class="modal-body-custom">
-                        <form method="POST" action="{% url 'comprar_ingrediente' %}">
-                            {% csrf_token %}
-                            <input type="hidden" name="id_ingrediente" id="idIngredienteInput" required>
-
-                            <div class="modal-input-group">
-                                <label for="proveedorInput" class="form-label-custom">Proveedor:</label>
-                                <input type="text" list="proveedores-list" id="proveedorInput" class="form-control-custom" placeholder="Seleccione un proveedor" required>
-                                <input type="hidden" name="id_proveedor_fk" id="idProveedorInput" required>
-                            </div>
-                            
-                            <div class="modal-input-group">
-                                <label for="precioCompra" class="form-label-custom">Precio de Compra (C$):</label>
-                                <input type="number" step="0.01" min="0.01" name="precio_compra" id="precioCompra" class="form-control-custom" required>
-                            </div>
-                            
-                            <div class="modal-input-group">
-                                <label for="cantidadComprada" class="form-label-custom">Cantidad Comprada:</label>
-                                <input type="number" step="0.01" min="0.01" name="cantidad_comprada" id="cantidadComprada" class="form-control-custom" required>
-                                <small id="unidadMedida" class="form-text-custom"></small>
-                            </div>
-                            
-                            <div class="modal-input-group">
-                                <label for="fechaCompra" class="form-label-custom">Fecha de la Compra:</label>
-                                <input type="date" name="fecha_compra" id="fechaCompra" class="form-control-custom" required>
-                            </div>
-                            
-                            <button type="submit" class="btn-custom-success">Registrar Compra</button>
-                            <button type="button" class="btn-custom-danger" onclick="ocultarFormularioCompra()">Cancelar</button>
-                        </form>
-                    </div>
-                </div>
-                {# FIN DE MODAL / FORMULARIO FLOTANTE DE COMPRA #}
-
-                {# Formulario Agregar Nuevo Ingrediente #}
+                {% if empleado_a_editar %}
                 <div class="card-custom">
                     <div class="card-header-custom">
-                        {% if articulo_a_editar %}Editar Artículo de Inventario: {{ articulo_a_editar.nombre }}{% else %}Agregar Nuevo Artículo de Inventario{% endif %}
+                        <h2>Editar Empleado: {{ empleado_a_editar.nombre }} {{ empleado_a_editar.apellido }}</h2>
                     </div>
                     <div class="card-body-custom">
-                        <form method="post" action="{% if articulo_a_editar %}{% url 'editar_ingrediente' articulo_a_editar.idArticuloInventario %}{% else %}{% url 'agregar_ingrediente' %}{% endif %}">
+                        <form method="post" action="{% url 'editar_empleado' empleado_a_editar.idEmpleado %}">
                             {% csrf_token %}
-                            
-                            <div style="flex-grow: 1; min-width: 200px;">
-                                <label for="nombre" class="form-label-custom">Nombre del Artículo:</label>
-                                <input type="text" name="nombre" id="nombre" class="form-control-custom" required autocomplete="off"
-                                    value="{{ articulo_a_editar.nombre|default:'' }}">
-                            </div>
-                            
-                            <div style="flex-grow: 0; min-width: 150px;">
-                                <label for="tipo_articulo" class="form-label-custom">Tipo de Artículo:</label>
-                                <select name="tipo_articulo" id="tipo_articulo" class="form-control-custom" required>
-                                    <option value="">Seleccione el Tipo</option>
-                                        <option value="{{ 'Ingrediente' }}"{% if articulo_a_editar.tipoArticulo == 'Ingrediente' %}selected{% endif %}>Ingrediente</option>
-                                </select>
-                            </div>
-                            
-                            <div style="flex-grow: 0; min-width: 100px;">
-                                <label for="stock" class="form-label-custom">Stock Inicial:</label>
-                                <input type="number" step="0.01" min="0" name="stock" id="stock" class="form-control-custom" value="0" required>
-                            </div>
-                            
-                            <div style="flex-grow: 0; min-width: 150px;">
-                                <label for="unidad_de_medida" class="form-label-custom">Unidad de Medida (ej. lb, ml, unidad):</label>
-                                <input type="text" name="unidad_de_medida" id="unidad_de_medida" class="form-control-custom" required autocomplete="off"
-                                    value="{{ articulo_a_editar.unidad_de_medida|default:'' }}">
-                            </div>
-                            
-                            <div style="flex-grow: 1; min-width: 200px;">
-                                <label for="ubicacion" class="form-label-custom">Ubicación:</label>
-                                <input type="text" name="ubicacion" id="ubicacion" class="form-control-custom" autocomplete="off"
-                                    value="{{ articulo_a_editar.ubicacion|default:'' }}">
-                                <small class="form-text-custom">Opcional. Deja en blanco si no aplica.</small>
-                            </div>
-                            
-                            <div style="flex: 1 1 100%;">
-                                {% if articulo_a_editar %}
-                                    <div style="display: flex; gap: 5px;">
-                                        <button type="submit" class="btn-custom-success" style="flex-grow: 1;">
-                                            Actualizar Artículo
-                                        </button>
-                                        <a href="{% url 'admin_ingredientes' %}" class="btn-custom-danger" style="text-align: center; text-decoration: none; padding: 9px 20px; font-weight: normal; font-size: 13px;">
-                                            Cancelar
-                                        </a>
-                                    </div>
-                                {% else %}
-                                    <button type="submit" class="btn-custom-success" style="width: 100%;">
-                                        Guardar Artículo
+                            <div style="display: flex; gap: 15px; flex-wrap: wrap;">
+                                
+                                <div style="flex: 1 1 30%; min-width: 200px;">
+                                    <label for="nombre" class="form-label-custom">Nombre</label>
+                                    <input type="text" class="form-control-custom" id="nombre" name="nombre" required
+                                    value="{{ empleado_a_editar.nombre|default:'' }}">
+                                </div>
+                                
+                                <div style="flex: 1 1 30%; min-width: 200px;">
+                                    <label for="apellido" class="form-label-custom">Apellido</label>
+                                    <input type="text" class="form-control-custom" id="apellido" name="apellido" required
+                                    value="{{ empleado_a_editar.apellido|default:'' }}">
+                                </div>
+                                
+                                <div style="flex: 1 1 30%; min-width: 200px;">
+                                    <label for="rol" class="form-label-custom">Rol</label>
+                                    <select class="form-control-custom" id="rol" name="rol" required>
+                                        {% for rol_opcion in roles_disponibles %}
+                                            <option value="{{ rol_opcion }}" {% if empleado_a_editar.rol == rol_opcion %}selected{% endif %}>
+                                                {{ rol_opcion }}
+                                            </option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                                
+                                <div style="flex: 1 1 30%; min-width: 200px;">
+                                    <label for="telefono" class="form-label-custom">Teléfono</label>
+                                    <input type="text" class="form-control-custom" id="telefono" name="telefono"
+                                    value="{{ empleado_a_editar.telefono|default:'' }}">
+                                </div>
+
+                                <div style="flex: 1 1 30%; min-width: 200px;">
+                                    <label for="correo" class="form-label-custom">Correo</label>
+                                    <input type="email" class="form-control-custom" id="correo" name="correo" required
+                                    value="{{ empleado_a_editar.correo|default:'' }}">
+                                </div>
+
+                                <div style="flex: 1 1 30%; min-width: 200px;">
+                                    <label for="cedula" class="form-label-custom">Cédula</label>
+                                    <input type="text" class="form-control-custom" id="cedula" name="cedula" required
+                                    value="{{ empleado_a_editar.cedula|default:'' }}">
+                                </div>
+
+                                <div style="flex: 1 1 20%; display: flex; align-items: flex-end; min-width: 250px;">
+                                    <button type="submit" class="btn-custom-success" style="flex-grow: 1; margin-bottom: 12px;">
+                                        Actualizar Empleado
                                     </button>
-                                {% endif %}
+                                    <a href="{% url 'admin_empleados' %}" class="btn-custom-danger" style="margin-bottom: 12px; flex-grow: 1; text-align: center; text-decoration: none; margin-left: 5px; padding: 9px; font-weight: normal; font-size: 13px;">
+                                        Cancelar
+                                    </a>
+                                </div>
                             </div>
                         </form>
                     </div>
                 </div>
-
-                {# Listado de Ingredientes / Tabla #}
-                <h2 style="color: #981a28; margin-top: 30px; border-bottom: 2px solid #dacfb7; padding-bottom: 5px; margin-bottom: 10px;">Listado de Artículos</h2>
+                {% endif %}
+                <h2 style="color: #981a28; margin-top: 30px; border-bottom: 2px solid #dacfb7; padding-bottom: 5px; margin-bottom: 10px;">Listado de Empleados</h2>
                 <div class="card-custom" style="padding: 0; overflow-x: auto;">
                     <table class="table-custom">
                         <thead>
                             <tr>
                                 <th>ID</th>
-                                <th>Nombre</th>
-                                <th>Tipo de Artículo</th> 
-                                <th>Stock Actual</th>
-                                <th>Unidad de Medida</th>
-                                <th>Ubicación</th>
-                                <th></th>
+                                <th>Nombre Completo</th>
+                                <th>Usuario</th>
+                                <th>Rol</th>
+                                <th>Teléfono</th>
+                                <th>Correo</th>
+                                <th>Cédula</th>
                                 <th></th>
                             </tr>
                         </thead>
                         <tbody>
-                            {% for articulo in ingredientes %}
-                                <tr 
-                                    class="clickable-row" 
-                                >
-                                    <td>{{ articulo.idArticuloInventario }}</td>
-                                    <td>{{ articulo.nombre }}</td>
-                                    <td>{{ articulo.tipoArticulo|default:"N/A" }}</td>
-                                    <td>{{ articulo.stock }}</td>
-                                    <td>{{ articulo.unidad_de_medida }}</td>
-                                    <td>{{ articulo.ubicacion|default:"-" }}</td> 
-                                    <td>
-                                        <button type="button" style="font-weight: bold; padding: 5px 10px;" class="btn-custom-success" onclick="event.stopPropagation(); mostrarFormularioCompra({{ articulo.idArticuloInventario }}, '{{ articulo.nombre }}', '{{ articulo.unidad_de_medida }}')">
-                                            Comprar
+                            {% for empleado in empleados %}
+                            <tr>
+                                <td>{{ empleado.idEmpleado }}</td>
+                                <td>{{ empleado.nombre }} {{ empleado.apellido }}</td>
+                                <td>{{ empleado.usuario }}</td>
+                                <td>{{ empleado.rol }}</td>
+                                <td>{{ empleado.telefono|default:"N/A" }}</td>
+                                <td>{{ empleado.correo }}</td>
+                                <td>{{ empleado.cedula }}</td>
+                                <td style="white-space: nowrap;">
+                                    <a href="{% url 'editar_empleado' empleado.idEmpleado %}" class='btn-custom-edit'
+                                       style="color: white; padding: 5px 10px; border-radius: 5px; text-decoration: none; font-size: 13px; font-weight: bold; display: inline-block; margin-right: 5px;">
+                                        <i class="fas fa-edit"></i> Editar
+                                    </a>
+                                    
+                                    <form action="{% url 'eliminar_empleado' empleado.idEmpleado %}" method="POST" style="display: inline;" 
+                                        onsubmit="return confirm('¿Está seguro de que desea eliminar el empleado {{ empleado.nombre }} {{ empleado.apellido }}?');">
+                                        {% csrf_token %}
+                                        <button type="submit" class="btn-custom-danger" style="padding: 5px 10px;"
+                                            {% if empleado.idEmpleado == request.user.idEmpleado %}disabled{% endif %}>
+                                            <i class="fas fa-trash-alt"></i> Eliminar
                                         </button>
-                                    </td>
-                                    <td style="white-space: nowrap;">
-                                        <a href="{% url 'editar_ingrediente' articulo.idArticuloInventario %}" class='btn-custom-edit'
-                                        style="color: white; padding: 5px 10px; border-radius: 5px; text-decoration: none; font-size: 13px; font-weight: bold; display: inline-block; margin-right: 5px;">
-                                            <i class="fas fa-edit"></i> Editar
-                                        </a>
-                                        
-                                        <form action="{% url 'eliminar_ingrediente' articulo.idArticuloInventario %}" method="POST" style="display: inline;" 
-                                            onsubmit="return confirm('¿Está seguro de que desea eliminar el ingrediente {{ articulo.nombre }}? Esta acción fallará si existen recetas o compras asociadas.');">
-                                            {% csrf_token %}
-                                            <button type="submit" class="btn-custom-danger" style="padding: 5px 10px; font-weight: bold;">
-                                                <i class="fas fa-trash-alt"></i> Eliminar
-                                            </button>
-                                        </form>
-                                    </td>
-                                </tr>
+                                    </form>
+                                </td>
+                            </tr>
                             {% empty %}
-                                <tr>
-                                    <td colspan="7" style="text-align: center;">No hay artículos registrados.</td>
-                                </tr>
+                            <tr>
+                                <td colspan="9" class="text-center-custom">No hay empleados registrados.</td>
+                            </tr>
                             {% endfor %}
                         </tbody>
                     </table>
                 </div>
-                {# Fin de Listado de Ingredientes / Tabla #}
             </div>
             
             <footer>
                 <p>2025 Hê Sãî Mãlî.</p>
             </footer>
         </main>
-        
+
         <div class="overlay" id="overlay" onclick="toggleSidebar()"></div>
     </div>
 
@@ -771,52 +681,6 @@
                 mainContent.classList.toggle('sidebar-collapsed');
             }
         }
-
-        // --- Funciones para el formulario de Compra (Modal) ---
-        function mostrarFormularioCompra(id, nombre, unidad) {
-            document.getElementById('idIngredienteInput').value = id;
-            document.getElementById('nombreIngrediente').textContent = nombre;
-            // Corregido: asumí que el nombre del campo en el JS es 'unidadDeMedida'
-            // Si el nombre del campo en tu modelo/contexto es 'unidad_de_medida', el HTML debe ser ajustado en el bucle 'for'
-            document.getElementById('unidadMedida').textContent = `Unidad: ${unidad}`; 
-            document.getElementById('compraFormContainer').style.display = 'block';
-            document.getElementById('formOverlay').style.display = 'block';
-        }
-
-        function ocultarFormularioCompra() {
-            document.getElementById('compraFormContainer').style.display = 'none';
-            document.getElementById('formOverlay').style.display = 'none';
-            
-            // Limpiar campos del formulario
-            document.getElementById('idIngredienteInput').value = '';
-            document.getElementById('proveedorInput').value = '';
-            document.getElementById('idProveedorInput').value = '';
-            document.getElementById('precioCompra').value = '';
-            document.getElementById('cantidadComprada').value = '';
-            // La fecha se podría dejar, o limpiar si se desea.
-        }
-
-        // Lógica para el datalist de Proveedores
-        const proveedorInput = document.getElementById('proveedorInput');
-        const idProveedorInput = document.getElementById('idProveedorInput');
-
-        proveedorInput.addEventListener('input', function() {
-            const datalist = document.getElementById('proveedores-list');
-            const selectedOption = Array.from(datalist.options).find(option => option.value === this.value);
-            
-            if (selectedOption) {
-                idProveedorInput.value = selectedOption.getAttribute('data-id');
-            } else {
-                idProveedorInput.value = '';
-            }
-        });
     </script>
-
-    <datalist id="proveedores-list">
-        {% for proveedor in proveedores %}
-            <option value="{{ proveedor.nombre }}" data-id="{{ proveedor.idProveedor }}">
-        {% endfor %}
-    </datalist>
-
-</body>
+    </body>
 </html>

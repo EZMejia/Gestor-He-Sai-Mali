@@ -21,7 +21,7 @@
             /* Colores de estado de Mesas */
             --mesa-ocupada: #dc3545; /* Rojo para Ocupada */
             --mesa-libre: #28a745; /* Verde para Libre */
-            --btn-delete: #dc3545;
+            --btn-delete: #f44336;
             --btn-edit: #007bff;
         }
 
@@ -265,7 +265,7 @@
         .btn-custom-edit { background-color: var(--btn-edit); }
         .btn-custom-edit:hover { background-color: #0056b3; }
         .btn-custom-delete { background-color: var(--btn-delete); }
-        .btn-custom-delete:hover { background-color: #b02a37; }
+        .btn-custom-delete:hover { background-color: #d32f2f; }
 
         /* Table and Status */
         .table-custom { width: 100%; border-collapse: collapse; }
@@ -338,38 +338,53 @@
 
                 <hr class="linea">
 
-                {% if user.rol == "Administrador"%}
+                {% if user.rol == "Mesero" %}
                     <div class="sidebar-menu-title">PEDIDOS Y FACTURACIÓN</div>
                     <a href="{% url 'pedidos' %}" class="sidebar-nav-item">
                         <i class="fas fa-clipboard-list"></i>
                         <span>Pedidos</span>
                     </a>
+                {% endif %}
+                {% if user.rol == "Mesero" %}
                     <a href="{% url 'registrarpedido' %}" class="sidebar-nav-item">
                         <i class="fas fa-file-invoice"></i>
                         <span>Nuevo Pedido</span>
                     </a>
 
                     <hr class="linea">
+                    
+                {% endif %}
+                
+                {% if user.rol == "Administrador" or user.rol == "Cocinero" %}
                     <div class="sidebar-menu-title">UTILIDADES DE COCINA</div>
+                {% endif %}
+                {% if user.rol == "Cocinero" %}
                     <a href="{% url 'cocina' %}" class="sidebar-nav-item">
                         <i class="fas fa-utensils"></i>
                         <span>Cocina</span>
                     </a>
+                {% endif %}
+                {% if user.rol == "Administrador" %}
                     <a href="{% url 'admin_platillos' %}" class="sidebar-nav-item">
                         <i class="fas fa-hamburger"></i>
-                        <span>Platillos</span>
+                        <span>Productos</span>
                     </a>
-
+                
                     <hr class="linea">
+                
+                {% endif %}
+                {% if user.rol == "Administrador" or user.rol == "Mesero" %}
                     <div class="sidebar-menu-title">ADMINISTRACIÓN DE LOCAL</div>
 
-                    <a href="#" class="sidebar-nav-item active">
+                    <a href="{% url 'admin_mesas' %}" class="sidebar-nav-item active">
                         <i class="fas fa-chair"></i>
                         <span>Mesas</span>
                     </a>
+                {% endif %}
+                {% if user.rol == "Administrador" %}
                     <a href="{% url 'admin_ingredientes' %}" class="sidebar-nav-item">
                         <i class="fas fa-leaf"></i>
-                        <span>Ingredientes</span>
+                        <span>Inventario</span>
                     </a>
                     <a href="{% url 'admin_proveedores' %}" class="sidebar-nav-item">
                         <i class="fas fa-truck-loading"></i>
@@ -378,6 +393,10 @@
                     <a href="{% url 'admin_dashboard' %}" class="sidebar-nav-item">
                         <i class="fas fa-chart-line"></i>
                         <span>Dashboard</span>
+                    </a>
+                    <a href="{% url 'admin_empleados' %}" class="sidebar-nav-item">
+                        <i class="fas fa-user-friends"></i>
+                        <span>Empleados</span>
                     </a>
                     <a href="{% url 'registro' %}" class="sidebar-nav-item">
                         <i class="fas fa-user-plus"></i>
@@ -390,58 +409,58 @@
 
         <main class="main-content" id="main-content">
             <div class="container_admin">
-                
-                <h1 style="color: #981a28; margin-bottom: 20px;">Administración de Mesas</h1>
+                {% if user.rol != "Mesero" %}
+                    <h1 style="color: #981a28; margin-bottom: 20px;">Administración de Mesas</h1>
 
-                {% if messages %}
-                    {% for message in messages %}
-                        <div class="alert-custom alert-{{ message.tags }}" role="alert">
-                            {{ message }}
-                        </div>
-                    {% endfor %}
-                {% endif %}
-                
-                <div class="card-custom">
-                    <div class="card-header-custom" id="form-header">
-                        Mesa (Agregar / Editar / Eliminar)
-                    </div>
-                    <div class="card-body-custom">
-                        <form method="post" action="{% url 'admin_mesas' %}" id="mesa-form" onsubmit="return validateForm()">
-                            {% csrf_token %}
-                            <input type="hidden" name="action" id="action-field" value="add"> 
-
-                            <div style="display: flex; gap: 15px; flex-wrap: wrap; align-items: flex-start;">
-                                
-                                <div style="flex-grow: 1; min-width: 300px;">
-                                    <label for="idMesa" class="form-label-custom">ID Mesa</label>
-                                    <input type="number" class="form-control-custom" id="idMesa" name="idMesa" placeholder="Nuevo / ID a editar"
-                                        value="{% if mesa_seleccionada %}{{ mesa_seleccionada.idMesa }}{% endif %}" min="1">
-                                    <small style="color: gray;">(Dejar vacío para Agregar)</small>
-                                </div>
-
-                                <div style="flex-grow: 1; min-width: 300px;">
-                                    <label for="capacidad" class="form-label-custom">Capacidad (Asientos)</label>
-                                    <input type="number" class="form-control-custom" id="capacidad" name="capacidad" min="1" 
-                                        value="{% if mesa_seleccionada %}{{ mesa_seleccionada.capacidad }}{% endif %}" required>
-                                </div>
-                                
-                                <div style="flex-grow: 1; min-width: 400px; display: flex; align-items: center; gap: 5px; margin-top: 24px;">
-                                    <button type="submit" class="btn-custom-action" onclick="setFormAction('add')" title="Agrega una nueva mesa">
-                                        <i class="fas fa-plus"></i> Agregar
-                                    </button>
-                                    <button type="submit" class="btn-custom-edit" onclick="setFormAction('edit')" title="Edita la mesa con el ID especificado">
-                                        <i class="fas fa-edit"></i> Editar
-                                    </button>
-                                    <button type="submit" class="btn-custom-delete" onclick="setFormAction('delete')" title="Elimina la mesa con el ID especificado">
-                                        <i class="fas fa-trash-alt"></i> Eliminar
-                                    </button>
-                                </div>
+                    {% if messages %}
+                        {% for message in messages %}
+                            <div class="alert-custom alert-{{ message.tags }}" role="alert">
+                                {{ message }}
                             </div>
-                        </form>
-                    </div>
-                </div>
+                        {% endfor %}
+                    {% endif %}
+                    
+                    <div class="card-custom">
+                        <div class="card-header-custom" id="form-header">
+                            {% if mesa_a_editar %}Editar Mesa: {{ mesa_a_editar.idMesa }}{% else %}Agregar Nueva Mesa{% endif %}
+                        </div>
+                        <div class="card-body-custom">
+                            <form method="post" action="{% url 'admin_mesas' %}" id="mesa-form" onsubmit="return validateForm()">
+                                {% csrf_token %}
+                                <input type="hidden" name="action" id="action-field" value="add"> 
 
-                <h2 style="color: #981a28; margin-top: 30px; border-bottom: 2px solid #dacfb7; padding-bottom: 5px; margin-bottom: 10px;">Listado de Mesas</h2>
+                                <div style="display: flex; gap: 15px; flex-wrap: wrap; align-items: flex-start;">
+                                    
+                                    <div style="flex-grow: 1; min-width: 300px;">
+                                        <label for="idMesa" class="form-label-custom">ID Mesa</label>
+                                        <input type="number" class="form-control-custom" id="idMesa" name="idMesa" placeholder="Nuevo ID"
+                                        value="{% if mesa_a_editar %}{{ mesa_a_editar.idMesa }}{% endif %}"
+                                        {% if mesa_a_editar %}disabled{% endif %}>
+                                    </div>
+
+                                    <div style="flex-grow: 1; min-width: 300px;">
+                                        <label for="capacidad" class="form-label-custom">Capacidad (Asientos)</label>
+                                        <input type="number" class="form-control-custom" id="capacidad" name="capacidad" min="1" 
+                                            value="{% if mesa_seleccionada %}{{ mesa_seleccionada.capacidad }}{% endif %}" required>
+                                    </div>
+                                    
+                                    <div style="flex-grow: 1; min-width: 400px; display: flex; align-items: center; gap: 5px; margin-top: 24px; font-size: 14px;">
+                                        <button type="submit" class="btn-custom-action" style="flex-grow: 1;">
+                                        {% if mesa_a_editar %}Actualizar Mesa{% else %}Agregar Mesa{% endif %}
+                                    </button>
+                                    {% if mesa_a_editar %}
+                                    <a href="{% url 'admin_mesas' %}" class="btn-custom-delete" style="text-align: center; text-decoration: none; padding: 9px 20px; font-weight: normal; font-size: 13px;">
+                                        Cancelar Edición
+                                    </a>
+                                    {% endif %}
+                                    </div>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                {% endif %}
+
+                <h2 style="color: #981a28; margin-top: {% if user.rol != "Mesero" %} 30px {% endif %}; border-bottom: 2px solid #dacfb7; padding-bottom: 5px; margin-bottom: 10px;">Listado de Mesas</h2>
                 
                 <div class="card-custom" style="padding: 0; overflow-x: auto;">
                     <table class="table-custom">
@@ -451,6 +470,9 @@
                                 <th>Capacidad</th>
                                 <th>Estado</th>
                                 <th>QR de Mesas</th>
+                                {% if user.rol != "Mesero" %}
+                                <th></th>
+                                {% endif %}
                             </tr>
                         </thead>
                         <tbody>
@@ -472,6 +494,20 @@
                                             <i class="fas fa-qrcode"></i> Ir al QR</button>
                                     </form>
                                 </td>
+                                {% if user.rol != "Mesero" %}
+                                    <td>
+                                        <a href="{% url 'editar_mesa' mesa.idMesa %}" class='btn-custom-edit' style="color: white; padding: 5px 10px; border-radius: 5px; text-decoration: none; font-size: 13px; font-weight: bold; display: inline-block; margin-right: 5px;">
+                                            <i class="fas fa-edit"></i> Editar
+                                        </a>
+                                        <form action="{% url 'eliminar_mesa' mesa.idMesa %}" method="POST" style="display: inline;" 
+                                            onsubmit="return confirm('¿Está seguro de que desea eliminar el platillo {{ platillo.nombre }} (ID: {{ platillo.idProductoMenu }})? Esta acción no se puede deshacer y fallará si existen pedidos asociados.');">
+                                            {% csrf_token %}
+                                            <button type="submit" class="btn-custom-delete" style="padding: 5px 10px; font-size: 13px; font-weight: bold;">
+                                                <i class="fas fa-trash-alt"></i> Eliminar
+                                            </button>
+                                        </form>
+                                    </td>
+                                {% endif %}
                             </tr>
                             {% empty %}
                             <tr>

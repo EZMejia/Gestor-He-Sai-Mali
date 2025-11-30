@@ -227,7 +227,7 @@
             <h3>Paso 2: Contacto e Identificación</h3>
             <p>
                 <label>Correo:</label>
-                <input type="email" name="correo" id="correo" value="{{ valores.correo }}" placeholder="nombre@ejemplo.com" required autocomplete="off">
+                <input type="email" name="correo" id="correo" value="{{ valores.correo }}" placeholder="nombre@dominio.com" required autocomplete="off">
             </p>
             <p>
                 <label>Teléfono (opcional):</label>
@@ -287,7 +287,6 @@
                 <button type="submit" class="Registrarse">Registrarse</button>
             </div>
         </div>
-        <p style="text-align:center; margin-top:20px;">¿Ya existe una cuenta? <a href="{% url 'logout' %}">Iniciar sesión</a></p>
     </form>
 
     <script>
@@ -332,6 +331,7 @@
             let firstInvalidInput = null;
             let errorMessage = "Por favor, completa todos los campos requeridos para continuar.";
 
+            // --- 1. Validar campos vacíos y recopilar el primer campo inválido ---
             requiredInputs.forEach(input => {
                 if (!input.value.trim()) {
                     isValid = false;
@@ -344,19 +344,80 @@
                 }
             });
 
-            if (currentStep === 3 && isValid) {
-                const pass1 = document.getElementById('contrasena1').value;
-                const pass2 = document.getElementById('contrasena2').value;
+            // Si hay campos vacíos, no continuar con validaciones de formato
+            if (isValid) {
+            
+                // --- 2. Validaciones de formato por Paso (Solo si isValid es true) ---
+                if (currentStep === 1) {
+                    const nombre = document.getElementById('nombre').value;
+                    const apellido = document.getElementById('apellido').value;
+                    // Expresión regular para letras (a-z, A-Z), letras acentuadas, ñ, Ñ y espacios
+                    const nameRegex = /^[a-zA-Z\u00C0-\u017F\sñÑ]*$/; 
 
-                if (pass1 !== pass2) {
-                    isValid = false;
-                    errorMessage = "Las contraseñas no coinciden. Por favor, verifícalas.";
-                    document.getElementById('contrasena1').classList.add('error-highlight');
-                    document.getElementById('contrasena2').classList.add('error-highlight');
-                    if (!firstInvalidInput) firstInvalidInput = document.getElementById('contrasena1');
+                    if (!nameRegex.test(nombre)) {
+                        isValid = false;
+                        errorMessage = "El nombre solo puede contener letras y espacios.";
+                        document.getElementById('nombre').classList.add('error-highlight');
+                        if (!firstInvalidInput) firstInvalidInput = document.getElementById('nombre');
+                    } else if (!nameRegex.test(apellido)) {
+                        isValid = false;
+                        errorMessage = "El apellido solo puede contener letras y espacios.";
+                        document.getElementById('apellido').classList.add('error-highlight');
+                        if (!firstInvalidInput) firstInvalidInput = document.getElementById('apellido');
+                    }
+                } else if (currentStep === 2) {
+                    const correo = document.getElementById('correo').value.trim();
+                    const telefono = document.getElementById('telefono').value.trim();
+                    const cedula = document.getElementById('cedula').value.trim();
+                    
+                    // RegEx para formato de correo electrónico estándar
+                    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/; 
+                    // RegEx para solo 8 dígitos
+                    const phoneRegex = /^\d{8}$/; 
+                    // RegEx para el formato 000-000000-0000X
+                    const cedulaRegex = /^\d{3}-\d{6}-\d{4}[A-Z]$/; 
+
+                    if (!emailRegex.test(correo)) {
+                        isValid = false;
+                        errorMessage = "El formato de Correo Electrónico debe ser nombre@dominio.com.";
+                        document.getElementById('correo').classList.add('error-highlight');
+                        if (!firstInvalidInput) firstInvalidInput = document.getElementById('correo');
+                    } else if (telefono && !phoneRegex.test(telefono)) {
+                        isValid = false;
+                        errorMessage = "El teléfono debe ser de 8 dígitos numéricos.";
+                        document.getElementById('telefono').classList.add('error-highlight');
+                        if (!firstInvalidInput) firstInvalidInput = document.getElementById('telefono');
+                    } else if (!cedulaRegex.test(cedula)) {
+                        isValid = false;
+                        errorMessage = "El formato de Cédula debe ser 000-000000-0000X.";
+                        document.getElementById('cedula').classList.add('error-highlight');
+                        if (!firstInvalidInput) firstInvalidInput = document.getElementById('cedula');
+                    }
+                } else if (currentStep === 3) {
+                    const pass1 = document.getElementById('contrasena1').value;
+                    const pass2 = document.getElementById('contrasena2').value;
+                    
+                    // RegEx para contraseña fuerte: Mínimo 8 caracteres, al menos 1 mayúscula, 1 minúscula y 1 número
+                    const strongPasswordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)[a-zA-Z\d]{8,}$/;
+
+                    if (pass1 !== pass2) {
+                        isValid = false;
+                        errorMessage = "Las contraseñas no coinciden. Por favor, verifícalas.";
+                        document.getElementById('contrasena1').classList.add('error-highlight');
+                        document.getElementById('contrasena2').classList.add('error-highlight');
+                        if (!firstInvalidInput) firstInvalidInput = document.getElementById('contrasena1');
+                    } else if (!strongPasswordRegex.test(pass1)) {
+                        isValid = false;
+                        errorMessage = "La contraseña debe tener al menos 8 caracteres, incluyendo una mayúscula, una minúscula y un número.";
+                        document.getElementById('contrasena1').classList.add('error-highlight');
+                        document.getElementById('contrasena2').classList.add('error-highlight');
+                        if (!firstInvalidInput) firstInvalidInput = document.getElementById('contrasena1');
+                    }
                 }
             }
 
+
+            // --- 3. Manejo del flujo (Si es válido o no) ---
             if (isValid) {
                 const nextStepNumber = currentStep + 1;
 
@@ -382,10 +443,11 @@
 
         // Función para actualizar el resumen y generar el usuario
         function updateSummary() {
-            // ... (Lógica de updateSummary se mantiene igual) ...
             const nombre = document.getElementById('nombre').value;
             const apellido = document.getElementById('apellido').value;
-            const rol = document.getElementById('rol').options[document.getElementById('rol').selectedIndex].text;
+            // Corregido para obtener el texto del rol seleccionado
+            const rolSelect = document.getElementById('rol');
+            const rol = rolSelect.options[rolSelect.selectedIndex].text;
             const correo = document.getElementById('correo').value;
             const cedula = document.getElementById('cedula').value;
 

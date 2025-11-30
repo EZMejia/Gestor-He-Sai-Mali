@@ -436,29 +436,42 @@
 
                 <hr class="linea">
 
-                {% if user.rol == "Administrador"%}
+                {% if user.rol == "Mesero" %}
                     <div class="sidebar-menu-title">PEDIDOS Y FACTURACIÓN</div>
                     <a href="{% url 'pedidos' %}" class="sidebar-nav-item">
                         <i class="fas fa-clipboard-list"></i>
                         <span>Pedidos</span>
                     </a>
+                {% endif %}
+                {% if user.rol == "Mesero" %}
                     <a href="{% url 'registrarpedido' %}" class="sidebar-nav-item">
                         <i class="fas fa-file-invoice"></i>
                         <span>Nuevo Pedido</span>
                     </a>
 
                     <hr class="linea">
+                    
+                {% endif %}
+                
+                {% if user.rol == "Administrador" or user.rol == "Cocinero" %}
                     <div class="sidebar-menu-title">UTILIDADES DE COCINA</div>
+                {% endif %}
+                {% if user.rol == "Cocinero" %}
                     <a href="{% url 'cocina' %}" class="sidebar-nav-item">
                         <i class="fas fa-utensils"></i>
                         <span>Cocina</span>
                     </a>
+                {% endif %}
+                {% if user.rol == "Administrador" %}
                     <a href="{% url 'admin_platillos' %}" class="sidebar-nav-item">
                         <i class="fas fa-hamburger"></i>
-                        <span>Platillos</span>
+                        <span>Productos</span>
                     </a>
-
+                {% endif %}
+                {% if user.rol == "Administrador" or user.rol == "Cocinero" %}
                     <hr class="linea">
+                {% endif %}
+                {% if user.rol == "Administrador" %}
                     <div class="sidebar-menu-title">ADMINISTRACIÓN DE LOCAL</div>
 
                     <a href="{% url 'admin_mesas' %}" class="sidebar-nav-item">
@@ -467,15 +480,19 @@
                     </a>
                     <a href="{% url 'admin_ingredientes' %}" class="sidebar-nav-item">
                         <i class="fas fa-leaf"></i>
-                        <span>Ingredientes</span>
+                        <span>Inventario</span>
                     </a>
                     <a href="{% url 'admin_proveedores' %}" class="sidebar-nav-item">
                         <i class="fas fa-truck-loading"></i>
                         <span>Proveedores</span>
                     </a>
-                    <a href="#" class="sidebar-nav-item active">
+                    <a href="{% url 'admin_dashboard' %}" class="sidebar-nav-item active">
                         <i class="fas fa-chart-line"></i>
                         <span>Dashboard</span>
+                    </a>
+                    <a href="{% url 'admin_empleados' %}" class="sidebar-nav-item">
+                        <i class="fas fa-user-friends"></i>
+                        <span>Empleados</span>
                     </a>
                     <a href="{% url 'registro' %}" class="sidebar-nav-item">
                         <i class="fas fa-user-plus"></i>
@@ -546,10 +563,10 @@
                     <!-- Card 4: Ejemplo de otra métrica (podría ser Platillos Disponibles) -->
                     <div class="card" style="border-left: 5px solid var(--primary-color);">
                         <div class="card-header">
-                            <h3>Platillos en el Menú</h3>
+                            <h3>Productos en el Menú</h3>
                             <i class="fas fa-list-alt card-icon" style="color: var(--primary-color);"></i>
                         </div>
-                        <div class="card-value">{{ top_products_labels|length }}</div>
+                        <div class="card-value">{{ platillos_en_menu }}</div>
                         <p style="color: #6c757d; font-size: 0.9rem;">Variedad de productos activos.</p>
                     </div>
 

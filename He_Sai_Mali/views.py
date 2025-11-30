@@ -1,42 +1,30 @@
-from django.db import connection, transaction
+from django.db import IntegrityError, connection, transaction
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required, user_passes_test
-
 from django.contrib.auth import login, authenticate, logout
 from django.contrib import messages
 from django.contrib.auth.hashers import make_password
 from django.views.decorators.cache import never_cache
 from django.views.decorators.http import require_POST
-from django.db.models import F, Sum, Count
-
-from django.http import Http404
-
+from django.db.models import F, Sum, Count, ProtectedError
+from itertools import groupby
+from operator import attrgetter
 from datetime import timedelta
 import json
-
 from django.utils import timezone
 from django.urls import reverse
-
 import qrcode
 from io import BytesIO
 import base64
-
 from decimal import Decimal
-
-from django.db.models import ProtectedError
-
-from .models import *
-
 import re
 
-from .decorators import es_rol
+from .models import *
+from .decorators import *
 
 # Create your views here.
 def main(request):
     return render(request, 'He_Sai_Mali/main.html')
-
-def origen(request):
-    return render(request, 'He_Sai_Mali/origen.html')
 
 @never_cache
 def registro(request):
@@ -123,7 +111,7 @@ def login_view(request):
         # al buscarlo en la tabla Empleado
         rol = (request.user.rol or '').strip().lower()
         if rol == "administrador":
-            return redirect('pedidos')
+            return redirect('admin_dashboard')
         elif rol == "mesero":
             return redirect('pedidos')
         elif rol == "cocinero":
@@ -181,9 +169,6 @@ def cambiar_estado_platillo(request, pedido_platillo_id):
             cursor.execute(sql_update_estado, [next_state, pedido_platillo_id])
 
         messages.success(request, f"Estado de {pedido_ProductoMenu.idProductoMenu.nombre} cambiado a '{next_state}'.")
-    else:
-        messages.info(request, f"El estado de {pedido_ProductoMenu.idProductoMenu.nombre} es '{current_state}', no se puede cambiar.")
-
     # Redirigir a la vista principal de pedidos
     return redirect('pedidos')
 
@@ -250,6 +235,7 @@ def calcular_monto_total(pedido_id):
         cursor.execute(sql_total, [pedido_id])
         return cursor.fetchone()[0] or 0.0
     
+@never_cache
 @user_passes_test(es_rol("Mesero"), login_url='login')
 def mostrar_factura(request, pedido_id):
     """
@@ -326,7 +312,6 @@ def pagar_factura(request, pedido_id):
                     mesa_a_liberar = pedido.idMesa
                     mesa_a_liberar.ocupada = False
                     mesa_a_liberar.save()
-                    messages.info(request, f"Mesa N°{mesa_a_liberar.idMesa} liberada exitosamente.")
                 except Exception as e:
                     messages.warning(request, f"Advertencia: No se pudo liberar la mesa del pedido. Error: {e}")
 
@@ -398,7 +383,7 @@ def vista_mesero(request):
     
     # 1. Obtener los pedidos que tienen al menos un ProductoMenu no facturado
     cola_pedidos = Pedido.objects.raw("""
-        SELECT p."idPedido", p."fecha", p."metodoPago", c."nombre",
+        SELECT p."idPedido", p."fecha", p."metodoPago", c."nombre", p."idMesa_id",
         SUM(pp."cantidad" * pl."precio") AS "montoTotal"
         FROM "Pedido" p
         JOIN "Cliente" c ON c."idCliente" = p."idCliente_id"
@@ -408,7 +393,7 @@ def vista_mesero(request):
                         WHERE pp."estado" IN ('Registrado', 'Listo', 'Servido')
                         GROUP BY pp."idPedido_id"
                         )
-        GROUP BY p."idPedido", p."fecha", p."metodoPago", c."nombre"
+        GROUP BY p."idPedido", p."fecha", p."metodoPago", c."nombre", p."idMesa_id"
         ORDER BY p."fecha" ASC;
     """)
 
@@ -472,8 +457,20 @@ def vista_registrarpedido(request, pedido_id=None):
     LÓGICA DE MESA IMPLEMENTADA: Filtra mesas disponibles, asigna la mesa al crear el pedido 
     y la marca como OCUPADA.
     """
-    menu_ProductoMenu = list(ProductoMenu.objects.raw("""SELECT * FROM "ProductoMenu" WHERE "disponible" = 'true'"""))
+    # ------------------ CAMBIO 1: Obtener y Agrupar Platillos por Categoría ------------------
+    # Obtener todos los platillos disponibles y ordenarlos por categoría y luego por nombre
+    all_menu_ProductoMenu = list(ProductoMenu.objects.raw("""SELECT * FROM "ProductoMenu" WHERE "disponible" = 'true' ORDER BY "categoria", "nombre" """))
     
+    # Agrupar los platillos usando itertools.groupby
+    # attrgetter('categoria') permite agrupar por el valor del atributo 'categoria' del objeto
+    platillos_agrupados = {}
+    for categoria, platillos in groupby(all_menu_ProductoMenu, key=attrgetter('categoria')):
+        platillos_agrupados[categoria] = list(platillos)
+    
+    # Se usa la lista original para la lógica POST (donde se itera sobre todos)
+    menu_ProductoMenu = all_menu_ProductoMenu 
+    # ------------------ FIN: CAMBIO 1 -----------------------------------------------------
+
     pedido_existente = None
     if pedido_id:
         sql_pedido_existente = """
@@ -482,6 +479,7 @@ def vista_registrarpedido(request, pedido_id=None):
             JOIN "Cliente" c ON c."idCliente" = p."idCliente_id"
             WHERE p."idPedido" = %s;
         """
+        # Se asume que 'Pedido.objects.raw' y la lógica de PedidoData está correctamente definida o es parte del código existente
         pedido_raw = list(Pedido.objects.raw(sql_pedido_existente, [pedido_id]))
 
         if pedido_raw:
@@ -502,10 +500,10 @@ def vista_registrarpedido(request, pedido_id=None):
             pedido_existente = PedidoData()
 
 
-    # ------------------ LOGICA POST ------------------
+    # ------------------ LOGICA POST (Se mantiene la lógica existente) ------------------
     if request.method == 'POST':
         nombre_cliente = request.POST.get('nombre_cliente')
-        telefono_cliente =  request.POST.get('telefono_cliente')
+        telefono_cliente = request.POST.get('telefono_cliente')
         correo_cliente = request.POST.get('correo_cliente')
 
         tipo_cliente = request.POST.get('tipo_cliente') # 'persona' o 'empresa'
@@ -514,10 +512,27 @@ def vista_registrarpedido(request, pedido_id=None):
         
         id_mesa_seleccionada = request.POST.get('mesa') 
         
+        # Filtra platillos seleccionados (MOVÍ ESTA LÓGICA AQUÍ PARA USARLA EN LA VALIDACIÓN)
+        productos_a_registrar = {}
+        for productoMenu in menu_ProductoMenu:
+            cantidad = request.POST.get(f'cantidad_{productoMenu.idProductoMenu}', 0)
+            try:
+                cantidad = int(cantidad)
+            except ValueError:
+                cantidad = 0
+            if cantidad > 0:
+                productos_a_registrar[productoMenu.idProductoMenu] = cantidad
+        # --- FIN: Filtra platillos seleccionados ---
+
         if not nombre_cliente:
             messages.error(request, 'El nombre del cliente es obligatorio.')
             return redirect('registrarpedido')
             
+        # Validación de 0 productos (LÓGICA EXISTENTE, REQUERÍA 'productos_a_registrar')
+        if not productos_a_registrar and not pedido_existente:
+             messages.error(request, 'Debe seleccionar al menos un platillo para registrar un nuevo pedido.')
+             return redirect('registrarpedido')
+        
         id_pedido_a_usar = None
         cliente_a_usar_id = None
 
@@ -594,15 +609,71 @@ def vista_registrarpedido(request, pedido_id=None):
                         """
                         cursor.execute(sql_insert_empleado_pedido, [request.user.idEmpleado, id_pedido_a_usar])
                 
-                # 2. Procesar los ProductosMenu seleccionados (Detalle)
-                for productoMenu in menu_ProductoMenu:
-                    cantidad = request.POST.get(f'cantidad_{productoMenu.idProductoMenu}', 0)
-                    try:
-                        cantidad = int(cantidad)
-                    except ValueError:
-                        cantidad = 0
+                # -------------------------------------------------------------------
+                # ** INICIO DE LA FUNCIONALIDAD AÑADIDA: VALIDACIÓN DE STOCK **
+                # -------------------------------------------------------------------
+                ingredientes_requeridos = {}
+                
+                if productos_a_registrar:
+                    with connection.cursor() as cursor:
+                        # 1. Calcular el total de ingredientes necesarios para todo el pedido
+                        for producto_id, cantidad_pedido in productos_a_registrar.items():
+                            # Obtener los ingredientes para este producto_id
+                            sql_ingredientes = """
+                                SELECT "idArticuloInventario_id", "cantidad_usada" 
+                                FROM "ProductoMenu_ArticuloInventario"
+                                WHERE "idProductoMenu_id" = %s;
+                            """
+                            # Convertir a Decimal para asegurar precisión con el stock
+                            cantidad_pedido_decimal = Decimal(str(cantidad_pedido))
+                            
+                            cursor.execute(sql_ingredientes, [producto_id])
+                            for id_ingrediente, cantidad_usada in cursor.fetchall():
+                                # Asegurar que cantidad_usada también sea Decimal para la multiplicación
+                                try:
+                                    cantidad_usada_decimal = Decimal(str(cantidad_usada))
+                                except:
+                                    cantidad_usada_decimal = Decimal(cantidad_usada)
 
-                    if cantidad > 0:
+                                cantidad_total_requerida = cantidad_usada_decimal * cantidad_pedido_decimal
+                                
+                                # Acumular el requerimiento total por ArticuloInventario
+                                ingredientes_requeridos[id_ingrediente] = ingredientes_requeridos.get(id_ingrediente, Decimal('0.00')) + cantidad_total_requerida
+
+                        # 2. Validar el stock para cada ingrediente acumulado
+                        for id_ingrediente, cantidad_requerida in ingredientes_requeridos.items():
+                            # Obtener el stock actual y el nombre del artículo de inventario
+                            sql_stock = """
+                                SELECT "stock", "nombre" FROM "ArticuloInventario"
+                                WHERE "idArticuloInventario" = %s;
+                            """
+                            cursor.execute(sql_stock, [id_ingrediente])
+                            
+                            stock_data = cursor.fetchone()
+                            if stock_data:
+                                stock, nombre_ingrediente = stock_data
+                                # Asegurar que stock sea Decimal para la comparación
+                                try:
+                                    stock_decimal = Decimal(str(stock))
+                                except:
+                                    stock_decimal = Decimal(stock)
+                                
+                                # Comparar: Si la cantidad requerida es mayor al stock disponible
+                                if cantidad_requerida > stock_decimal:
+                                    # **Lanzar un error** para forzar el rollback de la transacción atómica
+                                    raise ValueError(f"Stock insuficiente para '{nombre_ingrediente}'. Requerido: {cantidad_requerida:.2f}, Disponible: {stock_decimal:.2f}.")
+
+                # -------------------------------------------------------------------
+                # ** FIN DE LA FUNCIONALIDAD AÑADIDA **
+                # -------------------------------------------------------------------
+                
+                # 2. Procesar los ProductosMenu seleccionados (Detalle)
+                # MODIFICACIÓN: Ya no se itera sobre menu_ProductoMenu, sino sobre productos_a_registrar
+                for producto_id, cantidad in productos_a_registrar.items():
+                    # Buscar el ProductoMenu en la lista inicial
+                    productoMenu = next((p for p in menu_ProductoMenu if p.idProductoMenu == producto_id), None)
+                    
+                    if productoMenu and cantidad > 0:
                         with connection.cursor() as cursor:
                             # 2.1. Insertar el detalle del ProductoMenu
                             sql_insert_ProductoMenu_pedido = """
@@ -611,7 +682,7 @@ def vista_registrarpedido(request, pedido_id=None):
                             """
                             cursor.execute(sql_insert_ProductoMenu_pedido, [id_pedido_a_usar, productoMenu.idProductoMenu, cantidad])
                             
-                            # 2.2. Restar ingredientes del stock
+                            # 2.2. Restar ingredientes del stock (LÓGICA ORIGINAL ADAPTADA A DECIMAL)
                             sql_ingredientes = """
                                 SELECT "idArticuloInventario_id", "cantidad_usada" 
                                 FROM "ProductoMenu_ArticuloInventario" 
@@ -619,7 +690,12 @@ def vista_registrarpedido(request, pedido_id=None):
                             """
                             cursor.execute(sql_ingredientes, [productoMenu.idProductoMenu])
                             for id_ingrediente, cantidad_usada in cursor.fetchall():
-                                cantidad_a_restar = cantidad_usada * cantidad
+                                # Usar Decimal para la resta segura
+                                try:
+                                    cantidad_a_restar = Decimal(str(cantidad_usada)) * Decimal(str(cantidad))
+                                except:
+                                    cantidad_a_restar = Decimal(cantidad_usada) * Decimal(cantidad)
+
                                 sql_update_stock = """
                                     UPDATE "ArticuloInventario"
                                     SET "stock" = "stock" - %s
@@ -658,6 +734,7 @@ def vista_registrarpedido(request, pedido_id=None):
                 
                 return redirect('pedidos')
             
+            # --- MANEJO DE EXCEPCIONES: CAPTURA EL ERROR DE STOCK Y FUERZA EL ROLLBACK ---
         except Exception as e:
             messages.error(request, e)
             return redirect('registrarpedido')
@@ -665,9 +742,11 @@ def vista_registrarpedido(request, pedido_id=None):
     # ------------------ PETICIÓN GET (Contexto) ------------------
     mesas_disponibles = Mesa.objects.filter(ocupada=False).order_by('idMesa') 
 
+    # ------------------ CAMBIO 2: Pasar el nuevo diccionario agrupado ------------------
     # Petición GET
     context = {
-        'platillos': menu_ProductoMenu,
+        'platillos': menu_ProductoMenu, # Se mantiene por si se usa en otra lógica, aunque ahora agruparemos en el template
+        'platillos_agrupados': platillos_agrupados, # <--- **NUEVO CONTEXTO**
         # Si es un pedido existente (para agregar), pre-rellenar el nombre del cliente
         'nombre_cliente_previo': pedido_existente.idCliente.nombre if pedido_existente else '',
         'telefono_cliente_previo': pedido_existente.idCliente.telefono if pedido_existente else '',
@@ -677,8 +756,8 @@ def vista_registrarpedido(request, pedido_id=None):
         'nombre_empleado': request.user.nombre,
         'apellido_empleado': request.user.apellido
     }
+    # ------------------ FIN: CAMBIO 2 -------------------------------------------------
     return render(request, 'He_Sai_Mali/registrarpedido.html', context)
-
 
 @never_cache
 @user_passes_test(es_rol("Cocinero"), login_url='login')
@@ -736,8 +815,7 @@ def vista_cocinero(request):
     return render(request, 'He_Sai_Mali/cocina.html', context)
 
 @require_POST
-@user_passes_test(es_rol("Cocinero"))
-@login_required
+@user_passes_test(es_rol("Cocinero"), login_url='login')
 def platillo_listo(request, pedido_platillo_id):
     """
     Marca un platillo específico dentro de un pedido como 'Listo'.
@@ -784,8 +862,7 @@ def platillo_listo(request, pedido_platillo_id):
     return redirect('cocina')
 
 @never_cache
-@user_passes_test(es_rol("Administrador"))
-@login_required
+@user_passes_test(es_rol("Administrador"), login_url='login')
 def admin_ingredientes(request):
     """
     Vista para ver ingredientes y proveedores.
@@ -799,7 +876,6 @@ def admin_ingredientes(request):
 
 @require_POST
 @user_passes_test(es_rol("Administrador"), login_url='login')
-@login_required
 def agregar_ingrediente(request):
     nombre = request.POST.get('nombre', '').strip()
     stock_str = request.POST.get('stock', '0')
@@ -834,7 +910,6 @@ def agregar_ingrediente(request):
 
 @require_POST
 @user_passes_test(es_rol("Administrador"), login_url='login')
-@login_required
 def comprar_ingrediente(request):
     """
     Procesa la compra de un ingrediente, registra el ArticuloInventario_Proveedor 
@@ -896,9 +971,8 @@ def comprar_ingrediente(request):
 
     return redirect('admin_ingredientes')
 
-@login_required
-@user_passes_test(es_rol("Administrador"), login_url='login')
 @require_POST
+@user_passes_test(es_rol("Administrador"), login_url='login')
 def eliminar_ingrediente(request, ingrediente_id):
     """
     Vista para eliminar un ArticuloInventario (Ingrediente).
@@ -923,9 +997,61 @@ def eliminar_ingrediente(request, ingrediente_id):
     # 5. Redirigir de vuelta a la lista de ingredientes
     return redirect('admin_ingredientes')
 
+@user_passes_test(es_rol("Administrador"), login_url='login')
+def editar_ingrediente(request, ingrediente_id):
+    """
+    Vista para editar un artículo de inventario (ingrediente).
+    Carga el ingrediente en el formulario o procesa la actualización.
+    """
+    ingrediente = get_object_or_404(ArticuloInventario, idArticuloInventario=ingrediente_id)
+    
+    if request.method == 'POST':
+        # 1. Recolección de datos
+        nombre = request.POST.get('nombre').strip()
+        unidad_de_medida = request.POST.get('unidad_de_medida').strip()
+        tipoArticulo = request.POST.get('tipo_articulo').strip()
+        ubicacion = request.POST.get('ubicacion').strip()
+
+        # 2. Validación y Actualización
+        try:
+            # Actualizar las propiedades del objeto existente
+            ingrediente.nombre = nombre
+            ingrediente.unidad_de_medida = unidad_de_medida
+            ingrediente.tipoArticulo = tipoArticulo
+            ingrediente.ubicacion = ubicacion
+            
+            ingrediente.save()
+            messages.success(request, f"El ingrediente '{nombre}' ha sido actualizado con éxito.")
+            return redirect('admin_ingredientes')
+        
+        except IntegrityError:
+            messages.error(request, f"Ya existe un ingrediente con el nombre '{nombre}'.")
+        except Exception as e:
+            messages.error(request, f"Ocurrió un error al actualizar el ingrediente: {e}")
+                
+    # GET: Prepara el contexto para cargar el formulario con los datos del ingrediente
+    # Se usa la misma plantilla 'admin_ingredientes.html'
+    
+    # Proveedores y Artículos para el contexto general de la plantilla
+    proveedores = Proveedor.objects.all().order_by('nombre')
+    articulos_inventario = ArticuloInventario.objects.all().order_by('nombre')
+    
+    context = {
+        # Objeto a editar (se usa en el HTML para precargar datos y cambiar el título/acción)
+        'articulo_a_editar': ingrediente, 
+        
+        # Datos generales para la lista
+        'ingredientes': articulos_inventario,
+        'proveedores': proveedores,
+        
+        # Datos para el formulario de Compra
+        'compras_recientes': ArticuloInventario_Proveedor.objects.select_related('idArticuloInventario', 'idProveedor').order_by('-fechaCompra')[:10],
+    }
+    
+    return render(request, 'He_Sai_Mali/admin_ingredientes.html', context)
+
 @never_cache
-@user_passes_test(es_rol("Administrador"))
-@login_required
+@user_passes_test(es_rol("Administrador"), login_url='login')
 def admin_platillos(request):
     """
     Vista para agregar nuevos platillos (solo Admin).
@@ -1003,8 +1129,7 @@ def admin_platillos(request):
     return render(request, 'He_Sai_Mali/admin_platillos.html', context)
 
 @never_cache
-@user_passes_test(es_rol("Administrador"))
-@login_required
+@user_passes_test(es_rol("Administrador"), login_url='login')
 def toggle_disponibilidad_platillo(request, platillo_id):
     """
     Alterna el estado 'disponible' de un platillo.
@@ -1028,7 +1153,6 @@ def toggle_disponibilidad_platillo(request, platillo_id):
 
 @require_POST
 @user_passes_test(es_rol("Administrador"), login_url='login')
-@login_required
 def eliminar_platillo(request, platillo_id):
     """
     Elimina un ProductoMenu (platillo) y sus ingredientes relacionados.
@@ -1053,8 +1177,85 @@ def eliminar_platillo(request, platillo_id):
     return redirect('admin_platillos')
 
 @never_cache
-@user_passes_test(es_rol("Administrador"))
-@login_required
+@user_passes_test(es_rol("Administrador"), login_url='login')
+def editar_platillo(request, platillo_id):
+    """
+    Vista para editar un ProductoMenu (platillo) existente.
+    """
+    # Intentar obtener el platillo, si no existe devuelve un 404
+    platillo = get_object_or_404(ProductoMenu, pk=platillo_id)
+    
+    # Artículos de inventario para la lista de selección del formulario
+    articulos_inventario = ArticuloInventario.objects.all().order_by('nombre')
+    
+    # Obtener los ingredientes actuales del platillo para precargar el formulario
+    ingredientes_actuales = ProductoMenu_ArticuloInventario.objects.filter(
+        idProductoMenu=platillo
+    ).select_related('idArticuloInventario') 
+    
+    if request.method == 'POST':
+        # --- Lógica de Actualización (POST) ---
+        nombre = request.POST.get('nombre', '').strip()
+        precio = request.POST.get('precio', 0)
+        tiempoPreparacion = request.POST.get('tiempoPreparacion', '').strip()
+        categoria = request.POST.get('categoria', '').strip()
+        articulos_ids = request.POST.getlist('idArticuloInventario[]')
+        cantidades = request.POST.getlist('cantidad_usada[]')
+
+        # --- Validaciones de Edición ---
+        if not nombre or not precio or not tiempoPreparacion or not categoria:
+            messages.error(request, 'Todos los campos básicos son obligatorios.')
+        elif not articulos_ids:
+            messages.error(request, 'Debe seleccionar al menos un artículo de inventario.')
+        else:
+            try:
+                precio = float(precio)
+                with transaction.atomic():
+                    # 1. Actualizar el Platillo (ProductoMenu)
+                    platillo.nombre = nombre
+                    platillo.precio = precio
+                    platillo.tiempoPreparacion = tiempoPreparacion
+                    platillo.categoria = categoria
+                    platillo.save()
+
+                    # 2. Reemplazar los ingredientes antiguos con los nuevos
+                    # 2.1. Eliminar todos los ingredientes existentes (fácil y seguro)
+                    ProductoMenu_ArticuloInventario.objects.filter(idProductoMenu=platillo).delete()
+                    
+                    # 2.2. Insertar los nuevos ingredientes
+                    for i in range(len(articulos_ids)):
+                        articulo_id = articulos_ids[i]
+                        cantidad = cantidades[i]
+                        if articulo_id and cantidad:
+                            ProductoMenu_ArticuloInventario.objects.create(
+                                idProductoMenu=platillo,
+                                idArticuloInventario_id=articulo_id,
+                                cantidad_usada=float(cantidad)
+                            )
+                            
+                messages.success(request, f'Platillo "{nombre}" editado exitosamente.')
+                return redirect('admin_platillos') 
+            
+            except Exception as e:
+                messages.error(request, f'Error al editar el platillo: {e}')
+
+    # Contexto para el GET (o POST con errores)
+    context = {
+        # Se añade el objeto a editar y sus ingredientes
+        'platillo_a_editar': platillo,
+        'ingredientes_actuales': ingredientes_actuales,
+        
+        # El resto del contexto que usa admin_platillos
+        'platillos': ProductoMenu.objects.all().order_by('nombre'),
+        'articulos_inventario': articulos_inventario,
+        'categorias': ProductoMenu.objects.values_list('categoria', flat=True).distinct(),
+    }
+    
+    # Reutilizar la plantilla admin_platillos.html
+    return render(request, 'He_Sai_Mali/admin_platillos.html', context)
+
+@never_cache
+@user_passes_test(es_rol("Administrador"), login_url='login')
 def admin_proveedores(request):
     """
     Vista para agregar nuevos proveedores (solo Admin).
@@ -1084,9 +1285,52 @@ def admin_proveedores(request):
     }
     return render(request, 'He_Sai_Mali/admin_proveedores.html', context)
 
+@user_passes_test(es_rol("Administrador"), login_url='login')
+def editar_proveedor(request, proveedor_id):
+    """
+    Vista para editar un Proveedor existente.
+    """
+    # 1. Obtener el objeto a editar, si no existe lanza 404
+    proveedor = get_object_or_404(Proveedor, idProveedor=proveedor_id)
+    
+    # 2. Manejar la solicitud POST (Actualización)
+    if request.method == 'POST':
+        nombre = request.POST.get('nombre', '').strip()
+        contacto = request.POST.get('contacto', '').strip()
+        telefono = request.POST.get('telefono', '').strip()
+
+        if not nombre or not telefono:
+            messages.error(request, "El Nombre y el Teléfono son campos obligatorios.")
+        else:
+            try:
+                # Validación de unicidad: verifica si ya existe otro proveedor con el mismo nombre
+                if Proveedor.objects.filter(nombre=nombre).exclude(idProveedor=proveedor_id).exists():
+                    messages.error(request, f"Ya existe un proveedor con el nombre '{nombre}'.")
+                else:
+                    # Actualizar campos
+                    proveedor.nombre = nombre
+                    proveedor.contacto = contacto
+                    proveedor.telefono = telefono
+                    proveedor.save()
+                    
+                    messages.success(request, f"Proveedor '{nombre}' actualizado con éxito.")
+                    return redirect('admin_proveedores')
+            
+            except Exception as e:
+                messages.error(request, f"Ocurrió un error al actualizar el proveedor: {e}")
+                
+    # 3. Contexto para GET (o POST fallido)
+    # Se debe incluir el proveedor a editar y la lista completa de proveedores para la tabla.
+    context = {
+        'proveedor_a_editar': proveedor, # Objeto para precargar el formulario
+        'proveedores': Proveedor.objects.all().order_by('nombre'), # Lista para la tabla
+    }
+    
+    # Reutilizar la plantilla admin_proveedores.html
+    return render(request, 'He_Sai_Mali/admin_proveedores.html', context)
+
 @require_POST
 @user_passes_test(es_rol("Administrador"), login_url='login')
-@login_required
 def eliminar_proveedor(request, proveedor_id):
     """
     Vista para eliminar un Proveedor.
@@ -1113,105 +1357,128 @@ def eliminar_proveedor(request, proveedor_id):
     return redirect('admin_proveedores')
 
 @never_cache
-@user_passes_test(es_rol("Administrador"))
-@login_required
+@user_passes_test(es_rol_y_administrador("Mesero"), login_url='login')
 def admin_mesas(request):
-    
-    # Contexto base para el renderizado
-    context = {
-        'mesas': Mesa.objects.all().order_by('idMesa'),
-        'user': request.user,
-        'mesa_seleccionada': None, # Usado para precargar el formulario de edición
-    }
-    
+    mesas = Mesa.objects.all().order_by('idMesa')
+    mesa_a_editar = None # Esta vista siempre inicia en modo 'Agregar'
+
+    # Lógica de POST: AGREGAR Nueva Mesa
     if request.method == 'POST':
-        # 1. Obtener datos del formulario
-        id_mesa_str = request.POST.get('idMesa', '').strip()
-        capacidad_str = request.POST.get('capacidad', '').strip()
-        action = request.POST.get('action') # 'add', 'edit', 'delete'
-
-        # 2. Validar y Convertir datos básicos
         try:
-            ocupada = False
-            id_mesa = int(id_mesa_str) if id_mesa_str.isdigit() and id_mesa_str else None
-            capacidad = int(capacidad_str) if capacidad_str.isdigit() and capacidad_str else None
-            
-        except ValueError:
-            messages.error(request, "Error de datos: El ID y la Capacidad deben ser números enteros válidos.")
-            return redirect('admin_mesas')
+            # Obtener datos
+            id_mesa_str = request.POST.get('idMesa', '').strip()
+            capacidad = request.POST.get('capacidad', '').strip()
 
-        # --- Lógica de Agregar (action='add') ---
-        if action == 'add':
-            if not capacidad or capacidad <= 0:
-                messages.error(request, "Debe especificar una capacidad válida para agregar una mesa.")
+            # Validaciones de INT y existencia
+            try:
+                id_mesa = int(id_mesa_str)
+                capacidad_int = int(capacidad)
+            except ValueError:
+                messages.error(request, "El Número de Mesa y la Capacidad deben ser números enteros válidos.")
                 return redirect('admin_mesas')
-                
-            try:
-                Mesa.objects.create(
-                    idMesa=id_mesa,
-                    capacidad=capacidad,
-                    ocupada=ocupada
-                )
-                messages.success(request, f"Mesa de capacidad {capacidad} agregada exitosamente.")
-            except Exception as e:
-                messages.error(request, f"Error al agregar la mesa: {e}")
 
-        # --- Lógica de Editar (action='edit') ---
-        elif action == 'edit' and id_mesa is not None:
-            if not capacidad or capacidad <= 0:
-                messages.error(request, "Debe especificar una capacidad válida para editar la mesa.")
+            if id_mesa <= 0 or capacidad_int <= 0:
+                messages.error(request, "El Número de Mesa y la Capacidad deben ser mayores a cero.")
                 return redirect('admin_mesas')
-                
-            try:
-                mesa = get_object_or_404(Mesa, idMesa=id_mesa)
-                mesa.capacidad = capacidad
-                mesa.ocupada = ocupada
-                mesa.save()
-                messages.success(request, f"Mesa {id_mesa} actualizada exitosamente.")
-            except Http404:
-                messages.error(request, f"Error: No se encontró la Mesa con ID {id_mesa} para editar.")
-            except Exception as e:
-                messages.error(request, f"Error al editar la Mesa {id_mesa}: {e}")
 
-        # --- Lógica de Eliminar (action='delete') ---
-        elif action == 'delete' and id_mesa is not None:
-            try:
-                mesa = get_object_or_404(Mesa, idMesa=id_mesa)
-                mesa.delete()
-                messages.success(request, f"Mesa {id_mesa} eliminada permanentemente.")
-            except Http404:
-                messages.error(request, f"Error: No se encontró la Mesa con ID {id_mesa} para eliminar.")
-            except Exception as e:
-                messages.error(request, f"Error al eliminar la Mesa {id_mesa}: {e}")
-        
-        else:
-            messages.error(request, "Acción no válida o falta el ID de Mesa para la operación solicitada.")
+            # Validación de unicidad
+            if Mesa.objects.filter(pk=id_mesa).exists():
+                messages.error(request, f"Ya existe una mesa con el número '{id_mesa}'.")
+                return redirect('admin_mesas')
+
+            # Creación de la Mesa
+            Mesa.objects.create(
+                idMesa=id_mesa,
+                capacidad=capacidad_int,
+                ocupada=False
+            )
+            messages.success(request, f"Mesa '{id_mesa}' agregada exitosamente.")
+
+        except Exception as e:
+            messages.error(request, f"Error al agregar la mesa: {e}")
 
         return redirect('admin_mesas')
 
-    # --- Lógica de Listado (GET) ---
-
-    id_mesa_param = request.GET.get('id', '').strip()
-    if id_mesa_param and id_mesa_param.isdigit():
-        try:
-            context['mesa_seleccionada'] = Mesa.objects.get(idMesa=int(id_mesa_param))
-        except Mesa.DoesNotExist:
-            messages.warning(request, f"La Mesa con ID {id_mesa_param} no existe.")
-            
+    # Lógica de GET: Mostrar Lista y Formulario de Agregar
+    context = {
+        'mesas': mesas,
+        'mesa_a_editar': mesa_a_editar,
+    }
     return render(request, 'He_Sai_Mali/mesas.html', context)
 
-# --- VISTA DE DASHBOARD PARA ADMINISTRADOR (NUEVA) ---
-@login_required
-@user_passes_test(es_rol("Administrador"))
+@user_passes_test(es_rol("Administrador"), login_url='login')
+def editar_mesa(request, mesa_id):
+    mesa_a_editar = get_object_or_404(Mesa, pk=mesa_id)
+    mesas = Mesa.objects.all().order_by('idMesa')
+
+    if request.method == 'POST':
+        # --- Lógica de Actualización (POST) ---
+        try:
+            # No se recibe idMesa directamente, se usa el objeto ya cargado
+            capacidad = request.POST.get('capacidad', '').strip()
+
+            if not capacidad:
+                messages.error(request, "La capacidad es obligatoria.")
+                return redirect('editar_mesa', mesa_id=mesa_id) 
+
+            try:
+                capacidad_int = int(capacidad)
+                if capacidad_int <= 0:
+                    messages.error(request, "La capacidad debe ser mayor a cero.")
+                    return redirect('editar_mesa', mesa_id=mesa_id)
+            except ValueError:
+                messages.error(request, "La capacidad debe ser un número entero válido.")
+                return redirect('editar_mesa', mesa_id=mesa_id)
+
+            # Actualizar campos
+            mesa_a_editar.capacidad = capacidad_int
+            mesa_a_editar.save()
+
+            messages.success(request, f"Mesa '{mesa_a_editar.idMesa}' actualizada exitosamente.")
+            return redirect('admin_mesas') 
+
+        except Exception as e:
+            messages.error(request, f"Error al actualizar la mesa: {e}")
+            return redirect('editar_mesa', mesa_id=mesa_id)
+
+    # Lógica de GET: Mostrar Lista y Formulario de Edición
+    context = {
+        'mesas': mesas,
+        'mesa_a_editar': mesa_a_editar, # Objeto para rellenar el formulario
+    }
+    return render(request, 'He_Sai_Mali/mesas.html', context)
+
+@require_POST
+@user_passes_test(es_rol("Administrador"), login_url='login')
+def eliminar_mesa(request, mesa_id):
+    mesa = get_object_or_404(Mesa, pk=mesa_id)
+
+    try:
+        mesa.delete()
+        messages.success(request, f"Mesa '{mesa.idMesa}' eliminada exitosamente.")
+    except ProtectedError:
+        messages.error(request, f"No se puede eliminar la Mesa '{mesa.idMesa}' porque está relacionada con pedidos existentes.")
+    except Exception as e:
+        messages.error(request, f"Error al eliminar la mesa: {e}")
+
+    return redirect('admin_mesas')
+
+# --- VISTA DE DASHBOARD PARA ADMINISTRADOR ---
+@never_cache
+@user_passes_test(es_rol("Administrador"), login_url='login')
 def admin_dashboard(request):
     # 1. Lógica de Filtrado por Fecha
-    period = request.GET.get('period', 'month') # 'day', 'week', 'month', 'year'
+    period = request.GET.get('period', 'day') # 'day', 'week', 'month', 'year'
+
+    now = timezone.localtime(timezone.now())
+
     today = timezone.now().date()
     start_date = None
 
     if period == 'day':
-        start_date = timezone.make_aware(timezone.datetime(today.year, today.month, today.day))
+        start_date = now.replace(hour=0, minute=0, second=0, microsecond=0)
         period_display = "Hoy"
+        print(start_date)
     elif period == 'week':
         # Inicio de la semana (Lunes)
         start_date = timezone.make_aware(timezone.datetime(today.year, today.month, today.day)) - timedelta(days=today.weekday())
@@ -1239,22 +1506,29 @@ def admin_dashboard(request):
     
     # 3. Productos del Menú más Populares (Top 5)
     # Cuenta la cantidad total de cada producto vendido en el periodo
+    pedidos_del_periodo_ids = Pedido.objects.filter(**date_filter).values_list('idPedido', flat=True)
+
     top_products_query = Pedido_ProductoMenu.objects.filter(
-        idPedido__in=Pedido.objects.filter(**date_filter).values_list('idPedido', flat=True)
+        idPedido__in=pedidos_del_periodo_ids # Filtramos las líneas de pedido del periodo
     ).values(
-        nombre=F('idProductoMenu__nombre')
+        nombre=F('idProductoMenu__nombre') # Agrupamos por nombre del platillo
     ).annotate(
-        total_quantity=Sum('cantidad')
+        total_quantity=Sum('cantidad') # Calculamos la cantidad vendida total
+    ).filter(
+        total_quantity__gt=0 # <-- AÑADIR ESTE FILTRO: Solo platillos que tengan ventas > 0
     ).order_by('-total_quantity')[:5]
 
     top_products_labels = [p['nombre'] for p in top_products_query]
-    # Se convierte a lista de números (float) para ser usado en Chart.js
     top_products_data = [float(p['total_quantity']) for p in top_products_query]
     
     # 4. Mesas más Utilizadas (Top Tables)
     # Cuenta cuántos pedidos facturados se hicieron en cada mesa
-    top_tables_query = Pedido.objects.filter(**date_filter).values(
-    'idMesa' # Agrupamos por idMesa, la clave en el resultado es 'idMesa'
+    top_tables_query = Pedido.objects.filter(
+        **date_filter
+    ).exclude(
+        idMesa__isnull=True # <-- ¡CAMBIO CRUCIAL AQUÍ! Excluye los pedidos sin mesa.
+    ).values(
+        'idMesa' # Agrupamos por idMesa, la clave en el resultado es 'idMesa'
     ).annotate(
         total_orders=Count('idMesa')
     ).order_by('-total_orders')
@@ -1269,10 +1543,13 @@ def admin_dashboard(request):
     # Conteo de mesas activas (Mesas existentes)
     total_mesas = Mesa.objects.count()
 
+    platillos_en_menu = ProductoMenu.objects.filter(disponible=True).count()
+
     context = {
         'total_sales': total_sales,
         'total_orders': total_orders,
         'total_mesas': total_mesas,
+        'platillos_en_menu': platillos_en_menu,
         'period': period,
         'period_display': period_display,
         'top_products_labels': json.dumps(top_products_labels),
@@ -1360,6 +1637,110 @@ def temporizador_mesa(request, mesa_id):
     }
     
     return render(request, 'He_Sai_Mali/temporizador.html', context)
+
+@never_cache
+@user_passes_test(es_rol("Administrador"), login_url='login')
+def admin_empleados(request):
+    """
+    Lista todos los empleados para la gestión administrativa.
+    """
+    empleados = Empleado.objects.all().order_by('apellido', 'nombre')
+
+    context = {
+        'empleados': empleados,
+        'roles_disponibles': ['Administrador', 'Mesero', 'Cocinero'],
+        'rol_empleado': request.user.rol,
+        'nombre_empleado': request.user.nombre,
+        'apellido_empleado': request.user.apellido,
+    }
+    return render(request, 'He_Sai_Mali/admin_empleados.html', context)
+
+@user_passes_test(es_rol("Administrador"), login_url='login')
+def editar_empleado(request, empleado_id):
+    """
+    Vista para editar un empleado. Reutiliza la plantilla admin_empleados.html.
+    """
+    empleado = get_object_or_404(Empleado, pk=empleado_id)
+    empleados = Empleado.objects.all().order_by('apellido', 'nombre')
+
+    if request.method == 'POST':
+        # 1. Obtención de datos
+        nombre = request.POST.get('nombre', '').strip()
+        apellido = request.POST.get('apellido', '').strip()
+        telefono = request.POST.get('telefono', '').strip() or None # Puede ser None si está vacío
+        correo = request.POST.get('correo', '').strip()
+        cedula = request.POST.get('cedula', '').strip()
+        rol = request.POST.get('rol', '').strip()
+        is_active = request.POST.get('is_active') == 'on' 
+
+        try:
+            with transaction.atomic():
+                # 2. Validación de unicidad para campos únicos (excluyendo el empleado actual)
+                if Empleado.objects.filter(correo=correo).exclude(idEmpleado=empleado_id).exists():
+                    messages.error(request, f"Ya existe un empleado con el correo '{correo}'.")
+                    return redirect('editar_empleado', empleado_id=empleado_id)
+                if telefono and Empleado.objects.filter(telefono=telefono).exclude(idEmpleado=empleado_id).exists():
+                    messages.error(request, f"Ya existe un empleado con el teléfono '{telefono}'.")
+                    return redirect('editar_empleado', empleado_id=empleado_id)
+                if Empleado.objects.filter(cedula=cedula).exclude(idEmpleado=empleado_id).exists():
+                    messages.error(request, f"Ya existe un empleado con la cédula '{cedula}'.")
+                    return redirect('editar_empleado', empleado_id=empleado_id)
+
+                # 3. Actualizar campos
+                empleado.nombre = nombre
+                empleado.apellido = apellido
+                empleado.telefono = telefono
+                empleado.correo = correo
+                empleado.cedula = cedula
+                empleado.rol = rol
+                empleado.is_active = is_active
+                empleado.save()
+                messages.success(request, f"El empleado '{nombre} {apellido}' ha sido actualizado con éxito.")
+                return redirect('admin_empleados') 
+
+        except Exception as e:
+            messages.error(request, f"Ocurrió un error al actualizar el empleado: {e}")
+        
+    # Si es GET o si el POST falló, renderiza el formulario de edición
+    context = {
+        'empleado_a_editar': empleado,
+        'empleados': empleados,
+        'roles_disponibles': ['Administrador', 'Mesero', 'Cocinero'],
+        'rol_empleado': request.user.rol,
+        'nombre_empleado': request.user.nombre,
+        'apellido_empleado': request.user.apellido,
+    }
+    return render(request, 'He_Sai_Mali/admin_empleados.html', context)
+
+@require_POST
+@user_passes_test(es_rol("Administrador"), login_url='login')
+def eliminar_empleado(request, empleado_id):
+    """
+    Intenta eliminar un Empleado. Si hay referencias (ProtectedError), lo desactiva.
+    """
+    empleado = get_object_or_404(Empleado, pk=empleado_id)
+
+    if empleado.idEmpleado == request.user.idEmpleado:
+        messages.error(request, 'No puedes eliminar o desactivar tu propia cuenta de administrador.')
+        return redirect('admin_empleados')
+        
+    empleado_nombre_completo = f"{empleado.nombre} {empleado.apellido}"
+
+    try:
+        try:
+            # Opción 1: Eliminación permanente
+            empleado.delete()
+            messages.success(request, f'El empleado "{empleado_nombre_completo}" ha sido ELIMINADO permanentemente.')
+        except ProtectedError:
+            # Opción 2: Desactivación si tiene registros asociados
+            empleado.is_active = False
+            empleado.save()
+            messages.warning(request, f'El empleado "{empleado_nombre_completo}" no pudo ser eliminado por registros asociados. Ha sido DESACTIVADO.')
+            
+    except Exception as e:
+        messages.error(request, f'Error al procesar la acción para el empleado: {e}')
+
+    return redirect('admin_empleados')
 
 @login_required
 def logout_view(request):

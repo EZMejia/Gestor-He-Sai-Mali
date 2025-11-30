@@ -523,6 +523,18 @@
             border-radius: 4px;
             box-sizing: border-box;
         }
+
+        .platillo_estado {
+            transition: background-color 0.3s ease;
+        }
+
+        .platillo_estado[style*="yellow"]:hover {
+            background-color: #CCCC00 !important;
+        }
+
+        .platillo_estado[style*="90EE90"]:hover {
+            background-color: #6BBE6B !important;
+        }
     </style>
 </head>
 <body>
@@ -566,38 +578,50 @@
 
                 <hr class="linea">
 
-                {% if user.rol == "Administrador"%}
+                {% if user.rol == "Mesero" %}
                     <div class="sidebar-menu-title">PEDIDOS Y FACTURACIÓN</div>
-                    <a href="#" class="sidebar-nav-item active">
+                    <a href="{% url 'pedidos' %}" class="sidebar-nav-item active">
                         <i class="fas fa-clipboard-list"></i>
                         <span>Pedidos</span>
                     </a>
+                {% endif %}
+                {% if user.rol == "Mesero" %}
                     <a href="{% url 'registrarpedido' %}" class="sidebar-nav-item">
                         <i class="fas fa-file-invoice"></i>
                         <span>Nuevo Pedido</span>
                     </a>
 
-                    <hr class="linea">
+                {% endif %}
+                
+                {% if user.rol == "Administrador" or user.rol == "Cocinero" %}
                     <div class="sidebar-menu-title">UTILIDADES DE COCINA</div>
+                {% endif %}
+                {% if user.rol == "Cocinero" %}
                     <a href="{% url 'cocina' %}" class="sidebar-nav-item">
                         <i class="fas fa-utensils"></i>
                         <span>Cocina</span>
                     </a>
+                {% endif %}
+                {% if user.rol == "Administrador" %}
                     <a href="{% url 'admin_platillos' %}" class="sidebar-nav-item">
                         <i class="fas fa-hamburger"></i>
-                        <span>Platillos</span>
+                        <span>Productos</span>
                     </a>
-
+                {% endif %}
+                {% if user.rol == "Administrador" or user.rol == "Mesero" %}
                     <hr class="linea">
+                
                     <div class="sidebar-menu-title">ADMINISTRACIÓN DE LOCAL</div>
 
                     <a href="{% url 'admin_mesas' %}" class="sidebar-nav-item">
                         <i class="fas fa-chair"></i>
                         <span>Mesas</span>
                     </a>
+                {% endif %}
+                {% if user.rol == "Administrador" %}
                     <a href="{% url 'admin_ingredientes' %}" class="sidebar-nav-item">
                         <i class="fas fa-leaf"></i>
-                        <span>Ingredientes</span>
+                        <span>Inventario</span>
                     </a>
                     <a href="{% url 'admin_proveedores' %}" class="sidebar-nav-item">
                         <i class="fas fa-truck-loading"></i>
@@ -606,6 +630,10 @@
                     <a href="{% url 'admin_dashboard' %}" class="sidebar-nav-item">
                         <i class="fas fa-chart-line"></i>
                         <span>Dashboard</span>
+                    </a>
+                    <a href="{% url 'admin_empleados' %}" class="sidebar-nav-item">
+                        <i class="fas fa-user-friends"></i>
+                        <span>Empleados</span>
                     </a>
                     <a href="{% url 'registro' %}" class="sidebar-nav-item">
                         <i class="fas fa-user-plus"></i>
@@ -639,7 +667,7 @@
                         <div class="container_pedidos">
                             <div>
                                 <div class="pedido_head">
-                                    <span class="numero"><b>Pedido N° {{ pedido.idPedido }}</b></span>
+                                    <span class="numero"><b>Pedido N° {{ pedido.idPedido }}&nbsp;&nbsp;|{% if pedido.idMesa_id != None %}&nbsp;&nbsp;Mesa N° {{ pedido.idMesa_id }}{% else %}&nbsp;&nbsp;Sin Mesa {% endif %}</b></span>
                                     <span class="cliente"><b>Cliente:</b> {{ pedido.nombre }}</span>
                                 </div>
                                 <div class="info">
@@ -649,7 +677,7 @@
                             </div>
                             
                             <div>
-                                <h3>Detalle de Platillos:</h3>
+                                <h3>Detalle de Productos:</h3>
                                 <ul class="lista_platillos">
                                     {% for platillo in platillos_por_pedido|get_item:pedido.idPedido %}
                                         <li class="platillos">
@@ -663,14 +691,9 @@
                                                         {% elif platillo.Estado == 'Listo' %}#90EE90; /* Verde claro */
                                                         {% elif platillo.Estado == 'Servido' %}#FF6347; /* Rojo anaranjado */
                                                         {% endif %};
-                                                    border: none; cursor: pointer;"
-                                                    title="Click para cambiar a: 
-                                                        {% if platillo.Estado == 'Registrado' %}Listo
-                                                        {% elif platillo.Estado == 'Listo' %}Servido
-                                                        {% elif platillo.Estado == 'Servido' %}Facturado (Facturar por aquí solo en casos excepcionales)
-                                                        {% else %}Ya Facturado
-                                                        {% endif %}">
-                                                    {{ platillo.Estado }}
+                                                    border: none; cursor: 
+                                                        {% if platillo.Estado == 'Servido' %} default; {% endif %};">
+                                                    {% if platillo.Estado == "Registrado" %} Cambiar a Listo {% elif platillo.Estado == "Listo" %} Cambiar a Servido {% else %} Esperando Facturación {% endif %}
                                                 </button>
                                             </form>
                                         </li>
@@ -684,13 +707,13 @@
                                     class="btn-facturar" 
                                     onclick="mostrarFormularioPago('{{ pedido.idPedido }}', '{{ pedido.montoTotal|floatformat:2 }}', '{% url 'facturar_pedido' pedido.idPedido %}')"
                                     {% if not estado_botones|get_item:pedido.idPedido|get_item:'puede_facturar' %}disabled{% endif %} 
-                                    title="{% if not estado_botones|get_item:pedido.idPedido|get_item:'puede_facturar' %}El pedido tiene platillos pendientes de servir.{% else %}Facturar y finalizar el pedido.{% endif %}"
+                                    title="{% if not estado_botones|get_item:pedido.idPedido|get_item:'puede_facturar' %}El pedido tiene productos pendientes de servir.{% else %}Facturar y finalizar el pedido.{% endif %}"
                                 >
                                     <i class="fas fa-receipt card-icon"></i> Facturar Pedido
                                 </button>
 
                                 <a href="{% url 'registrarpedido_agregar' pedido.idPedido %}" class="btn-agregar" style="text-align: center;">
-                                    <i class="fas fa-plus"></i> Agregar Platillos
+                                    <i class="fas fa-plus"></i> Agregar Productos
                                 </a>
 
                                 <form method="POST" action="{% url 'eliminar_pedido' pedido.idPedido %}" style="display:inline;" onsubmit="return confirm('¿Está seguro de que desea eliminar el Pedido N°{{ pedido.IdPedido }}? Esta acción es irreversible.');">

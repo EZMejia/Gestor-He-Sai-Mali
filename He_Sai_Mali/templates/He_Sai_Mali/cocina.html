@@ -6,7 +6,7 @@
     <meta charset="UTF-8">
     <link rel="icon" type="image/png" href="{% static 'He_Sai_Mali/logo.png' %}">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Cocina - Cola de Platillos</title>
+    <title>Cocina - Cola de Productos</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <style>
         :root {
@@ -427,29 +427,41 @@
 
                 <hr class="linea">
 
-                {% if user.rol == "Administrador"%}
+                {% if user.rol == "Mesero" %}
                     <div class="sidebar-menu-title">PEDIDOS Y FACTURACIÓN</div>
                     <a href="{% url 'pedidos' %}" class="sidebar-nav-item">
                         <i class="fas fa-clipboard-list"></i>
                         <span>Pedidos</span>
                     </a>
+                {% endif %}
+                {% if user.rol == "Mesero" %}
                     <a href="{% url 'registrarpedido' %}" class="sidebar-nav-item">
                         <i class="fas fa-file-invoice"></i>
                         <span>Nuevo Pedido</span>
                     </a>
 
                     <hr class="linea">
+                    
+                {% endif %}
+                
+                {% if user.rol == "Administrador" or user.rol == "Cocinero" %}
                     <div class="sidebar-menu-title">UTILIDADES DE COCINA</div>
-                    <a href="#" class="sidebar-nav-item active">
+                {% endif %}
+                {% if user.rol == "Cocinero" %}
+                    <a href="{% url 'cocina' %}" class="sidebar-nav-item active">
                         <i class="fas fa-utensils"></i>
                         <span>Cocina</span>
                     </a>
+                {% endif %}
+                {% if user.rol == "Administrador" %}
                     <a href="{% url 'admin_platillos' %}" class="sidebar-nav-item">
                         <i class="fas fa-hamburger"></i>
-                        <span>Platillos</span>
+                        <span>Productos</span>
                     </a>
-
+                {% endif %}
+                {% if user.rol == "Administrador" %}
                     <hr class="linea">
+
                     <div class="sidebar-menu-title">ADMINISTRACIÓN DE LOCAL</div>
 
                     <a href="{% url 'admin_mesas' %}" class="sidebar-nav-item">
@@ -458,7 +470,7 @@
                     </a>
                     <a href="{% url 'admin_ingredientes' %}" class="sidebar-nav-item">
                         <i class="fas fa-leaf"></i>
-                        <span>Ingredientes</span>
+                        <span>Inventario</span>
                     </a>
                     <a href="{% url 'admin_proveedores' %}" class="sidebar-nav-item">
                         <i class="fas fa-truck-loading"></i>
@@ -467,6 +479,10 @@
                     <a href="{% url 'admin_dashboard' %}" class="sidebar-nav-item">
                         <i class="fas fa-chart-line"></i>
                         <span>Dashboard</span>
+                    </a>
+                    <a href="{% url 'admin_empleados' %}" class="sidebar-nav-item">
+                        <i class="fas fa-user-friends"></i>
+                        <span>Empleados</span>
                     </a>
                     <a href="{% url 'registro' %}" class="sidebar-nav-item">
                         <i class="fas fa-user-plus"></i>
@@ -493,7 +509,7 @@
                     </div>
                 {% endif %}
                 
-                <h2 style="color: #dacfb7; text-align: center; padding: 20px 0;">Platillos Pendientes por Elaborar</h2>
+                <h2 style="color: #dacfb7; text-align: center; padding: 20px 0;">Productos Pendientes por Elaborar</h2>
 
                 {% if pedidos_en_cola %}
                     <div class="cola-cocina">
@@ -507,7 +523,7 @@
                                     <p style="margin-bottom: 5px;">Cliente: {{ pedido.cliente }}</p>
                                     <p style="font-size: 0.85em; color: #666;">Hora: {{ pedido.hora|date:"H:i:s" }}</p>
                                     
-                                    <h6>Platillos a Preparar:</h6>
+                                    <h6>Productos a Preparar:</h6>
                                     
                                     {% for platillo in pedido.platillos %}
                                         <div class="platillo-item">
@@ -517,7 +533,7 @@
                                             <form method="post" action="{% url 'platillo_listo' platillo.id_pp %}" style="display:inline;">
                                                 {% csrf_token %}
                                                 <button type="submit" class="btn-listo" title="Marcar como listo para servir">
-                                                    Listo
+                                                    Marcar como listo
                                                 </button>
                                             </form>
                                         </div>
@@ -528,7 +544,7 @@
                     </div>
                 {% else %}
                     <div class="alert-info-custom">
-                        ¡No hay platillos pendientes!
+                        ¡No hay productos pendientes!
                     </div>
                 {% endif %}
             </div>

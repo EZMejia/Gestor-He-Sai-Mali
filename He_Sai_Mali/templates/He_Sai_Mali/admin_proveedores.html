@@ -361,6 +361,9 @@
             background-color: #d32f2f;
         }
 
+        .btn-custom-edit:hover { background-color: #0056b3; }
+        .btn-custom-edit { background-color: #007bff; }
+        
         /* ---------------------------------------------------- */
         /* --- FOOTER ADAPTADO --- */
         /* ---------------------------------------------------- */
@@ -453,29 +456,42 @@
 
                 <hr class="linea">
 
-                {% if user.rol == "Administrador"%}
+                {% if user.rol == "Mesero" %}
                     <div class="sidebar-menu-title">PEDIDOS Y FACTURACIÓN</div>
                     <a href="{% url 'pedidos' %}" class="sidebar-nav-item">
                         <i class="fas fa-clipboard-list"></i>
                         <span>Pedidos</span>
                     </a>
+                {% endif %}
+                {% if user.rol == "Mesero" %}
                     <a href="{% url 'registrarpedido' %}" class="sidebar-nav-item">
                         <i class="fas fa-file-invoice"></i>
                         <span>Nuevo Pedido</span>
                     </a>
 
                     <hr class="linea">
+                    
+                {% endif %}
+                
+                {% if user.rol == "Administrador" or user.rol == "Cocinero" %}
                     <div class="sidebar-menu-title">UTILIDADES DE COCINA</div>
+                {% endif %}
+                {% if user.rol == "Cocinero" %}
                     <a href="{% url 'cocina' %}" class="sidebar-nav-item">
                         <i class="fas fa-utensils"></i>
                         <span>Cocina</span>
                     </a>
+                {% endif %}
+                {% if user.rol == "Administrador" %}
                     <a href="{% url 'admin_platillos' %}" class="sidebar-nav-item">
                         <i class="fas fa-hamburger"></i>
-                        <span>Platillos</span>
+                        <span>Productos</span>
                     </a>
-
+                {% endif %}
+                {% if user.rol == "Administrador" or user.rol == "Cocinero" %}
                     <hr class="linea">
+                {% endif %}
+                {% if user.rol == "Administrador" %}
                     <div class="sidebar-menu-title">ADMINISTRACIÓN DE LOCAL</div>
 
                     <a href="{% url 'admin_mesas' %}" class="sidebar-nav-item">
@@ -484,15 +500,19 @@
                     </a>
                     <a href="{% url 'admin_ingredientes' %}" class="sidebar-nav-item">
                         <i class="fas fa-leaf"></i>
-                        <span>Ingredientes</span>
+                        <span>Inventario</span>
                     </a>
-                    <a href="#" class="sidebar-nav-item active">
+                    <a href="{% url 'admin_proveedores' %}" class="sidebar-nav-item active">
                         <i class="fas fa-truck-loading"></i>
                         <span>Proveedores</span>
                     </a>
                     <a href="{% url 'admin_dashboard' %}" class="sidebar-nav-item">
                         <i class="fas fa-chart-line"></i>
                         <span>Dashboard</span>
+                    </a>
+                    <a href="{% url 'admin_empleados' %}" class="sidebar-nav-item">
+                        <i class="fas fa-user-friends"></i>
+                        <span>Empleados</span>
                     </a>
                     <a href="{% url 'registro' %}" class="sidebar-nav-item">
                         <i class="fas fa-user-plus"></i>
@@ -518,26 +538,40 @@
                 
                 <div class="card-custom">
                     <div class="card-header-custom">
-                        Agregar Nuevo Proveedor
+                        <h2>{% if proveedor_a_editar %}Editar Proveedor: {{ proveedor_a_editar.nombre }}{% else %}Agregar Nuevo Proveedor{% endif %}</h2>
                     </div>
                     <div class="card-body-custom">
-                        <form method="post">
+                        <form method="post" action="{% if proveedor_a_editar %}{% url 'editar_proveedor' proveedor_a_editar.idProveedor %}{% else %}{% url 'admin_proveedores' %}{% endif %}">
                             {% csrf_token %}
                             <div style="display: flex; gap: 15px; flex-wrap: wrap;">
-                                <div style="flex: 1 1 30%;">
+                                <div style="flex: 1 1 30%; min-width: 200px;">
                                     <label for="nombre" class="form-label-custom">Nombre</label>
-                                    <input type="text" class="form-control-custom" id="nombre" name="nombre" required>
+                                    <input type="text" class="form-control-custom" id="nombre" name="nombre" required autocomplete="off"
+                                    value="{{ proveedor_a_editar.nombre|default:'' }}">
                                 </div>
-                                <div style="flex: 1 1 20%;">
+                                <div style="flex: 1 1 10%; min-width: 200px;">
                                     <label for="telefono" class="form-label-custom">Teléfono</label>
-                                    <input type="text" class="form-control-custom" id="telefono" name="telefono">
+                                    <input type="text" class="form-control-custom" id="telefono" name="telefono" autocomplete="off" inputmode="numeric" pattern="[0-9]{8}" title="El teléfono debe contener exactamente 8 dígitos numéricos."
+                                    value="{{ proveedor_a_editar.telefono|default:'' }}">
                                 </div>
-                                <div style="flex: 1 1 30%;">
+                                <div style="flex: 1 1 20%; min-width: 200px;">
                                     <label for="direccion" class="form-label-custom">Dirección</label>
-                                    <input type="text" class="form-control-custom" id="direccion" name="direccion">
+                                    <input type="text" class="form-control-custom" id="direccion" name="direccion" autocomplete="off"
+                                    value="{{ proveedor_a_editar.direccion|default:'' }}">
                                 </div>
-                                <div style="flex: 1 1 10%; display: flex; align-items: flex-end;">
-                                    <button type="submit" class="btn-custom-success" style="width: 100%;margin-bottom: 12px;">Guardar</button>
+                                <div style="flex: 1 1 20%; display: flex; align-items: flex-end; min-width: 250px;">
+                                    {% if proveedor_a_editar %}
+                                        <button type="submit" class="btn-custom-success" style="flex-grow: 1; margin-bottom: 12px;">
+                                            Actualizar Proveedor
+                                        </button>
+                                        <a href="{% url 'admin_proveedores' %}" class="btn-custom-danger" style="margin-bottom: 12px; flex-grow: 1; text-align: center; text-decoration: none; margin-left: 5px; padding: 9px; font-weight: normal; font-size: 13px;">
+                                            Cancelar
+                                        </a>
+                                    {% else %}
+                                        <button type="submit" class="btn-custom-success" style="width: 100%;margin-bottom: 12px;">
+                                            Guardar Proveedor
+                                        </button>
+                                    {% endif %}
                                 </div>
                             </div>
                         </form>
@@ -563,11 +597,17 @@
                                 <td>{{ prov.nombre }}</td>
                                 <td>{{ prov.telefono|default:"N/A" }}</td>
                                 <td>{{ prov.direccion|default:"N/A" }}</td>
-                                <td>
-                                    <form action="{% url 'eliminar_proveedor' prov.idProveedor %}" method="POST" style="display: inline;" onsubmit="return confirm('¿Estás seguro de que quieres eliminar al proveedor {{ proveedor.nombre }}?');">
+                                <td style="white-space: nowrap;">
+                                    <a href="{% url 'editar_proveedor' prov.idProveedor %}" class='btn-custom-edit'
+                                       style="color: white; padding: 5px 10px; border-radius: 5px; text-decoration: none; font-size: 13px; font-weight: bold; display: inline-block; margin-right: 5px;">
+                                        <i class="fas fa-edit"></i> Editar
+                                    </a>
+                                    
+                                    <form action="{% url 'eliminar_proveedor' prov.idProveedor %}" method="POST" style="display: inline;" 
+                                        onsubmit="return confirm('¿Está seguro de que desea eliminar el proveedor {{ prov.nombre }}? Esta acción fallará si existen ingredientes o compras asociados.');">
                                         {% csrf_token %}
-                                        <button type="submit" class="btn-custom-danger" title="Eliminar Proveedor" style="font-weight: bold; padding: 5px 10px;">
-                                            <i class="fas fa-trash"></i> Eliminar
+                                        <button type="submit" class="btn-custom-danger" style="padding: 5px 10px;">
+                                            <i class="fas fa-trash-alt"></i> Eliminar
                                         </button>
                                     </form>
                                 </td>

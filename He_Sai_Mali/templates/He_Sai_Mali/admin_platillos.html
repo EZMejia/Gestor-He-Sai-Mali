@@ -6,7 +6,7 @@
     <meta charset="UTF-8">
     <link rel="icon" type="image/png" href="{% static 'He_Sai_Mali/logo.png' %}">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Admin - Platillos</title>
+    <title>Admin - Productos del Menu</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <style>
         :root {
@@ -406,6 +406,10 @@
         .btn-custom-danger:hover {
             background-color: #d32f2f;
         }
+
+        .btn-custom-edit:hover { background-color: #0056b3; }
+        .btn-custom-edit { background-color: #007bff; }
+
         /* ---------------------------------------------------- */
         /* --- FOOTER ADAPTADO --- */
         /* ---------------------------------------------------- */
@@ -471,7 +475,7 @@
                 <i class="fas fa-bars header-menu-toggle" onclick="toggleSidebar()"></i>
                 <h1 class="header-title">
                     <img src="{% static 'He_Sai_Mali/logo.png' %}" alt="Logo He Sai Mali">
-                    ADMINISTRACIÓN DE PLATILLOS
+                    ADMINISTRACIÓN DE PRODUCTOS
                 </h1>
             </div>
             
@@ -505,29 +509,42 @@
 
                 <hr class="linea">
 
-                {% if user.rol == "Administrador"%}
+                {% if user.rol == "Mesero" %}
                     <div class="sidebar-menu-title">PEDIDOS Y FACTURACIÓN</div>
                     <a href="{% url 'pedidos' %}" class="sidebar-nav-item">
                         <i class="fas fa-clipboard-list"></i>
                         <span>Pedidos</span>
                     </a>
+                {% endif %}
+                {% if user.rol == "Mesero" %}
                     <a href="{% url 'registrarpedido' %}" class="sidebar-nav-item">
                         <i class="fas fa-file-invoice"></i>
                         <span>Nuevo Pedido</span>
                     </a>
 
                     <hr class="linea">
+                    
+                {% endif %}
+                
+                {% if user.rol == "Administrador" or user.rol == "Cocinero" %}
                     <div class="sidebar-menu-title">UTILIDADES DE COCINA</div>
+                {% endif %}
+                {% if user.rol == "Cocinero" %}
                     <a href="{% url 'cocina' %}" class="sidebar-nav-item">
                         <i class="fas fa-utensils"></i>
                         <span>Cocina</span>
                     </a>
-                    <a href="#" class="sidebar-nav-item active">
+                {% endif %}
+                {% if user.rol == "Administrador" %}
+                    <a href="{% url 'admin_platillos' %}" class="sidebar-nav-item active">
                         <i class="fas fa-hamburger"></i>
-                        <span>Platillos</span>
+                        <span>Productos</span>
                     </a>
-
+                {% endif %}
+                {% if user.rol == "Administrador" or user.rol == "Cocinero" %}
                     <hr class="linea">
+                {% endif %}
+                {% if user.rol == "Administrador" %}
                     <div class="sidebar-menu-title">ADMINISTRACIÓN DE LOCAL</div>
 
                     <a href="{% url 'admin_mesas' %}" class="sidebar-nav-item">
@@ -536,7 +553,7 @@
                     </a>
                     <a href="{% url 'admin_ingredientes' %}" class="sidebar-nav-item">
                         <i class="fas fa-leaf"></i>
-                        <span>Ingredientes</span>
+                        <span>Inventario</span>
                     </a>
                     <a href="{% url 'admin_proveedores' %}" class="sidebar-nav-item">
                         <i class="fas fa-truck-loading"></i>
@@ -545,6 +562,10 @@
                     <a href="{% url 'admin_dashboard' %}" class="sidebar-nav-item">
                         <i class="fas fa-chart-line"></i>
                         <span>Dashboard</span>
+                    </a>
+                    <a href="{% url 'admin_empleados' %}" class="sidebar-nav-item">
+                        <i class="fas fa-user-friends"></i>
+                        <span>Empleados</span>
                     </a>
                     <a href="{% url 'registro' %}" class="sidebar-nav-item">
                         <i class="fas fa-user-plus"></i>
@@ -557,7 +578,7 @@
         
         <main class="main-content" id="main-content">
             <div class="container_admin">
-                <h1 style="color: #981a28; margin-bottom: 20px;">Administración de Platillos</h1>
+                <h1 style="color: #981a28; margin-bottom: 20px;">Administración de Productos</h1>
 
                 {% if messages %}
                     {% for message in messages %}
@@ -569,23 +590,23 @@
 
                 <div class="card-custom">
                     <div class="card-header-custom">
-                        Agregar Nuevo Platillo
+                        {% if platillo_a_editar %}Editar Producto: {{ platillo_a_editar.nombre }}{% else %}Agregar Nuevo Producto{% endif %}
                     </div>
                     <div class="card-body-custom">
-                        <form method="post">
+                        <form method="post" action="{% if platillo_a_editar %}{% url 'editar_platillo' platillo_a_editar.idProductoMenu %}{% else %}{% url 'admin_platillos' %}{% endif %}">
                             {% csrf_token %}
                             <div style="display: flex; flex-wrap: wrap; gap: 15px;">
-                                <div style="flex: 1 1 30%;">
+                                <div style="flex: 1 1 40%; min-width: 200px;">
                                     <label for="nombre" class="form-label-custom">Nombre</label>
-                                    <input type="text" class="form-control-custom" id="nombre" name="nombre" required>
+                                    <input type="text" class="form-control-custom" id="nombre" name="nombre" required autocomplete="off" value="{% if platillo_a_editar %}{{ platillo_a_editar.nombre }}{% endif %}">
                                 </div>
-                                <div style="flex: 1 1 20%;">
+                                <div style="flex: 1 1 30%; min-width: 200px;">
                                     <label for="precio" class="form-label-custom">Precio (C$)</label>
-                                    <input type="number" step="1" class="form-control-custom" id="precio" name="precio" min="0" required>
+                                    <input type="number" step="1" class="form-control-custom" id="precio" name="precio" min="0" required value="{% if platillo_a_editar %}{{ platillo_a_editar.precio }}{% endif %}">
                                 </div>
-                                <div style="flex: 1 1 25%;">
+                                <div style="flex: 1 1 25%; min-width: 200px;">
                                     <label for="categoria" class="form-label-custom">Categoría</label>
-                                    <input list="categorias-list" class="form-control-custom" id="categoria" name="categoria" required>
+                                    <input list="categorias-list" class="form-control-custom" id="categoria" name="categoria" required value="{% if platillo_a_editar %}{{ platillo_a_editar.categoria }}{% endif %}">
                                     <datalist id="categorias-list">
                                         {% for cat in categorias %}
                                             <option value="{{ cat }}">
@@ -595,11 +616,11 @@
 
                                 <div style="flex: 1 1 100%;">
                                     <label for="tiempoPreparacion" class="form-label-custom">Tiempo de preparación (segundos)</label>
-                                    <input type="number" step="10" class="form-control-custom" id="tiempoPreparacion" name="tiempoPreparacion" min="0" required>
+                                    <input type="number" step="10" class="form-control-custom" id="tiempoPreparacion" name="tiempoPreparacion" min="0" required value="{% if platillo_a_editar %}{{ platillo_a_editar.tiempoPreparacion }}{% endif %}">
                                 </div>
 
                                 <div style="flex: 1 1 100%; border-top: 1px dashed #ccc; padding-top: 15px;">
-                                    <label class="form-label-custom" style="margin-bottom: 10px;">Artículos de Inventario (Ingredientes)</label>
+                                    <label class="form-label-custom" style="margin-bottom: 10px;">Artículos de Inventario</label>
                                     
                                     <div id="ingredientes-container">
                                     </div>
@@ -610,14 +631,27 @@
                                 </div>
                                 
                                 <div style="flex: 1 1 100%; margin-top: 20px;">
-                                    <button type="submit" class="btn-custom-success" style="width: 100%;">Guardar Platillo</button>
+                                    {% if platillo_a_editar %}
+                                    <div style="display: flex; gap: 5px;">
+                                        <button type="submit" class="btn-custom-success" style="flex-grow: 1;">
+                                            Actualizar Producto
+                                        </button>
+                                        <a href="{% url 'admin_platillos' %}" class="btn-custom-danger" style="text-align: center; text-decoration: none; padding: 9px 20px; font-weight: normal; font-size: 13px;">
+                                            Cancelar
+                                        </a>
+                                    </div>
+                                {% else %}
+                                    <button type="submit" class="btn-custom-success" style="width: 100%;">
+                                        Guardar Producto
+                                    </button>
+                                {% endif %}
                                 </div>
                             </div>
                         </form>
                     </div>
                 </div>
 
-                <h2 style="color: #981a28; margin-top: 30px; border-bottom: 2px solid #dacfb7; padding-bottom: 5px; margin-bottom: 10px;">Listado de Platillos</h2>
+                <h2 style="color: #981a28; margin-top: 30px; border-bottom: 2px solid #dacfb7; padding-bottom: 5px; margin-bottom: 10px;">Listado de Productos</h2>
                 <div class="card-custom" style="padding: 0; overflow-x: auto;">
                     <table class="table-custom">
                         <thead>
@@ -638,7 +672,7 @@
                                 <td>{{ platillo.categoria|default:"N/A" }}</td>
                                 <td>{{ platillo.nombre }}</td>
                                 <td>C$ {{ platillo.precio|floatformat:2 }}</td>
-                                <td>{{ platillo.tiempoPreparacion }}</td>
+                                <td>{{ platillo.tiempoPreparacion }}s</td>
                                 <td>
                                     <form method="post" action="{% url 'toggle_disponibilidad_platillo' platillo.idProductoMenu %}" style="margin: 0;">
                                         {% csrf_token %}
@@ -648,7 +682,10 @@
                                         </button>
                                     </form>
                                 </td>
-                                <td>
+                                <td style="white-space: nowrap;">
+                                    <a href="{% url 'editar_platillo' platillo.idProductoMenu %}" class='btn-custom-edit' style="color: white; padding: 5px 10px; border-radius: 5px; text-decoration: none; font-size: 13px; font-weight: bold; display: inline-block; margin-right: 5px;">
+                                        <i class="fas fa-edit"></i> Editar
+                                    </a>
                                     <form action="{% url 'eliminar_platillo' platillo.idProductoMenu %}" method="POST" style="display: inline;" 
                                         onsubmit="return confirm('¿Está seguro de que desea eliminar el platillo {{ platillo.nombre }} (ID: {{ platillo.idProductoMenu }})? Esta acción no se puede deshacer y fallará si existen pedidos asociados.');">
                                         {% csrf_token %}
@@ -660,7 +697,7 @@
                             </tr>
                             {% empty %}
                             <tr>
-                                <td colspan="6" style="text-align: center;">No hay platillos registrados.</td>
+                                <td colspan="6" style="text-align: center;">No hay productos registrados.</td>
                             </tr>
                             {% endfor %}
                         </tbody>
@@ -700,9 +737,29 @@
         }
         
         // --- Funciones para Ingredientes Dinámicos ---
+        
+        // 1. Declarar los ingredientes iniciales si existen (para edición)
+        {% if ingredientes_actuales %}
+        const ingredientes_iniciales = [
+            {% for ingrediente in ingredientes_actuales %}
+            {
+                id: '{{ ingrediente.idArticuloInventario.idArticuloInventario }}',
+                // CAMBIO: Se agrega la unidad de medida para el valor del input y se cumple el formato de edición
+                nombre: '{{ ingrediente.idArticuloInventario.nombre|escapejs }} ({{ ingrediente.idArticuloInventario.unidad_de_medida|escapejs }})', 
+                cantidad: '{{ ingrediente.cantidad_usada }}',
+                // NUEVO: Se pasa la unidad por separado para establecer el placeholder inicial
+                unidad: '{{ ingrediente.idArticuloInventario.unidad_de_medida|escapejs }}' 
+            },
+            {% endfor %}
+        ];
+        {% else %}
+        const ingredientes_iniciales = [];
+        {% endif %}
+        // FIN: Declarar ingredientes iniciales
 
         // Función para crear un nuevo campo de ingrediente
-        function agregarIngrediente() {
+        // CAMBIO: Se agrega 'initialUnidad' al argumento
+        function agregarIngrediente(initialId = '', initialNombre = '', initialCantidad = '', initialUnidad = '') { 
             const container = document.getElementById('ingredientes-container');
             const wrapper = document.createElement('div');
             wrapper.className = 'ingrediente-item';
@@ -712,16 +769,15 @@
             inputArticulo.type = 'text';
             inputArticulo.className = 'form-control-custom';
             inputArticulo.setAttribute('list', 'articulos-inventario-list');
-            inputArticulo.setAttribute('placeholder', 'Buscar Ingrediente');
+            inputArticulo.setAttribute('placeholder', 'Buscar Artículo de Inventario');
             inputArticulo.setAttribute('required', 'required');
-            // Necesario para enviar el ID del artículo al backend (se actualiza al seleccionar)
             inputArticulo.setAttribute('data-id-target', 'idArticuloInventario[]');
             
             // 2. Input oculto para enviar el ID real del artículo seleccionado
             const hiddenInput = document.createElement('input');
             hiddenInput.type = 'hidden';
             hiddenInput.name = 'idArticuloInventario[]';
-            hiddenInput.setAttribute('required', 'required'); // Hacer el ID obligatorio
+            hiddenInput.setAttribute('required', 'required'); 
             
             // 3. Input para la Cantidad Usada
             const inputCantidad = document.createElement('input');
@@ -730,9 +786,14 @@
             inputCantidad.min = '0.1';
             inputCantidad.name = 'cantidad_usada[]';
             inputCantidad.className = 'form-control-custom';
-            inputCantidad.setAttribute('placeholder', 'Cantidad usada');
+            // CAMBIO: Se elimina el placeholder estático. Se asignará dinámicamente.
             inputCantidad.setAttribute('required', 'required');
             
+            // NUEVO: Función para establecer el placeholder de la cantidad
+            function setCantidadPlaceholder(unidad) {
+                inputCantidad.setAttribute('placeholder', unidad ? `Cantidad usada (${unidad})` : 'Cantidad usada');
+            }
+
             // 4. Botón de Remover
             const btnRemover = document.createElement('button');
             btnRemover.type = 'button';
@@ -742,7 +803,7 @@
                 container.removeChild(wrapper);
             };
 
-            // 5. Lógica para manejar la selección del datalist y actualizar el hidden input
+            // 5. Lógica para manejar la selección del datalist y actualizar el hidden input y el placeholder
             inputArticulo.addEventListener('input', function() {
                 const datalist = document.getElementById('articulos-inventario-list');
                 const selectedOption = Array.from(datalist.options).find(option => option.value === this.value);
@@ -750,11 +811,31 @@
                 if (selectedOption) {
                     // Si se selecciona una opción válida, actualiza el valor del input oculto
                     hiddenInput.value = selectedOption.getAttribute('data-id');
+                    
+                    // LÓGICA CLAVE: Extraer la unidad de medida del valor seleccionado: "Nombre (Unidad)"
+                    const match = this.value.match(/\(([^)]+)\)$/); 
+                    const unidad = match ? match[1] : '';
+                    setCantidadPlaceholder(unidad); // Establece el placeholder con la unidad
+                    
                 } else {
-                    // Si el texto no coincide con una opción, vacía el input oculto
+                    // Si el texto no coincide con una opción, vacía el input oculto y el placeholder
                     hiddenInput.value = '';
+                    setCantidadPlaceholder(''); 
                 }
             });
+
+            // 6. Asignar valores iniciales para edición
+            hiddenInput.value = initialId;
+            inputArticulo.value = initialNombre; // Este valor ahora incluye la unidad
+            inputCantidad.value = initialCantidad;
+            
+            // NUEVO: Asignar placeholder inicial si se está editando
+            if (initialUnidad) {
+                setCantidadPlaceholder(initialUnidad);
+            } else {
+                setCantidadPlaceholder(''); // Placeholder por defecto
+            }
+            // FIN: Asignar valores iniciales
 
             // Ensamblar el elemento
             wrapper.appendChild(inputArticulo);
@@ -764,14 +845,30 @@
             container.appendChild(wrapper);
         }
 
-        // Ejecutar al cargar para asegurar que no haya inputs de ingredientes vacíos al inicio (opcional)
-        // document.addEventListener('DOMContentLoaded', agregarIngrediente); 
+        // 7. Ejecutar la carga de ingredientes iniciales
+        document.addEventListener('DOMContentLoaded', function() {
+            if (ingredientes_iniciales.length > 0) {
+                // Limpiar y cargar los iniciales
+                const container = document.getElementById('ingredientes-container');
+                container.innerHTML = ''; // Asegurar que está limpio
+
+                ingredientes_iniciales.forEach(function(ingrediente) {
+                    // CAMBIO: Se añade ingrediente.unidad al llamado de la función
+                    agregarIngrediente(ingrediente.id, ingrediente.nombre, ingrediente.cantidad, ingrediente.unidad);
+                });
+            } 
+            // Si no hay ingredientes iniciales (no estamos editando), asegurarse de que haya al menos un campo vacío 
+            else if (document.getElementById('ingredientes-container').children.length === 0) {
+                agregarIngrediente(); 
+            }
+        });
+        // FIN: Carga de ingredientes iniciales
 
     </script>
 
     <datalist id="articulos-inventario-list">
         {% for articulo in articulos_inventario %}
-            <option value="{{ articulo.nombre }}" data-id="{{ articulo.idArticuloInventario }}">
+            <option value="{{ articulo.nombre }} ({{ articulo.unidad_de_medida }})" data-id="{{ articulo.idArticuloInventario }}">
         {% endfor %}
     </datalist>
     </body>
