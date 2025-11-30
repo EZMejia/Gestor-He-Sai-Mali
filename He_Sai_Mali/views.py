@@ -494,7 +494,7 @@ def pagar_factura(request, pedido_id):
 
 # Vista dedicada solo a generar y servir el archivo PDF
 @user_passes_test(es_rol("Mesero"), login_url='login')
-def descargar_pdf_factura(pedido_id):
+def descargar_pdf_factura(request, pedido_id):
     return generar_pdf_factura(pedido_id)
 
 @require_POST
