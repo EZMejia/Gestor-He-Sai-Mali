@@ -642,6 +642,7 @@
                                 <select name="tipo_articulo" id="tipo_articulo" class="form-control-custom" required>
                                     <option value="">Seleccione el Tipo</option>
                                         <option value="{{ 'Ingrediente' }}"{% if articulo_a_editar.tipoArticulo == 'Ingrediente' %}selected{% endif %}>Ingrediente</option>
+                                        <option value="{{ 'Bebida' }}"{% if articulo_a_editar.tipoArticulo == 'Bebida' %}selected{% endif %}>Bebida</option>
                                 </select>
                             </div>
                             

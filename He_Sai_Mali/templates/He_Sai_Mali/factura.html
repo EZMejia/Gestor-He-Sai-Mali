@@ -68,10 +68,31 @@
             {% if pedido.estadoDePago == 0 %}
             <a href="{% url 'pedidos' %}" class="btn-accion btn-cancelar">Volver a pedidos</a>
             
-            <form method="POST" action="{% url 'pagar_factura' pedido.idPedido %}" style="display:inline;">
+            <button type="button" 
+                    class="btn-accion btn-pagada" 
+                    onclick="marcarYDescargar({{ pedido.idPedido }})">
+                Marcar como pagada y descargar PDF
+            </button>
+
+            <form id="form-pagar" 
+                method="POST" 
+                action="{% url 'pagar_factura' pedido.idPedido %}" 
+                style="display:none;">
                 {% csrf_token %}
-                <button type="submit" class="btn-accion btn-pagada">Marcar como pagada</button>
             </form>
+            
+            <script>
+                function marcarYDescargar(pedidoId) {
+                    // 1. Iniciar la descarga del PDF en una nueva pestaña (o iframe oculto)
+                    // Esto dispara la vista 'descargar_pdf_factura', que devuelve el PDF.
+                    window.open('{% url "descargar_pdf_factura" 0 %}'.replace('0', pedidoId), '_blank');
+                    
+                    // 2. Enviar el formulario POST para marcar como pagada y redirigir
+                    // Esto dispara la vista 'pagar_factura', que actualiza el estado y redirige a 'pedidos'.
+                    document.getElementById('form-pagar').submit();
+                }
+            </script>
+
             {% else %}
             <p><strong>Factura pagada y cerrada.</strong></p>
             <a href="{% url 'pedidos' %}" class="btn-accion btn-pagada">Volver a Pedidos</a>

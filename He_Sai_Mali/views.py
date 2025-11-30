@@ -1,4 +1,5 @@
 from django.db import IntegrityError, connection, transaction
+from django.http import HttpResponse
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.contrib.auth import login, authenticate, logout
@@ -18,6 +19,13 @@ from io import BytesIO
 import base64
 from decimal import Decimal
 import re
+
+from reportlab.pdfgen import canvas
+from reportlab.lib.pagesizes import letter
+from reportlab.lib.units import inch
+from reportlab.lib.styles import getSampleStyleSheet
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
+from reportlab.lib import colors
 
 from .models import *
 from .decorators import *
@@ -279,6 +287,92 @@ def mostrar_factura(request, pedido_id):
     # Renderizar la plantilla de la factura
     return render(request, 'He_Sai_Mali/factura.html', context)
 
+def generar_pdf_factura(pedido_id):
+    """
+    Genera el PDF de la factura para un pedido dado.
+    Retorna un HttpResponse con el contenido del PDF.
+    """
+    
+    # 1. Obtener datos (similar a mostrar_factura)
+    pedido = get_object_or_404(Pedido, pk=pedido_id)
+    monto_total_sin_impuesto = calcular_monto_total(pedido_id)
+    monto_total_decimal = Decimal(str(monto_total_sin_impuesto))
+    
+    TASA_IMPUESTO = Decimal('0.15')
+    subtotal = monto_total_decimal
+    impuesto = monto_total_decimal * TASA_IMPUESTO
+    total_con_impuesto = subtotal + impuesto
+    
+    cliente = pedido.idCliente # Asumo que el cliente está asociado
+    
+    platillos_pedido = Pedido_ProductoMenu.objects.filter(
+        idPedido=pedido
+    ).select_related('idProductoMenu')
+    
+    # --- Configuración del PDF ---
+    response = HttpResponse(content_type='application/pdf')
+    filename = f"factura_pedido_{pedido_id}.pdf"
+    response['Content-Disposition'] = f'attachment; filename="{filename}"'
+
+    doc = SimpleDocTemplate(response, pagesize=letter)
+    story = []
+    styles = getSampleStyleSheet()
+
+    # --- 2. Encabezado ---
+    story.append(Paragraph("<b>Hê Sãî Mãlî - Factura</b>", styles['h1']))
+    story.append(Spacer(1, 0.25 * inch))
+    story.append(Paragraph(f"<b>Pedido N°:</b> {pedido.idPedido}", styles['Normal']))
+    story.append(Paragraph(f"<b>Fecha:</b> {pedido.fecha.strftime('%d/%m/%Y %H:%M')}", styles['Normal']))
+    story.append(Spacer(1, 0.1 * inch))
+    story.append(Paragraph(f"<b>Cliente:</b> {cliente.nombre}", styles['Normal']))
+    if cliente.tipoCliente == "empresa":
+        story.append(Paragraph(f"<b>RUC:</b> {cliente.identificacion}", styles['Normal']))
+    story.append(Paragraph(f"<b>Método de Pago:</b> {pedido.metodoPago or 'N/A'}", styles['Normal']))
+    story.append(Spacer(1, 0.25 * inch))
+
+    # --- 3. Detalles de Productos (Tabla) ---
+    data = [['Producto', 'Cant.', 'Precio Unit.', 'Total']]
+    for item in platillos_pedido:
+        nombre = item.idProductoMenu.nombre
+        cantidad = str(item.cantidad)
+        precio_unit = f"${item.idProductoMenu.precio:.2f}"
+        total_item = item.cantidad * item.idProductoMenu.precio
+        total_item_str = f"${total_item:.2f}"
+        data.append([nombre, cantidad, precio_unit, total_item_str])
+
+    table = Table(data, colWidths=[3*inch, 0.7*inch, 1*inch, 1*inch])
+    table.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
+        ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+        ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+        ('ALIGN', (1, 1), (2, -1), 'CENTER'), # Cantidad y Precio unitario
+        ('ALIGN', (3, 1), (3, -1), 'RIGHT'), # Total
+        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+        ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+        ('GRID', (0, 0), (-1, -1), 1, colors.black),
+    ]))
+    story.append(table)
+    story.append(Spacer(1, 0.25 * inch))
+
+    # --- 4. Totales ---
+    totales_data = [
+        ['Subtotal:', f"${subtotal:.2f}"],
+        [f"Impuesto (IVA {int(TASA_IMPUESTO*100)}%):", f"${impuesto:.2f}"],
+        [f"Total a Pagar:", f"${total_con_impuesto:.2f}"],
+    ]
+    
+    totales_table = Table(totales_data, colWidths=[4*inch, 1.7*inch])
+    totales_table.setStyle(TableStyle([
+        ('ALIGN', (0, 0), (-1, -1), 'RIGHT'),
+        ('FONTNAME', (0, 2), (-1, 2), 'Helvetica-Bold'),
+        ('LINEBELOW', (0, 1), (-1, 1), 1, colors.black),
+        ('LEFTPADDING', (0, 0), (0, -1), 100) # Empujar a la derecha
+    ]))
+    story.append(totales_table)
+    
+    doc.build(story)
+    return response
+
 @require_POST
 @user_passes_test(es_rol("Mesero"), login_url='login')
 def pagar_factura(request, pedido_id):
@@ -321,6 +415,14 @@ def pagar_factura(request, pedido_id):
         messages.error(request, f"Error al registrar el pago: {e}")
 
     return redirect('pedidos')
+
+@user_passes_test(es_rol("Mesero"), login_url='login')
+def descargar_pdf_factura(request, pedido_id):
+    """
+    Vista dedicada solo a generar y servir el archivo PDF.
+    """
+    # Usamos la misma lógica de generar_pdf_factura definida previamente.
+    return generar_pdf_factura(pedido_id)
 
 @require_POST
 @user_passes_test(es_rol("Mesero"), login_url='login')
@@ -1607,7 +1709,8 @@ def temporizador_mesa(request, mesa_id):
     ).order_by('idPedido').last()
 
     remaining_seconds = 0
-    
+    tiempo_total_segundos = 0
+
     if latest_pedido:
         total_duration_seconds = Pedido_ProductoMenu.objects.filter(
             idPedido=latest_pedido.idPedido,
