@@ -904,7 +904,7 @@ def vista_registrarpedido(request, pedido_id=None):
                     if productoMenu and cantidad > 0:
                         with connection.cursor() as cursor:
                             # 2.1. Insertar el detalle del ProductoMenu
-                            sql_insert_ProductoMenu_pedido = """user
+                            sql_insert_ProductoMenu_pedido = """
                                 INSERT INTO "Pedido_ProductoMenu" ("idPedido_id", "idProductoMenu_id", "cantidad", "estado")
                                 VALUES (%s, %s, %s, 'Registrado');
                             """

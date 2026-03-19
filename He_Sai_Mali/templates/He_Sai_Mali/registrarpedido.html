@@ -693,7 +693,7 @@
 
                     <div class="action-group">
                         <a href="{% url 'pedidos' %}" class="btn-secondary-lg">Cancelar y Volver</a>
-                        <button type="submit" class="btn-success-lg">
+                        <button type="button" id="btnPrepararConfirmacion" class="btn-success-lg">
                             {% if pedido_existente %}
                                 Añadir Productos a Pedido
                             {% else %}
@@ -712,6 +712,20 @@
         <div class="overlay" id="overlay" onclick="toggleSidebar()"></div>
     </div>
     
+    <div id="modalConfirmacion" style="display: none; position: fixed; z-index: 2000; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.7); display: flex; align-items: center; justify-content: center;">
+        <div style="background-color: white; padding: 25px; border-radius: 8px; width: 90%; max-width: 500px; box-shadow: 0 5px 15px rgba(0,0,0,0.3);">
+            <h2 style="color: var(--primary-color); border-bottom: 2px solid var(--secondary-color); padding-bottom: 10px; margin-bottom: 15px;">Confirmar Pedido</h2>
+            
+            <div id="resumenPedido" style="margin-bottom: 20px; max-height: 300px; overflow-y: auto;">
+                </div>
+
+            <div style="display: flex; justify-content: flex-end; gap: 10px;">
+                <button onclick="cerrarModal()" style="padding: 10px 15px; border: none; border-radius: 4px; cursor: pointer; background: #ccc;">Corregir</button>
+                <button id="btnConfirmarFinal" style="padding: 10px 15px; border: none; border-radius: 4px; cursor: pointer; background: var(--primary-color); color: white;">Confirmar y Enviar</button>
+            </div>
+        </div>
+    </div>
+
     <script>
         function filtrarProductos() {
             const input = document.getElementById('buscador');
@@ -838,6 +852,61 @@
         });
 
         document.addEventListener('DOMContentLoaded', actualizarInventarioYDisponibilidad);
+
+        // Modal ----------------------
+
+        document.getElementById('btnPrepararConfirmacion').addEventListener('click', function() {
+            const modal = document.getElementById('modalConfirmacion');
+            const resumen = document.getElementById('resumenPedido');
+            const nombreCliente = document.getElementById('nombre_cliente')?.value || "{{ pedido_existente.idCliente.nombre }}";
+            const mesaSelect = document.getElementById('mesa');
+            const mesaText = mesaSelect ? mesaSelect.options[mesaSelect.selectedIndex].text : "N/A";
+            
+            let productosHtml = `<p><strong>Cliente:</strong> ${nombreCliente}</p>`;
+            if (mesaSelect) productosHtml += `<p><strong>Ubicación:</strong> ${mesaText}</p>`;
+            productosHtml += `<table style="width:100%; margin-top:30px; border-collapse: collapse;">
+                                <thead><tr style="text-align:left; border-bottom: 1px solid #ddd;">
+                                <th>Producto</th><th>Cant.</th></tr></thead><tbody>`;
+
+            let tieneProductos = false;
+            document.querySelectorAll('.input-platillo').forEach(input => {
+                const cantidad = parseInt(input.value) || 0;
+                if (cantidad > 0) {
+                    const nombre = input.closest('tr').querySelector('.nombre-producto').innerText;
+                    productosHtml += `<tr style="border-bottom: 1px solid #eee;">
+                                        <td style="padding: 5px 0;">${nombre}</td>
+                                        <td>${cantidad}</td>
+                                    </tr>`;
+                    tieneProductos = true;
+                }
+            });
+
+            productosHtml += `</tbody></table>`;
+
+            if (!tieneProductos) {
+                alert("Por favor, selecciona al menos un producto.");
+                return;
+            }
+
+            resumen.innerHTML = productosHtml;
+            modal.style.display = 'flex';
+        });
+
+        function cerrarModal() {
+            document.getElementById('modalConfirmacion').style.display = 'none';
+        }
+
+        document.getElementById('btnConfirmarFinal').addEventListener('click', function() {
+            // Busca el formulario padre y haz el submit real
+            document.querySelector('form').submit();
+        });
+
+        // Asegurarse de que el modal inicie oculto al cargar la página (corrección CSS inline)
+        document.addEventListener('DOMContentLoaded', () => {
+            document.getElementById('modalConfirmacion').style.display = 'none';
+        });
+
+        // ----------------------
 
         function toggleSidebar() {
             const sidebar = document.getElementById('sidebar');
