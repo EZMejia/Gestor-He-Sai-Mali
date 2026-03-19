@@ -52,7 +52,7 @@
             align-items: center;
             height: 60px;
             background-color: var(--primary-color);
-            border-bottom: 8px solid var(--secondary-color);
+            border-bottom: 8px solid var(--primary-color);
             color: var(--text-light);
             padding: 30px 15px;
             box-shadow: 0 6px 10px black;
@@ -233,7 +233,7 @@
             text-decoration: none;
             background-color: #981a28;
             padding: 10px;
-            border-radius: 8px;
+            border-radius: 6px;
             border: 2px solid #f3bb67;
             
             max-width: 220px;
@@ -280,11 +280,11 @@
         /*Titulo del pedido*/
         .pedido_head {
             display: flex;
-            background-color: #981a28;
-            color: white;
+            background-color: #f2f2f2;
+            color: #981a28;
             border-radius: 5px 5px 0 0;
             padding: 2px;
-            border-bottom: 3px solid #f3bb67;
+            border-bottom: 1px solid #dfe3e6;
         }
         .pedido_head .numero {
             align-items: center;
@@ -325,7 +325,7 @@
             border-radius: 5px;
             cursor: pointer;
             text-decoration: none;
-            color: black;
+            color: white;
             font-weight: bold;
         }
         .lista_platillos li.platillos:nth-child(odd) {
@@ -469,6 +469,14 @@
             border-radius: 5px;
         }
 
+        .alert-warning {
+            background-color: #f6a700;
+            color: white;
+            padding: 10px;
+            margin-bottom: 10px;
+            border-radius: 5px;
+        }
+
         .overlay-custom {
             display: none; /* Inicia oculto */
             position: fixed; 
@@ -528,12 +536,12 @@
             transition: background-color 0.3s ease;
         }
 
-        .platillo_estado[style*="yellow"]:hover {
-            background-color: #CCCC00 !important;
+        .platillo_estado[style*="981a28"]:hover {
+            background-color: #7a1520 !important;
         }
 
-        .platillo_estado[style*="90EE90"]:hover {
-            background-color: #6BBE6B !important;
+        .platillo_estado[style*="891724"]:hover {
+            background-color: #6a121c !important;
         }
     </style>
 </head>
@@ -657,7 +665,7 @@
                 {% endif %}
 
                 <div class="mb-4">
-                    <a href="{% url 'registrarpedido' %}" class="btn">
+                    <a href="{% url 'registrarpedido' %}" class="btn" style="border: none;">
                         <i class="fas fa-plus"></i>&nbsp;Registrar Nuevo Pedido
                     </a>
                 </div>
@@ -687,9 +695,9 @@
                                                 <button type="submit" 
                                                     class="platillo_estado" 
                                                     style="background-color: 
-                                                        {% if platillo.Estado == 'Registrado' %}yellow;
-                                                        {% elif platillo.Estado == 'Listo' %}#90EE90; /* Verde claro */
-                                                        {% elif platillo.Estado == 'Servido' %}#FF6347; /* Rojo anaranjado */
+                                                        {% if platillo.Estado == 'Registrado' %}#981a28;
+                                                        {% elif platillo.Estado == 'Listo' %}#891724;
+                                                        {% elif platillo.Estado == 'Servido' %}#7a1520;
                                                         {% endif %};
                                                     border: none; cursor: 
                                                         {% if platillo.Estado == 'Servido' %} default; {% endif %};">
@@ -716,7 +724,7 @@
                                     <i class="fas fa-plus"></i> Agregar Productos
                                 </a>
 
-                                <form method="POST" action="{% url 'eliminar_pedido' pedido.idPedido %}" style="display:inline;" onsubmit="return confirm('¿Está seguro de que desea eliminar el Pedido N°{{ pedido.IdPedido }}? Esta acción es irreversible.');">
+                                <form method="POST" action="{% url 'eliminar_pedido' pedido.idPedido %}" style="display:inline;" onsubmit="return confirm('¿Está seguro de que desea eliminar el Pedido N°{{ pedido.idPedido }}? Esta acción es irreversible.');">
                                     {% csrf_token %}
                                     <button type="submit" 
                                             class="btn-eliminar" 

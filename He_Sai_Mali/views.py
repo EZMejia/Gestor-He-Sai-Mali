@@ -155,7 +155,7 @@ def login_view(request):
                 rol = (user.rol or '').strip().lower()
                 # Redirige a una vista principal para cada tipo de empleado
                 if rol == "administrador":
-                    return redirect('pedidos')
+                    return redirect('admin_dashboard')
                 elif rol == "mesero":
                     return redirect('pedidos')
                 elif rol == "cocinero":
@@ -508,13 +508,11 @@ def descargar_pdf_factura(request, pedido_id):
 @require_POST
 @user_passes_test(es_rol("Mesero"), login_url='login')
 def eliminar_pedido(request, pedido_id):
-    # Elimina un Pedido si *todos* sus ProductoMenu estan aun en estado 'Registrado'.
-
+    # Elimina un Pedido si *todos* sus ProductoMenu están aún en estado 'Registrado'.
     pedido = get_object_or_404(Pedido, pk=pedido_id)
 
     with connection.cursor() as cursor:
-        # 1. Verificar si todos los ProductoMenu estan en 'Registrado'
-        # Se cuentan cuantos NO estan en 'Registrado'
+        # 1. Verificar si todos los ProductoMenu están en 'Registrado'
         sql_items_no_registrados = """
             SELECT COUNT(*) FROM "Pedido_ProductoMenu" 
             WHERE "idPedido_id" = %s AND "estado" NOT IN ('Registrado');
@@ -523,34 +521,70 @@ def eliminar_pedido(request, pedido_id):
         items_no_registrados = cursor.fetchone()[0]
     
     if items_no_registrados == 0:
-        # Si la cuenta es 0, todos están en 'Registrado'
-        with transaction.atomic():           
-            with connection.cursor() as cursor:
-                sql_delete_detalles = """
-                    DELETE FROM "Pedido_ProductoMenu" 
-                    WHERE "idPedido_id" = %s;
-                """
-                cursor.execute(sql_delete_detalles, [pedido_id])
+        try:
+            with transaction.atomic():
+                with connection.cursor() as cursor:
+                    # --- NUEVA LÓGICA: RECUPERAR STOCK ---
+                    # 1. Obtener todos los productos y sus cantidades en este pedido
+                    sql_detalles = """
+                        SELECT "idProductoMenu_id", "cantidad" 
+                        FROM "Pedido_ProductoMenu" 
+                        WHERE "idPedido_id" = %s;
+                    """
+                    cursor.execute(sql_detalles, [pedido_id])
+                    productos_pedido = cursor.fetchall()
 
-                sql_delete_empleado_pedido = """
-                    DELETE FROM "Empleado_Pedido" 
-                    WHERE "idPedido_id" = %s;
-                """
-                cursor.execute(sql_delete_empleado_pedido, [pedido_id])
+                    for id_producto, cantidad_pedida in productos_pedido:
+                        # 2. Para cada producto, buscar qué ingredientes utiliza (receta)
+                        sql_receta = """
+                            SELECT "idArticuloInventario_id", "cantidad_usada"
+                            FROM "ProductoMenu_ArticuloInventario"
+                            WHERE "idProductoMenu_id" = %s;
+                        """
+                        cursor.execute(sql_receta, [id_producto])
+                        ingredientes = cursor.fetchall()
 
-                sql_delete_pedido = """
-                    DELETE FROM "Pedido" 
-                    WHERE "idPedido" = %s;
-                """
-                cursor.execute(sql_delete_pedido, [pedido_id])
+                        for id_ingrediente, cant_unitaria_usada in ingredientes:
+                            # 3. Calcular total a devolver y actualizar el stock
+                            cantidad_a_devolver = Decimal(str(cant_unitaria_usada)) * Decimal(str(cantidad_pedida))
+                            
+                            sql_update_stock = """
+                                UPDATE "ArticuloInventario"
+                                SET "stock" = "stock" + %s
+                                WHERE "idArticuloInventario" = %s;
+                            """
+                            cursor.execute(sql_update_stock, [cantidad_a_devolver, id_ingrediente])
+                    # --- FIN RECUPERACIÓN DE STOCK ---
 
-            if pedido.idMesa:
-                pedido.idMesa.ocupada = False
-                pedido.idMesa.save()
-                
-            messages.success(request, f"Pedido N°{pedido_id} eliminado exitosamente.")
+                    # Proceder con la eliminación de registros
+                    sql_delete_detalles = """
+                        DELETE FROM "Pedido_ProductoMenu" 
+                        WHERE "idPedido_id" = %s;
+                    """
+                    cursor.execute(sql_delete_detalles, [pedido_id])
+
+                    sql_delete_empleado_pedido = """
+                        DELETE FROM "Empleado_Pedido" 
+                        WHERE "idPedido_id" = %s;
+                    """
+                    cursor.execute(sql_delete_empleado_pedido, [pedido_id])
+
+                    sql_delete_pedido = """
+                        DELETE FROM "Pedido" 
+                        WHERE "idPedido" = %s;
+                    """
+                    cursor.execute(sql_delete_pedido, [pedido_id])
+
+                # Liberar la mesa
+                if pedido.idMesa:
+                    pedido.idMesa.ocupada = False
+                    pedido.idMesa.save()
+                    
+                messages.success(request, f"Pedido N°{pedido_id} eliminado y stock recuperado exitosamente.")
+        except Exception as e:
+            messages.error(request, f"Error al eliminar el pedido: {e}")
     else:
-        messages.error(request, f"No se puede eliminar el Pedido N°{pedido_id}")
+        messages.error(request, f"No se puede eliminar el Pedido N°{pedido_id} porque ya tiene productos en preparación o servidos.")
 
     return redirect('pedidos')
 
@@ -570,13 +604,14 @@ def vista_mesero(request):
         JOIN "Cliente" c ON c."idCliente" = p."idCliente_id"
         JOIN "Pedido_ProductoMenu" pp ON pp."idPedido_id" = p."idPedido"
         JOIN "ProductoMenu" pl ON pl."idProductoMenu" = pp."idProductoMenu_id"
+        JOIN "Empleado_Pedido" ep ON ep."idPedido_id" = p."idPedido"
         WHERE p."idPedido" IN (SELECT pp."idPedido_id" FROM "Pedido_ProductoMenu" pp 
                         WHERE pp."estado" IN ('Registrado', 'Listo', 'Servido')
                         GROUP BY pp."idPedido_id"
-                        )
+                        ) AND ep."idEmpleado_id" = %s
         GROUP BY p."idPedido", p."fecha", p."metodoPago", c."nombre", p."idMesa_id"
         ORDER BY p."fecha" ASC;
-    """)
+    """, [request.user.idEmpleado])
 
     # 2. Obtener el detalle de platillos para los pedidos
     pedidos_ids = [p.idPedido for p in cola_pedidos]
@@ -634,6 +669,23 @@ def vista_mesero(request):
 def vista_registrarpedido(request, pedido_id=None):
     # Permite registrar un nuevo pedido o agregar platillos a un pedido existente (si se pasa pedido_id).
     # Filtra mesas disponibles, asigna la mesa al crear el pedido y la marca como OCUPADA.
+    
+    # Obtener el inventario actual
+    inventario_actual = {
+        art.idArticuloInventario: float(art.stock)
+        for art in ArticuloInventario.objects.all()
+    }
+
+    # Obtener las recetas (qué usa cada platillo)
+    recetas = {}
+    relaciones = ProductoMenu_ArticuloInventario.objects.all()
+    for rel in relaciones:
+        if rel.idProductoMenu_id not in recetas:
+            recetas[rel.idProductoMenu_id] = []
+        recetas[rel.idProductoMenu_id].append({
+            'idArticulo': rel.idArticuloInventario_id,
+            'cantidad': float(rel.cantidad_usada)
+        })
 
     # ------------------ Obtener y Agrupar Platillos por Categoría ------------------
     # Obtener todos los platillos disponibles y ordenarlos por categoría y luego por nombre
@@ -707,8 +759,8 @@ def vista_registrarpedido(request, pedido_id=None):
             
         # Validación de 0 productos
         if not productos_a_registrar and not pedido_existente:
-             messages.error(request, 'Debe seleccionar al menos un platillo para registrar un nuevo pedido.')
-             return redirect('registrarpedido')
+            messages.error(request, 'Debe seleccionar al menos un platillo para registrar un nuevo pedido.')
+            return redirect('registrarpedido')
         
         id_pedido_a_usar = None
         cliente_a_usar_id = None
@@ -852,7 +904,7 @@ def vista_registrarpedido(request, pedido_id=None):
                     if productoMenu and cantidad > 0:
                         with connection.cursor() as cursor:
                             # 2.1. Insertar el detalle del ProductoMenu
-                            sql_insert_ProductoMenu_pedido = """
+                            sql_insert_ProductoMenu_pedido = """user
                                 INSERT INTO "Pedido_ProductoMenu" ("idPedido_id", "idProductoMenu_id", "cantidad", "estado")
                                 VALUES (%s, %s, %s, 'Registrado');
                             """
@@ -930,7 +982,9 @@ def vista_registrarpedido(request, pedido_id=None):
         'mesas_disponibles': mesas_disponibles,
         'rol_empleado': request.user.rol,
         'nombre_empleado': request.user.nombre,
-        'apellido_empleado': request.user.apellido
+        'apellido_empleado': request.user.apellido,
+        'inventario_json': json.dumps(inventario_actual),
+        'recetas_json': json.dumps(recetas),
     }
     # ------------------ FIN: CAMBIO 2 -------------------------------------------------
     return render(request, 'He_Sai_Mali/registrarpedido.html', context)
@@ -1802,7 +1856,7 @@ def generate_dashboard_pdf(request):
     titulo_bloque = [
         Paragraph("<b>Hê Sãî Mãlî</b>", style_center_h1),
         Spacer(1, 0.05 * inch), # Espaciador para separar
-        Paragraph("Reporte de Dashboard", style_center_h2),
+        Paragraph("Reporte de ventas", style_center_h2),
     ]
     header_data.append(titulo_bloque)
 
@@ -1950,7 +2004,14 @@ def temporizador_mesa(request, mesa_id):
         
         start_time = latest_pedido.fecha
 
-        tiempo_total_segundos = int(total_duration_seconds.get('suma_tiempos')/(total_duration_seconds.get('total_quantity') - 1)) + 5*60
+        duracion = 0
+
+        if total_duration_seconds.get('total_quantity') == 1:
+            duracion = 2
+        else:
+            duracion = total_duration_seconds.get('total_quantity')
+        
+        tiempo_total_segundos = int(total_duration_seconds.get('suma_tiempos')/(duracion - 1)) + 5*60
         # Hora en que el temporizador debería terminar
         end_time = start_time + timedelta(seconds=tiempo_total_segundos)
 
@@ -2001,7 +2062,7 @@ def editar_empleado(request, empleado_id):
         correo = request.POST.get('correo', '').strip()
         cedula = request.POST.get('cedula', '').strip()
         rol = request.POST.get('rol', '').strip()
-        is_active = request.POST.get('is_active') == 'on' 
+        is_active = True
 
         try:
             with transaction.atomic():

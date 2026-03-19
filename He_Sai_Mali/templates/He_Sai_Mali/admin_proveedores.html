@@ -51,7 +51,7 @@
             align-items: center;
             height: 60px;
             background-color: var(--primary-color);
-            border-bottom: 8px solid var(--secondary-color);
+            border-bottom: 8px solid var(--primary-color);
             color: var(--text-light);
             padding: 30px 15px;
             box-shadow: 0 6px 10px black;
@@ -262,7 +262,7 @@
             background-color: #981a28; /* Color principal del diseño */
             color: white;
             padding: 10px 15px;
-            border-bottom: 3px solid #f3bb67; /* Color de acento */
+            border-bottom: 3px solid #981a28; /* Color de acento */
             border-radius: 5px 5px 0 0;
             font-weight: bold;
         }
@@ -290,6 +290,14 @@
             margin-bottom: 5px;
             font-weight: bold;
         }
+        .form-control {
+            width: 100%;
+            padding: 8px;
+            margin-bottom: 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
         .form-control-custom {
             width: 100%;
             padding: 8px;
@@ -309,8 +317,7 @@
             margin-top: 0px;
         }
         .table-custom thead tr {
-            background-color: #dacfb7; /* Color claro del diseño */
-            border-bottom: 2px solid #981a28;
+            background-color: #ddd; /* Color claro del diseño */
         }
         .table-custom th, .table-custom td {
             padding: 10px;
@@ -538,7 +545,7 @@
                 
                 <div class="card-custom">
                     <div class="card-header-custom">
-                        <h2>{% if proveedor_a_editar %}Editar Proveedor: {{ proveedor_a_editar.nombre }}{% else %}Agregar Nuevo Proveedor{% endif %}</h2>
+                        {% if proveedor_a_editar %}Editar Proveedor: {{ proveedor_a_editar.nombre }}{% else %}Agregar Nuevo Proveedor{% endif %}
                     </div>
                     <div class="card-body-custom">
                         <form method="post" action="{% if proveedor_a_editar %}{% url 'editar_proveedor' proveedor_a_editar.idProveedor %}{% else %}{% url 'admin_proveedores' %}{% endif %}">
@@ -578,7 +585,25 @@
                     </div>
                 </div>
 
-                <h2 style="color: #981a28; margin-top: 30px; border-bottom: 2px solid #dacfb7; padding-bottom: 5px; margin-bottom: 10px;">Listado de Proveedores</h2>
+                <h2 style="color: #981a28; margin-top: 30px; border-bottom: 2px solid #981a28; padding-bottom: 5px; margin-bottom: 10px;">Listado de Proveedores</h2>
+                
+                <div style="margin-bottom: 20px;">
+                    <label for="buscador" style="font-weight: bold; display: block; margin-bottom: 5px;">Buscar proveedor:</label>
+                    <div style="position: relative; display: flex; align-items: center;">
+                        <span style="position: absolute; left: 10px; color: #888;">
+                            <i class="fas fa-search"></i>
+                        </span>
+                        <input type="text" id="buscador" class="form-control" 
+                            placeholder="Escribe el nombre del proveedor..." 
+                            style="padding-left: 35px; padding-right: 35px; margin-bottom: 0;" 
+                            onkeyup="filtrarProveedor()">
+                        <span id="btn-limpiar" onclick="limpiarBusqueda()" 
+                            style="position: absolute; right: 10px; color: #888; cursor: pointer; display: none;">
+                            <i class="fas fa-times-circle"></i>
+                        </span>
+                    </div>
+                </div>
+
                 <div class="card-custom" style="padding: 0; overflow-x: auto;">
                     <table class="table-custom">
                         <thead>
@@ -590,16 +615,16 @@
                                 <th></th>
                             </tr>
                         </thead>
-                        <tbody>
+                        <tbody id="tabla-proveedores-body">
                             {% for prov in proveedores %}
-                            <tr>
+                            <tr class="fila-proveedor">
                                 <td>{{ prov.idProveedor }}</td>
-                                <td>{{ prov.nombre }}</td>
+                                <td class="nombre-proveedor">{{ prov.nombre }}</td>
                                 <td>{{ prov.telefono|default:"N/A" }}</td>
                                 <td>{{ prov.direccion|default:"N/A" }}</td>
                                 <td style="white-space: nowrap;">
                                     <a href="{% url 'editar_proveedor' prov.idProveedor %}" class='btn-custom-edit'
-                                       style="color: white; padding: 5px 10px; border-radius: 5px; text-decoration: none; font-size: 13px; font-weight: bold; display: inline-block; margin-right: 5px;">
+                                        style="color: white; padding: 5px 10px; border-radius: 5px; text-decoration: none; font-size: 13px; font-weight: bold; display: inline-block; margin-right: 5px;">
                                         <i class="fas fa-edit"></i> Editar
                                     </a>
                                     
@@ -631,6 +656,35 @@
     </div>
 
     <script>
+        function filtrarProveedor() {
+            const input = document.getElementById('buscador');
+            const btnLimpiar = document.getElementById('btn-limpiar');
+            const filtro = input.value.toLowerCase();
+            const filas = document.querySelectorAll('.fila-proveedor');
+
+            // Mostrar u ocultar el botón de limpiar (X)
+            btnLimpiar.style.display = filtro.length > 0 ? "block" : "none";
+
+            filas.forEach(fila => {
+                // Obtenemos el texto de la celda que contiene el ID de la mesa
+                const nombreProveedor = fila.querySelector('.nombre-proveedor').textContent.toLowerCase();
+                
+                // Si el ID incluye lo que el usuario escribe, se muestra la fila
+                if (nombreProveedor.includes(filtro)) {
+                    fila.style.display = "";
+                } else {
+                    fila.style.display = "none";
+                }
+            });
+        }
+
+        function limpiarBusqueda() {
+            const input = document.getElementById('buscador');
+            input.value = ""; // Vaciar input
+            filtrarProveedor(); // Resetear el filtrado para mostrar todo
+            input.focus(); // Devolver el foco al buscador
+        }
+
         function toggleSidebar() {
             const sidebar = document.getElementById('sidebar');
             const mainContent = document.getElementById('main-content');

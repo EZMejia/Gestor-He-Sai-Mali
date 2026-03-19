@@ -56,7 +56,7 @@
             align-items: center;
             height: 60px;
             background-color: var(--primary-color);
-            border-bottom: 8px solid var(--secondary-color);
+            border-bottom: 8px solid var(--primary-color);
             color: var(--text-light);
             padding: 30px 15px;
             box-shadow: 0 6px 10px black;
@@ -244,7 +244,7 @@
         .card-custom { border: 1px solid #ddd; border-radius: 5px; margin-bottom: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
         .card-header-custom {
             background-color: var(--primary-color); color: white; padding: 10px 15px;
-            border-bottom: 3px solid var(--secondary-color); border-radius: 5px 5px 0 0; font-weight: bold;
+            border-bottom: 3px solid var(--primary-color); border-radius: 5px 5px 0 0; font-weight: bold;
         }
         .card-body-custom { padding: 15px; }
 
@@ -253,6 +253,15 @@
         .form-control-custom { width: 100%; padding: 8px; margin-bottom: 10px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; }
         .form-check-custom { display: flex; align-items: center; margin-top: 10px; }
         .form-check-custom input[type="checkbox"] { width: 20px; height: 20px; margin-right: 10px; }
+
+        .form-control {
+            width: 100%;
+            padding: 8px;
+            margin-bottom: 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
 
         /* Buttons */
         .btn-custom-edit, .btn-custom-delete, .btn-custom-action {
@@ -268,9 +277,29 @@
         .btn-custom-delete:hover { background-color: #d32f2f; }
 
         /* Table and Status */
-        .table-custom { width: 100%; border-collapse: collapse; }
-        .table-custom thead tr { background-color: #dacfb7; border-bottom: 2px solid #981a28; }
-        .table-custom th, .table-custom td { padding: 10px; text-align: left; border-bottom: 1px solid #eee; }
+        .table-custom {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 0px;
+            color: #333; /* Color de texto para la tabla */
+        }
+        .table-custom thead tr {
+            background-color: #ddd; /* Color claro del diseño */
+        }
+        .table-custom th, .table-custom td {
+            padding: 10px;
+            text-align: left;
+            border-bottom: 1px solid #eee;
+        }
+        .table-custom tbody tr:nth-child(odd) {
+            background-color: #F8F8F8;
+        }
+        .table-custom tbody tr:nth-child(even) {
+            background-color: #EEEEEE;
+        }
+        .table-custom tbody tr:hover {
+            background-color: #e0e0e0;
+        }
         .status-badge { padding: 4px 8px; border-radius: 5px; font-weight: bold; color: white; }
         .status-libre { background-color: var(--mesa-libre); }
         .status-ocupada { background-color: var(--mesa-ocupada); }
@@ -460,8 +489,25 @@
                     </div>
                 {% endif %}
 
-                <h2 style="color: #981a28; margin-top: {% if user.rol != "Mesero" %} 30px {% endif %}; border-bottom: 2px solid #dacfb7; padding-bottom: 5px; margin-bottom: 10px;">Listado de Mesas</h2>
+                <h2 style="color: #981a28; margin-top: {% if user.rol != "Mesero" %} 30px {% endif %}; border-bottom: 2px solid #981a28; padding-bottom: 5px; margin-bottom: 10px;">Listado de Mesas</h2>
                 
+                <div style="margin-bottom: 20px;">
+                    <label for="buscador" style="font-weight: bold; display: block; margin-bottom: 5px;">Buscar mesa:</label>
+                    <div style="position: relative; display: flex; align-items: center;">
+                        <span style="position: absolute; left: 10px; color: #888;">
+                            <i class="fas fa-search"></i>
+                        </span>
+                        <input type="text" id="buscador" class="form-control" 
+                            placeholder="Escribe el numero de mesa..." 
+                            style="padding-left: 35px; padding-right: 35px; margin-bottom: 0;" 
+                            onkeyup="filtrarMesas()">
+                        <span id="btn-limpiar" onclick="limpiarBusqueda()" 
+                            style="position: absolute; right: 10px; color: #888; cursor: pointer; display: none;">
+                            <i class="fas fa-times-circle"></i>
+                        </span>
+                    </div>
+                </div>
+
                 <div class="card-custom" style="padding: 0; overflow-x: auto;">
                     <table class="table-custom">
                         <thead>
@@ -475,10 +521,10 @@
                                 {% endif %}
                             </tr>
                         </thead>
-                        <tbody>
+                        <tbody id="tabla-mesas-body">
                             {% for mesa in mesas %} 
-                            <tr>
-                                <td>{{ mesa.idMesa }}</td>
+                            <tr class="fila-mesa">
+                                <td class="id-mesa">{{ mesa.idMesa }}</td>
                                 <td>{{ mesa.capacidad }} personas</td>
                                 <td>
                                     {% if mesa.ocupada %}
@@ -528,6 +574,35 @@
     </div>
 
     <script>
+        function filtrarMesas() {
+            const input = document.getElementById('buscador');
+            const btnLimpiar = document.getElementById('btn-limpiar');
+            const filtro = input.value.toLowerCase();
+            const filas = document.querySelectorAll('.fila-mesa');
+
+            // Mostrar u ocultar el botón de limpiar (X)
+            btnLimpiar.style.display = filtro.length > 0 ? "block" : "none";
+
+            filas.forEach(fila => {
+                // Obtenemos el texto de la celda que contiene el ID de la mesa
+                const idMesa = fila.querySelector('.id-mesa').textContent.toLowerCase();
+                
+                // Si el ID incluye lo que el usuario escribe, se muestra la fila
+                if (idMesa.includes(filtro)) {
+                    fila.style.display = "";
+                } else {
+                    fila.style.display = "none";
+                }
+            });
+        }
+
+        function limpiarBusqueda() {
+            const input = document.getElementById('buscador');
+            input.value = ""; // Vaciar input
+            filtrarMesas(); // Resetear el filtrado para mostrar todo
+            input.focus(); // Devolver el foco al buscador
+        }
+
         // Función para manejar el colapso del sidebar (del código original)
         function toggleSidebar() {
             const sidebar = document.getElementById('sidebar');

@@ -51,7 +51,7 @@
             align-items: center;
             height: 60px;
             background-color: var(--primary-color);
-            border-bottom: 8px solid var(--secondary-color);
+            border-bottom: 8px solid var(--primary-color);
             color: var(--text-light);
             padding: 30px 15px;
             box-shadow: 0 6px 10px black;
@@ -517,7 +517,7 @@
                             <div class="pedido-card {% if forloop.first %}pedido-mas-antiguo{% endif %}">
                                 <div class="card-header">
                                     <span style="font-size: 18px;"><b>Pedido N° {{ pedido.id }}</b></span>
-                                    <span style="font-size: 14px;">Mesa: {{ pedido.mesa }}</span>
+                                    <span style="font-size: 14px;">{{ pedido.mesa }}</span>
                                 </div>
                                 <div class="card-body">
                                     <p style="margin-bottom: 5px;">Cliente: {{ pedido.cliente }}</p>

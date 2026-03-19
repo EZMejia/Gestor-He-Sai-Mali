@@ -50,7 +50,7 @@
             align-items: center;
             height: 60px;
             background-color: var(--primary-color);
-            border-bottom: 8px solid var(--secondary-color);
+            border-bottom: 8px solid var(--primary-color);
             color: var(--text-light);
             padding: 30px 15px;
             box-shadow: 0 6px 10px black;
@@ -261,7 +261,7 @@
             background-color: #981a28; /* Color principal del diseño */
             color: white;
             padding: 10px 15px;
-            border-bottom: 3px solid #f3bb67; /* Color de acento */
+            border-bottom: 3px solid #981a28; /* Color de acento */
             border-radius: 5px 5px 0 0;
             font-weight: bold;
         }
@@ -298,6 +298,15 @@
             background-color: #b12131;
         }
         
+        .form-control {
+            width: 100%;
+            padding: 8px;
+            margin-bottom: 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+
         .form-label-custom {
             display: block;
             margin-bottom: 5px;
@@ -323,8 +332,7 @@
             color: #333; /* Color de texto para la tabla */
         }
         .table-custom thead tr {
-            background-color: #dacfb7; /* Color claro del diseño */
-            border-bottom: 2px solid #981a28;
+            background-color: #ddd; /* Color claro del diseño */
         }
         .table-custom th, .table-custom td {
             padding: 10px;
@@ -385,15 +393,14 @@
             background-color: white;
             border-radius: 5px;
             box-shadow: 0 4px 10px rgba(0, 0, 0, 0.5);
-            border: 3px solid #f3bb67;
+            border: 3px solid #981a28;
         }
 
         .modal-header-custom {
             background-color: #981a28; 
             color: white;
             padding: 15px;
-            border-bottom: 3px solid #f3bb67;
-            border-radius: 5px 5px 0 0;
+            border-radius:  0 0;
             font-weight: bold;
             font-size: 1.2em;
         }
@@ -685,7 +692,25 @@
                 </div>
 
                 {# Listado de Ingredientes / Tabla #}
-                <h2 style="color: #981a28; margin-top: 30px; border-bottom: 2px solid #dacfb7; padding-bottom: 5px; margin-bottom: 10px;">Listado de Artículos</h2>
+                <h2 style="color: #981a28; margin-top: 30px; border-bottom: 2px solid #981a28; padding-bottom: 5px; margin-bottom: 10px;">Listado de Artículos</h2>
+
+                <div style="margin-bottom: 20px;">
+                    <label for="buscador" style="font-weight: bold; display: block; margin-bottom: 5px;">Buscar artículo:</label>
+                    <div style="position: relative; display: flex; align-items: center;">
+                        <span style="position: absolute; left: 10px; color: #888;">
+                            <i class="fas fa-search"></i>
+                        </span>
+                        <input type="text" id="buscador" class="form-control" 
+                            placeholder="Escribe el nombre del artículo..." 
+                            style="padding-left: 35px; padding-right: 35px; margin-bottom: 0;" 
+                            onkeyup="filtrarArticulos()">
+                        <span id="btn-limpiar" onclick="limpiarBusqueda()" 
+                            style="position: absolute; right: 10px; color: #888; cursor: pointer; display: none;">
+                            <i class="fas fa-times-circle"></i>
+                        </span>
+                    </div>
+                </div>
+
                 <div class="card-custom" style="padding: 0; overflow-x: auto;">
                     <table class="table-custom">
                         <thead>
@@ -700,13 +725,11 @@
                                 <th></th>
                             </tr>
                         </thead>
-                        <tbody>
+                        <tbody id="tabla-articulos-body">
                             {% for articulo in ingredientes %}
-                                <tr 
-                                    class="clickable-row" 
-                                >
+                                <tr class="fila-articulo">
                                     <td>{{ articulo.idArticuloInventario }}</td>
-                                    <td>{{ articulo.nombre }}</td>
+                                    <td class="nombre-articulo">{{ articulo.nombre }}</td>
                                     <td>{{ articulo.tipoArticulo|default:"N/A" }}</td>
                                     <td>{{ articulo.stock }}</td>
                                     <td>{{ articulo.unidad_de_medida }}</td>
@@ -751,6 +774,35 @@
     </div>
 
     <script>
+        function filtrarArticulos() {
+            const input = document.getElementById('buscador');
+            const btnLimpiar = document.getElementById('btn-limpiar');
+            const filtro = input.value.toLowerCase();
+            const filas = document.querySelectorAll('.fila-articulo');
+
+            // Mostrar u ocultar el botón de limpiar (X)
+            btnLimpiar.style.display = filtro.length > 0 ? "block" : "none";
+
+            filas.forEach(fila => {
+                // Obtenemos el texto de la celda que contiene el ID de la mesa
+                const nombreArticulo = fila.querySelector('.nombre-articulo').textContent.toLowerCase();
+                
+                // Si el ID incluye lo que el usuario escribe, se muestra la fila
+                if (nombreArticulo.includes(filtro)) {
+                    fila.style.display = "";
+                } else {
+                    fila.style.display = "none";
+                }
+            });
+        }
+
+        function limpiarBusqueda() {
+            const input = document.getElementById('buscador');
+            input.value = ""; // Vaciar input
+            filtrarArticulos(); // Resetear el filtrado para mostrar todo
+            input.focus(); // Devolver el foco al buscador
+        }
+
         function toggleSidebar() {
             const sidebar = document.getElementById('sidebar');
             const mainContent = document.getElementById('main-content');
