@@ -1,13 +1,11 @@
+{% extends "He_Sai_Mali/base.html" %}
+
 {% load static %}
 {% load custom_filters %}
-<!DOCTYPE html>
-<html lang="es">
-<head>
-    <meta charset="UTF-8">
-    <link rel="icon" type="image/png" href="{% static 'He_Sai_Mali/logo.png' %}">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Admin - Empleados</title>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+
+{% block title %}Admin - Empleados{% endblock %}
+
+{% block extra_style %}
     <style>
         :root {
             /* Colores del diseño de la APP (He Sai Mali) */
@@ -20,234 +18,20 @@
             --menu-item-hover: #b12131; /* Rojo más claro para hover */
         }
 
-        /* Estilos generales y del body */
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-            font-family: 'Roboto', sans-serif;
-        }
-
-        body {
-            display: flex;
-            min-height: 100vh;
-            background-color: var(--bg-page);
-            overflow-x: hidden;
-        }
-
-        /* Estilos del Contenedor Principal (Layout) */
-        #app {
-            display: flex;
-            flex-direction: column;
-            width: 100%;
-        }
-
-        /* ---------------------------------------------------- */
-        /* --- Barra de Navegación Superior (HEADER) --- */
-        /* ---------------------------------------------------- */
-        .header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            height: 60px;
-            background-color: var(--primary-color); 
-            border-bottom: 8px solid var(--primary-color); 
-            color: var(--text-light);
-            padding: 30px 15px;
-            box-shadow: 0 6px 10px black;
-            position: fixed;
-            width: 100%;
-            z-index: 1000;
-        }
-
-        .header-left {
-            display: flex;
-            align-items: center;
-        }
-
-        .header-menu-toggle {
-            font-size: 24px;
-            margin-right: 15px;
-            cursor: pointer;
-            padding: 5px;
-        }
-
-        .header-title {
-            display: flex;
-            align-items: center;
-            font-size: 1.2em;
-            font-weight: bold;
-            color: var(--text-accent);
-        }
-        .header-title img {
-            height: 40px;
-            margin-right: 10px;
-        }
-
-        .header-right {
-            display: flex;
-            align-items: center;
-        }
-        
-        /* Contenedor de Información de Usuario */
-        .user-info-badge {
-            display: flex;
-            align-items: center;
-            text-align: left;
-            color: var(--text-accent);
-            font-size: 15px;
-            background-color: var(--menu-item-hover);
-            border-radius: 5px;
-            padding: 5px 10px;
-            margin-right: 15px;
-        }
-
-        .user-info-badge img {
-            height: 30px;
-            margin-left: 10px;
-            filter: 
-                brightness(0)
-                invert(1)
-                sepia(0.9)
-                saturate(1000%)
-                hue-rotate(300deg)
-                brightness(1.0)
-                contrast(0.9);
-        }
-
-        /* ---------------------------------------------------- */
-        /* --- Menú Lateral (SIDEBAR) --- */
-        /* ---------------------------------------------------- */
-        .sidebar {
-            width: 250px;
-            background-color: var(--sidebar-bg); 
-            color: var(--text-light);
-            padding-top: 68px; 
-            position: fixed;
-            top: 0;
-            left: 0;
-            height: 100%;
-            transform: translateX(0); 
-            transition: transform 0.3s ease;
-            z-index: 900;
-        }
-
-        .sidebar.collapsed {
-            transform: translateX(-250px);
-        }
-
-        /* Contenido del usuario dentro del sidebar */
-        .sidebar-user-info {
-            padding: 15px;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-            display: flex;
-            align-items: center;
-            margin-bottom: 10px;
-        }
-
-        .sidebar-user-avatar {
-            width: 45px;
-            height: 45px;
-            border-radius: 50%;
-            background-color: white;
-            overflow: hidden;
-            margin-right: 10px;
-            position: relative;
-        }
-        .sidebar-user-avatar img {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-        }
-        
-        .sidebar-user-details p {
-            margin: 0;
-        }
-
-        .sidebar-user-name {
-            font-weight: bold;
-            font-size: 1.1em;
-        }
-
-        .sidebar-user-status {
-            font-size: 0.85em;
-            color: var(--online-green);
-            display: flex;
-            align-items: center;
-        }
-
-        .sidebar-user-status .fa-circle {
-            font-size: 0.6em;
-            margin-right: 5px;
-        }
-
-        .linea {
-            margin: 10px 0 0 0;
-            border: none;
-            height: 1px;
-            background-color: rgba(255, 255, 255, 0.1);
-        }
-
-        /* Menú de navegación */
-        .sidebar-nav {
-            padding: 10px 0;
-        }
-        .sidebar-nav-item {
-            display: flex;
-            align-items: center;
-            padding: 12px 15px;
-            text-decoration: none;
-            color: var(--text-light);
-            transition: background-color 0.2s;
-            cursor: pointer;
-        }
-
-        .sidebar-nav-item:hover,
-        .sidebar-nav-item.active {
-            background-color: var(--menu-item-hover);
-            border-left: 5px solid var(--secondary-color);
-            padding-left: 10px;
-        }
-
-        .sidebar-nav-item i {
-            width: 25px;
-            margin-right: 10px;
-            font-size: 1.1em;
-        }
-        
-        .sidebar-menu-title {
-            padding: 10px 15px 5px;
-            font-size: 0.9em;
-            text-transform: uppercase;
-            color: var(--text-accent);
-            font-weight: bold;
-        }
-        /*------------------------*/
+        body { height: 100%; overflow: hidden; }
 
         /* ---------------------------------------------------- */
         /* --- Contenido Principal (MAIN CONTENT) --- */
         /* ---------------------------------------------------- */
-        .main-content {
-            flex-grow: 1;
-            padding-top: 68px; 
-            background-color: var(--bg-page);
-            margin-left: 250px; 
-            transition: margin-left 0.3s ease;
-        }
+        .main-content { height: calc(100vh - 60px); display: flex; flex-direction: column; overflow: hidden; transition: margin-left 0.3s ease;}
 
-        .main-content.sidebar-collapsed {
-            margin-left: 0;
-        }
+        .contenido { flex-grow: 1; padding: 20px 20px; overflow-y: auto;}
 
         /* Estilos principales para el contenido de la administración */
         .container_admin {
-            display: block;
-            box-sizing: border-box;
-            margin: 20px auto;
             background-color: white;
             box-shadow: 0 0 50px 10px rgba(0, 0, 0, 0.3);
-            width: 90%;
-            max-width: 1200px; 
+            width: 100%;
             border-radius: 5px;
             padding: 20px;
         }
@@ -358,328 +142,205 @@
 
         .btn-custom-danger:hover {
             background-color: #d32f2f;
+            color: white;
         }
 
         .btn-custom-edit:hover { background-color: #0056b3; }
         .btn-custom-edit { background-color: #007bff; }
-        
-        /* ---------------------------------------------------- */
-        /* --- FOOTER --- */
-        /* ---------------------------------------------------- */
-        footer {
-            display: flex;
-            color: var(--text-accent);
-            background-color: #41444a;
-            justify-content: center;
-            align-items: center;
-            padding: 15px 0;
-            border-top: 5px solid #2c3038;
-            border-bottom: 10px solid #2c3038;
-            font-size: 14px;
-            width: 100%;
-            margin-top: 0; 
-        }
-
-        /* ---------------------------------------------------- */
-        /* --- Comportamiento en MÓVIL --- */
-        /* ---------------------------------------------------- */
-        @media (max-width: 768px) {
-            .sidebar {
-                transform: translateX(-250px);
-                padding-top: 68px;
-            }
-
-            .sidebar.show {
-                transform: translateX(0);
-            }
-            
-            .main-content {
-                margin-left: 0; 
-            }
-
-            .overlay {
-                position: fixed;
-                top: 0;
-                left: 0;
-                width: 100%;
-                height: 100%;
-                background-color: rgba(0, 0, 0, 0.5);
-                z-index: 800; 
-                display: none;
-            }
-
-            .overlay.show {
-                display: block;
-            }
-        }
     </style>
-</head>
-<body>
+{% endblock %}
+
+{% block header %}ADMINISTRACIÓN DE EMPLEADOS{% endblock %}
+
+{% block content %}
     <div id="app">
-        <header class="header">
-            <div class="header-left">
-                <i class="fas fa-bars header-menu-toggle" onclick="toggleSidebar()"></i>
-                <h1 class="header-title">
-                    <img src="{% static 'He_Sai_Mali/logo.png' %}" alt="Logo He Sai Mali">
-                    ADMINISTRACIÓN DE EMPLEADOS
-                </h1>
-            </div>
-            
-            <div class="header-right">
-                <div class="user-info-badge">
-                    {{ user.nombre }} {{ user.apellido }}
-                    <img src="{% static 'He_Sai_Mali/avatar.png' %}" alt="Avatar">
-                </div>
-            </div>
-        </header>
-
-        <aside class="sidebar" id="sidebar">
-            <nav class="sidebar-nav">
-                <div class="sidebar-user-info">
-                    <div class="sidebar-user-avatar">
-                        <img src="{% static 'He_Sai_Mali/avatar.png' %}" alt="Avatar">
-                        <span class="online-status"></span>
-                    </div>
-                    <div class="sidebar-user-details">
-                        <p class="sidebar-user-name">{{ user.nombre }} {{ user.apellido }}</p>
-                        <p class="sidebar-user-role">
-                            {{ user.rol }}
-                        </p>
-                    </div>
-                </div>
-
-                <a href="{% url 'logout' %}" class="sidebar-nav-item">
-                    <i class="fas fa-sign-out-alt"></i>
-                    <span>Cerrar sesión</span>
-                </a>
-
-                <hr class="linea">
-
-                {% if user.rol == "Mesero" %}
-                    <div class="sidebar-menu-title">PEDIDOS Y FACTURACIÓN</div>
-                    <a href="{% url 'pedidos' %}" class="sidebar-nav-item">
-                        <i class="fas fa-clipboard-list"></i>
-                        <span>Pedidos</span>
-                    </a>
-                {% endif %}
-                {% if user.rol == "Mesero" %}
-                    <a href="{% url 'registrarpedido' %}" class="sidebar-nav-item">
-                        <i class="fas fa-file-invoice"></i>
-                        <span>Nuevo Pedido</span>
-                    </a>
-
-                    <hr class="linea">
-                    
-                {% endif %}
-                
-                {% if user.rol == "Administrador" or user.rol == "Cocinero" %}
-                    <div class="sidebar-menu-title">UTILIDADES DE COCINA</div>
-                {% endif %}
-                {% if user.rol == "Cocinero" %}
-                    <a href="{% url 'cocina' %}" class="sidebar-nav-item">
-                        <i class="fas fa-utensils"></i>
-                        <span>Cocina</span>
-                    </a>
-                {% endif %}
-                {% if user.rol == "Administrador" %}
-                    <a href="{% url 'admin_platillos' %}" class="sidebar-nav-item">
-                        <i class="fas fa-hamburger"></i>
-                        <span>Productos</span>
-                    </a>
-                {% endif %}
-                {% if user.rol == "Administrador" or user.rol == "Cocinero" %}
-                    <hr class="linea">
-                {% endif %}
-                {% if user.rol == "Administrador" %}
-                    <div class="sidebar-menu-title">ADMINISTRACIÓN DE LOCAL</div>
-
-                    <a href="{% url 'admin_mesas' %}" class="sidebar-nav-item">
-                        <i class="fas fa-chair"></i>
-                        <span>Mesas</span>
-                    </a>
-                    <a href="{% url 'admin_ingredientes' %}" class="sidebar-nav-item">
-                        <i class="fas fa-leaf"></i>
-                        <span>Inventario</span>
-                    </a>
-                    <a href="{% url 'admin_proveedores' %}" class="sidebar-nav-item">
-                        <i class="fas fa-truck-loading"></i>
-                        <span>Proveedores</span>
-                    </a>
-                    <a href="{% url 'admin_dashboard' %}" class="sidebar-nav-item">
-                        <i class="fas fa-chart-line"></i>
-                        <span>Dashboard</span>
-                    </a>
-                    <a href="{% url 'admin_empleados' %}" class="sidebar-nav-item active">
-                        <i class="fas fa-user-friends"></i>
-                        <span>Empleados</span>
-                    </a>
-                    <a href="{% url 'registro' %}" class="sidebar-nav-item">
-                        <i class="fas fa-user-plus"></i>
-                        <span>Registrar Usuario</span>
-                    </a>
-                    
-                {% endif %}
-            </nav>
-        </aside>
-
         <main class="main-content" id="main-content">
-            <div class="container_admin">
-                
-                <h1 style="color: #981a28; margin-bottom: 20px;">Administración de Empleados</h1>
+            <div class="contenido">
+                <div class="container_admin">
+                    
+                    <h1 style="color: #981a28; margin-bottom: 20px;">Administración de Empleados</h1>
 
-                {% if messages %}
-                    {% for message in messages %}
-                        <div class="alert-custom alert-{{ message.tags }}" role="alert">
-                            {{ message }}
-                        </div>
-                    {% endfor %}
-                {% endif %}
-                
-                {% if empleado_a_editar %}
-                <div class="card-custom">
-                    <div class="card-header-custom">
-                        <h2>Editar Empleado: {{ empleado_a_editar.nombre }} {{ empleado_a_editar.apellido }}</h2>
-                    </div>
-                    <div class="card-body-custom">
-                        <form method="post" action="{% url 'editar_empleado' empleado_a_editar.idEmpleado %}">
-                            {% csrf_token %}
-                            <div style="display: flex; gap: 15px; flex-wrap: wrap;">
-                                
-                                <div style="flex: 1 1 30%; min-width: 200px;">
-                                    <label for="nombre" class="form-label-custom">Nombre</label>
-                                    <input type="text" class="form-control-custom" id="nombre" name="nombre" required
-                                    value="{{ empleado_a_editar.nombre|default:'' }}">
-                                </div>
-                                
-                                <div style="flex: 1 1 30%; min-width: 200px;">
-                                    <label for="apellido" class="form-label-custom">Apellido</label>
-                                    <input type="text" class="form-control-custom" id="apellido" name="apellido" required
-                                    value="{{ empleado_a_editar.apellido|default:'' }}">
-                                </div>
-                                
-                                <div style="flex: 1 1 30%; min-width: 200px;">
-                                    <label for="rol" class="form-label-custom">Rol</label>
-                                    <select class="form-control-custom" id="rol" name="rol" required>
-                                        {% for rol_opcion in roles_disponibles %}
-                                            <option value="{{ rol_opcion }}" {% if empleado_a_editar.rol == rol_opcion %}selected{% endif %}>
-                                                {{ rol_opcion }}
-                                            </option>
-                                        {% endfor %}
-                                    </select>
-                                </div>
-                                
-                                <div style="flex: 1 1 30%; min-width: 200px;">
-                                    <label for="telefono" class="form-label-custom">Teléfono</label>
-                                    <input type="text" class="form-control-custom" id="telefono" name="telefono"
-                                    value="{{ empleado_a_editar.telefono|default:'' }}">
-                                </div>
-
-                                <div style="flex: 1 1 30%; min-width: 200px;">
-                                    <label for="correo" class="form-label-custom">Correo</label>
-                                    <input type="email" class="form-control-custom" id="correo" name="correo" required
-                                    value="{{ empleado_a_editar.correo|default:'' }}">
-                                </div>
-
-                                <div style="flex: 1 1 30%; min-width: 200px;">
-                                    <label for="cedula" class="form-label-custom">Cédula</label>
-                                    <input type="text" class="form-control-custom" id="cedula" name="cedula" required
-                                    value="{{ empleado_a_editar.cedula|default:'' }}">
-                                </div>
-
-                                <div style="flex: 1 1 20%; display: flex; align-items: flex-end; min-width: 250px;">
-                                    <button type="submit" class="btn-custom-success" style="flex-grow: 1; margin-bottom: 12px;">
-                                        Actualizar Empleado
-                                    </button>
-                                    <a href="{% url 'admin_empleados' %}" class="btn-custom-danger" style="margin-bottom: 12px; flex-grow: 1; text-align: center; text-decoration: none; margin-left: 5px; padding: 9px; font-weight: normal; font-size: 13px;">
-                                        Cancelar
-                                    </a>
-                                </div>
+                    {% if messages %}
+                        {% for message in messages %}
+                            <div class="alert-custom alert-{{ message.tags }}" role="alert">
+                                {{ message }}
                             </div>
-                        </form>
-                    </div>
-                </div>
-                {% endif %}
-                <h2 style="color: #981a28; margin-top: 30px; border-bottom: 2px solid #981a28; padding-bottom: 5px; margin-bottom: 10px;">Listado de Empleados</h2>
-                <div class="card-custom" style="padding: 0; overflow-x: auto;">
-                    <table class="table-custom">
-                        <thead>
-                            <tr>
-                                <th>ID</th>
-                                <th>Nombre Completo</th>
-                                <th>Usuario</th>
-                                <th>Rol</th>
-                                <th>Teléfono</th>
-                                <th>Correo</th>
-                                <th>Cédula</th>
-                                <th></th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for empleado in empleados %}
-                            <tr>
-                                <td>{{ empleado.idEmpleado }}</td>
-                                <td>{{ empleado.nombre }} {{ empleado.apellido }}</td>
-                                <td>{{ empleado.usuario }}</td>
-                                <td>{{ empleado.rol }}</td>
-                                <td>{{ empleado.telefono|default:"N/A" }}</td>
-                                <td>{{ empleado.correo }}</td>
-                                <td>{{ empleado.cedula }}</td>
-                                <td style="white-space: nowrap;">
-                                    <a href="{% url 'editar_empleado' empleado.idEmpleado %}" class='btn-custom-edit'
-                                       style="color: white; padding: 5px 10px; border-radius: 5px; text-decoration: none; font-size: 13px; font-weight: bold; display: inline-block; margin-right: 5px;">
-                                        <i class="fas fa-edit"></i> Editar
-                                    </a>
+                        {% endfor %}
+                    {% endif %}
+                    
+                    {% if empleado_a_editar %}
+                    <div class="card-custom">
+                        <div class="card-header-custom">
+                            <h2>Editar Empleado: {{ empleado_a_editar.nombre }} {{ empleado_a_editar.apellido }}</h2>
+                        </div>
+                        <div class="card-body-custom">
+                            <form method="post" action="{% url 'editar_empleado' empleado_a_editar.idEmpleado %}">
+                                {% csrf_token %}
+                                <div style="display: flex; gap: 15px; flex-wrap: wrap;">
                                     
-                                    <form action="{% url 'eliminar_empleado' empleado.idEmpleado %}" method="POST" style="display: inline;" 
-                                        onsubmit="return confirm('¿Está seguro de que desea eliminar el empleado {{ empleado.nombre }} {{ empleado.apellido }}?');">
-                                        {% csrf_token %}
-                                        <button type="submit" class="btn-custom-danger" style="padding: 5px 10px;"
-                                            {% if empleado.idEmpleado == request.user.idEmpleado %}disabled{% endif %}>
-                                            <i class="fas fa-trash-alt"></i> Eliminar
+                                    <div style="flex: 1 1 30%; min-width: 200px;">
+                                        <label for="nombre" class="form-label-custom">Nombre</label>
+                                        <input type="text" class="form-control-custom" id="nombre" name="nombre" required
+                                        value="{{ empleado_a_editar.nombre|default:'' }}">
+                                    </div>
+                                    
+                                    <div style="flex: 1 1 30%; min-width: 200px;">
+                                        <label for="apellido" class="form-label-custom">Apellido</label>
+                                        <input type="text" class="form-control-custom" id="apellido" name="apellido" required
+                                        value="{{ empleado_a_editar.apellido|default:'' }}">
+                                    </div>
+                                    
+                                    <div style="flex: 1 1 30%; min-width: 200px;">
+                                        <label for="rol" class="form-label-custom">Rol</label>
+                                        <select class="form-control-custom" id="rol" name="rol" required>
+                                            {% for rol_opcion in roles_disponibles %}
+                                                <option value="{{ rol_opcion }}" {% if empleado_a_editar.rol == rol_opcion %}selected{% endif %}>
+                                                    {{ rol_opcion }}
+                                                </option>
+                                            {% endfor %}
+                                        </select>
+                                    </div>
+                                    
+                                    <div style="flex: 1 1 30%; min-width: 200px;">
+                                        <label for="telefono" class="form-label-custom">Teléfono</label>
+                                        <input type="text" class="form-control-custom" id="telefono" name="telefono"
+                                        value="{{ empleado_a_editar.telefono|default:'' }}">
+                                    </div>
+
+                                    <div style="flex: 1 1 30%; min-width: 200px;">
+                                        <label for="correo" class="form-label-custom">Correo</label>
+                                        <input type="email" class="form-control-custom" id="correo" name="correo" required
+                                        value="{{ empleado_a_editar.correo|default:'' }}">
+                                    </div>
+
+                                    <div style="flex: 1 1 30%; min-width: 200px;">
+                                        <label for="cedula" class="form-label-custom">Cédula</label>
+                                        <input type="text" class="form-control-custom" id="cedula" name="cedula" required
+                                        value="{{ empleado_a_editar.cedula|default:'' }}">
+                                    </div>
+
+                                    <div style="flex: 1 1 50%; min-width: 200px;">
+                                            <label class="form-label-custom">Nueva Contraseña (dejar en blanco para no cambiar):</label>
+                                            <input type="password" name="nueva_password" class="form-control-custom" placeholder="********">
+                                    </div>
+                                    <div style="flex: 1 1 50%; min-width: 200px;">
+                                            <label class="form-label-custom">Confirmar Nueva Contraseña:</label>
+                                            <input type="password" name="confirmar_password" class="form-control-custom" placeholder="********">
+                                    </div>
+                                    
+                                    <div style="flex: 1 1 100%; display: flex; align-items: flex-end; min-width: 250px;">
+                                        <button type="submit" class="btn-custom-success" style="flex-grow: 1; margin-bottom: 12px;">
+                                            Actualizar Empleado
                                         </button>
-                                    </form>
-                                </td>
-                            </tr>
-                            {% empty %}
-                            <tr>
-                                <td colspan="9" class="text-center-custom">No hay empleados registrados.</td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
+                                        <a href="{% url 'admin_empleados' %}" class="btn-custom-danger" style="margin-bottom: 12px; flex-grow: 1; text-align: center; text-decoration: none; margin-left: 5px; padding: 9px; font-weight: normal;">
+                                            Cancelar
+                                        </a>
+                                    </div>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                    {% endif %}
+                    <h2 style="color: #981a28; margin-top: 30px; border-bottom: 2px solid #981a28; padding-bottom: 5px; margin-bottom: 10px;">Listado de Empleados</h2>
+                    
+                    <label for="buscador" style="font-weight: bold; display: block; margin-bottom: 5px;">Buscar empleado:</label>
+                        <div style="position: relative; display: flex; align-items: center; margin-bottom: 20px;">
+                            <span style="position: absolute; left: 10px; color: #888;">
+                                <i class="fas fa-search"></i>
+                            </span>
+                            <input type="text" id="buscador" class="form-control" 
+                                placeholder="Escribe el nombre del empleado..." 
+                                style="padding-left: 35px; padding-right: 35px; margin-bottom: 0;" 
+                                onkeyup="filtrarEmpleado()">
+                            <span id="btn-limpiar" onclick="limpiarBusqueda()" 
+                                style="position: absolute; right: 10px; color: #888; cursor: pointer; display: none;">
+                                <i class="fas fa-times-circle"></i>
+                            </span>
+                        </div>
+
+                    <div class="card-custom" style="padding: 0; overflow-x: auto;">
+                        <table class="table-custom">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Nombre Completo</th>
+                                    <th>Usuario</th>
+                                    <th>Rol</th>
+                                    <th>Teléfono</th>
+                                    <th>Correo</th>
+                                    <th>Cédula</th>
+                                    <th></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for empleado in empleados %}
+                                <tr class="fila-empleado">
+                                    <td>{{ empleado.idEmpleado }}</td>
+                                    <td class="nombre-empleado">{{ empleado.nombre }} {{ empleado.apellido }}</td>
+                                    <td>{{ empleado.usuario }}</td>
+                                    <td>{{ empleado.rol }}</td>
+                                    <td>{{ empleado.telefono|default:"N/A" }}</td>
+                                    <td>{{ empleado.correo }}</td>
+                                    <td>{{ empleado.cedula }}</td>
+                                    <td style="white-space: nowrap;">
+                                        <a href="{% url 'editar_empleado' empleado.idEmpleado %}" class='btn-custom-edit'
+                                            style="color: white; padding: 5px 10px; border-radius: 5px; text-decoration: none; font-weight: bold; display: inline-block; margin-right: 5px;">
+                                            <i class="fas fa-edit"></i> Editar
+                                        </a>
+                                        
+                                        <form action="{% url 'eliminar_empleado' empleado.idEmpleado %}" method="POST" style="display: inline;" 
+                                            onsubmit="return confirm('¿Está seguro de que desea eliminar el empleado {{ empleado.nombre }} {{ empleado.apellido }}?');">
+                                            {% csrf_token %}
+                                            <button type="submit" class="btn-custom-danger" style="padding: 5px 10px;"
+                                                {% if empleado.idEmpleado == request.user.idEmpleado %}disabled{% endif %}>
+                                                <i class="fas fa-trash-alt"></i> Eliminar
+                                            </button>
+                                        </form>
+                                    </td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="9" class="text-center-custom">No hay empleados registrados.</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
             </div>
-            
-            <footer>
-                <p>2025 Hê Sãî Mãlî.</p>
-            </footer>
         </main>
-
-        <div class="overlay" id="overlay" onclick="toggleSidebar()"></div>
     </div>
+{% endblock %}
 
+{% block extra_js %}
     <script>
-        function toggleSidebar() {
-            const sidebar = document.getElementById('sidebar');
-            const mainContent = document.getElementById('main-content');
-            const overlay = document.getElementById('overlay');
-            
-            const isMobile = window.innerWidth <= 768;
+        function filtrarEmpleado() {
+            const input = document.getElementById('buscador');
+            const btnLimpiar = document.getElementById('btn-limpiar');
+            const filtro = input.value.toLowerCase();
+            const filas = document.querySelectorAll('.fila-empleado');
 
-            if (isMobile) {
-                // Comportamiento en Móvil: Usa la clase 'show'
-                sidebar.classList.toggle('show');
-                overlay.classList.toggle('show');
+            // Mostrar u ocultar el botón de limpiar (X)
+            btnLimpiar.style.display = filtro.length > 0 ? "block" : "none";
+
+            filas.forEach(fila => {
+                // Obtenemos el texto de la celda que contiene el ID de la mesa
+                const nombreEmpleado = fila.querySelector('.nombre-empleado').textContent.toLowerCase();
                 
-                // Evita el desplazamiento del body cuando el menú está abierto en móvil
-                document.body.style.overflow = sidebar.classList.contains('show') ? 'hidden' : 'auto';
+                // Si el ID incluye lo que el usuario escribe, se muestra la fila
+                if (nombreEmpleado.includes(filtro)) {
+                    fila.style.display = "";
+                } else {
+                    fila.style.display = "none";
+                }
+            });
+        }
 
-            } else {
-                // Comportamiento en Desktop: Usa la clase 'collapsed'
-                sidebar.classList.toggle('collapsed');
-                mainContent.classList.toggle('sidebar-collapsed');
-            }
+        function limpiarBusqueda() {
+            const input = document.getElementById('buscador');
+            input.value = ""; // Vaciar input
+            filtrarProveedor(); // Resetear el filtrado para mostrar todo
+            input.focus(); // Devolver el foco al buscador
         }
     </script>
-    </body>
-</html>
+{% endblock %}

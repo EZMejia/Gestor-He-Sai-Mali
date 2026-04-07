@@ -1,14 +1,10 @@
+{% extends "He_Sai_Mali/base.html" %}
 {% load static %}
 {% load custom_filters %}
-<!DOCTYPE html>
-<html lang="es">
-<head>
-    <meta charset="UTF-8">
-    <link rel="icon" type="image/png" href="{% static 'He_Sai_Mali/logo.png' %}">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Cola de Pedidos</title>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 
+{% block title %}Cola de Pedidos{% endblock %}
+
+{% block extra_style %}
     <style>
         :root {
             /* Colores del diseño de la APP (He Sai Mali) */
@@ -21,211 +17,9 @@
             --menu-item-hover: #b12131; /* Rojo más claro para hover */
         }
 
-        /* Estilos generales y del body */
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-            font-family: 'Roboto', sans-serif;
-        }
+        body { height: 100%; overflow: hidden; }
 
-        body {
-            display: flex;
-            min-height: 100vh;
-            background-color: var(--bg-page);
-            overflow-x: hidden;
-        }
-
-        /* Estilos del Contenedor Principal (Layout) */
-        #app {
-            display: flex;
-            flex-direction: column;
-            width: 100%;
-        }
-
-        /* ---------------------------------------------------- */
-        /* --- Barra de Navegación Superior (HEADER ADAPTADO) --- */
-        /* ---------------------------------------------------- */
-        .header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            height: 60px;
-            background-color: var(--primary-color);
-            border-bottom: 8px solid var(--primary-color);
-            color: var(--text-light);
-            padding: 30px 15px;
-            box-shadow: 0 6px 10px black;
-            position: fixed;
-            width: 100%;
-            z-index: 1000;
-        }
-
-        .header-left {
-            display: flex;
-            align-items: center;
-        }
-
-        .header-menu-toggle {
-            font-size: 24px;
-            margin-right: 15px;
-            cursor: pointer;
-            padding: 5px;
-        }
-
-        .header-title {
-            display: flex;
-            align-items: center;
-            font-size: 1.2em;
-            font-weight: bold;
-            color: var(--text-accent);
-        }
-        .header-title img {
-            height: 40px;
-            margin-right: 10px;
-        }
-
-        .header-right {
-            display: flex;
-            align-items: center;
-        }
-        
-        /* Contenedor de Información de Usuario */
-        .user-info-badge {
-            display: flex;
-            align-items: center;
-            text-align: left;
-            color: var(--text-accent);
-            font-size: 15px;
-            background-color: var(--menu-item-hover);
-            border-radius: 5px;
-            padding: 5px 10px;
-            margin-right: 15px;
-        }
-
-        .user-info-badge img {
-            height: 30px;
-            margin-left: 10px;
-            filter: 
-                brightness(0)
-                invert(1)
-                sepia(0.9)
-                saturate(1000%)
-                hue-rotate(300deg)
-                brightness(1.0)
-                contrast(0.9);
-        }
-
-        /* ---------------------------------------------------- */
-        /* --- Menú Lateral (SIDEBAR ADAPTADO) --- */
-        /* ---------------------------------------------------- */
-        .sidebar {
-            width: 250px;
-            background-color: var(--sidebar-bg); /* Opcional: usar primary-color si se desea mantener el rojo */
-            color: var(--text-light);
-            padding-top: 68px; /* Espacio para el header fijo + borde */
-            position: fixed;
-            top: 0;
-            left: 0;
-            height: 100%;
-            transform: translateX(0); 
-            transition: transform 0.3s ease;
-            z-index: 900;
-        }
-
-        .sidebar.collapsed {
-            transform: translateX(-250px);
-        }
-
-        /* Contenido del usuario dentro del sidebar */
-        .sidebar-user-info {
-            padding: 15px;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-            display: flex;
-            align-items: center;
-            margin-bottom: 10px;
-        }
-
-        .sidebar-user-avatar {
-            width: 45px;
-            height: 45px;
-            border-radius: 50%;
-            background-color: white;
-            overflow: hidden;
-            margin-right: 10px;
-            position: relative;
-        }
-        .sidebar-user-avatar img {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-        }
-        
-        .sidebar-user-details p {
-            margin: 0;
-        }
-
-        .sidebar-user-name {
-            font-weight: bold;
-            font-size: 1.1em;
-        }
-
-        .sidebar-user-status {
-            font-size: 0.85em;
-            color: var(--online-green);
-            display: flex;
-            align-items: center;
-        }
-
-        .sidebar-user-status .fa-circle {
-            font-size: 0.6em;
-            margin-right: 5px;
-        }
-
-        .linea {
-            margin: 10px 0 0 0;
-            border: none;
-            height: 1px;
-            background-color: rgba(255, 255, 255, 0.1);
-        }
-
-        /* Menú de navegación (Adaptado de 'dropdown-content') */
-        .sidebar-nav {
-            padding: 10px 0;
-        }
-        .sidebar-nav-item {
-            display: flex;
-            align-items: center;
-            padding: 12px 15px;
-            text-decoration: none;
-            color: var(--text-light);
-            transition: background-color 0.2s;
-            cursor: pointer;
-        }
-
-        .sidebar-nav-item:hover,
-        .sidebar-nav-item.active {
-            background-color: var(--menu-item-hover);
-            border-left: 5px solid var(--secondary-color);
-            padding-left: 10px;
-        }
-
-        .sidebar-nav-item i {
-            width: 25px;
-            margin-right: 10px;
-            font-size: 1.1em;
-        }
-        
-        .sidebar-menu-title {
-            padding: 10px 15px 5px;
-            font-size: 0.9em;
-            text-transform: uppercase;
-            color: var(--text-accent);
-            font-weight: bold;
-        }
-        /*------------------------*/
-        
-        .btn {
+        .btn-nuevo {
             display: flex;
             text-align: center;
             align-items: center;
@@ -239,15 +33,18 @@
             max-width: 220px;
             margin: 20px 0px;
         }
+
         .Mas {
             height: 15px;
             margin-right: 10px;
             filter: invert(1);
         }
-        .btn:hover {
+        .btn-nuevo:hover {
             background-color:#832630;
+            color: white;
+            text-decoration: none;
         }
-        .btn:active {
+        .btn-nuevo:active {
             background-color:#b12131;
         }
 
@@ -317,7 +114,6 @@
             margin-right: auto;
             margin-left: 10px;
         }
-        /* MODIFICADO: platillo_estado ahora es un enlace/botón */
         .lista_platillos li.platillos .platillo_estado { 
             justify-content: flex-end;
             padding: 5px;
@@ -382,74 +178,19 @@
         /* --- Contenido Principal (MAIN CONTENT) --- */
         /* ---------------------------------------------------- */
         .main-content {
-            flex-grow: 1;
-            padding-top: 68px; /* Espacio para el header fijo + borde */
-            background-color: var(--bg-page);
-            margin-left: 250px; 
-            transition: margin-left 0.3s ease;
+            display: flex;         /* Agregado */
+            flex-direction: column; /* Agregado */
+            height: calc(100vh - 60px);         /* Ocupa el 100% de la ventana del navegador */
+            overflow: hidden;      /* Evita que el padre tenga scroll propio */
         }
 
-        .main-content.sidebar-collapsed {
-            margin-left: 0;
-        }
-
-        /* Estilos del Contenido de Registro (Adaptados) */
+        /* 2. Configuramos el div contenido para que sea el que haga scroll */
         .contenido {
-            width: 90%;
-            max-width: 1200px;
-            margin: 20px auto;
-            border-radius: 8px;
-            min-height: calc(100vh - 100px - 68px); /* Ajuste dinámico */
-        }
-        
-        /* ---------------------------------------------------- */
-        /* --- FOOTER ADAPTADO --- */
-        /* ---------------------------------------------------- */
-        footer {
-            display: flex;
-            color: var(--text-accent);
-            background-color: #41444a;
-            justify-content: center;
-            align-items: center;
-            padding: 15px 0;
-            border-top: 5px solid #2c3038;
-            border-bottom: 10px solid #2c3038;
-            font-size: 14px;
             width: 100%;
-            margin-top: 0; /* Lo gestiona el main-content */
-        }
-
-        /* ---------------------------------------------------- */
-        /* --- Comportamiento en MÓVIL (Max-width: 768px) --- */
-        /* ---------------------------------------------------- */
-        @media (max-width: 768px) {
-            .sidebar {
-                transform: translateX(-250px);
-                padding-top: 68px;
-            }
-
-            .sidebar.show {
-                transform: translateX(0);
-            }
+            padding:0 20px;
             
-            .main-content {
-                margin-left: 0; 
-            }
-
-            .overlay {
-                position: fixed;
-                top: 0;
-                left: 0;
-                width: 100%;
-                height: 100%;
-                background-color: rgba(0, 0, 0, 0.5);
-                z-index: 800; 
-                display: none;
-            }
-
-            .overlay.show {
-                display: block;
-            }
+            flex-grow: 1;
+            overflow-y: auto;
         }
 
         /*------------------------*/
@@ -544,114 +285,12 @@
             background-color: #6a121c !important;
         }
     </style>
-</head>
-<body>
+{% endblock %}
+
+{% block header %}COLA DE PEDIDOS{% endblock %}
+    
+{% block content %}
     <div id="app">
-        <header class="header">
-            <div class="header-left">
-                <i class="fas fa-bars header-menu-toggle" onclick="toggleSidebar()"></i>
-                <h1 class="header-title">
-                    <img src="{% static 'He_Sai_Mali/logo.png' %}" alt="Logo He Sai Mali">
-                    COLA DE PEDIDOS
-                </h1>
-            </div>
-            
-            <div class="header-right">
-                <div class="user-info-badge">
-                    {{ user.nombre }} {{ user.apellido }}
-                    <img src="{% static 'He_Sai_Mali/avatar.png' %}" alt="Avatar">
-                </div>
-            </div>
-        </header>
-
-        <aside class="sidebar" id="sidebar">
-            <nav class="sidebar-nav">
-                <div class="sidebar-user-info">
-                    <div class="sidebar-user-avatar">
-                        <img src="{% static 'He_Sai_Mali/avatar.png' %}" alt="Avatar">
-                        <span class="online-status"></span>
-                    </div>
-                    <div class="sidebar-user-details">
-                        <p class="sidebar-user-name">{{ user.nombre }} {{ user.apellido }}</p>
-                        <p class="sidebar-user-role">
-                            {{ user.rol }}
-                        </p>
-                    </div>
-                </div>
-
-                <a href="{% url 'logout' %}" class="sidebar-nav-item">
-                    <i class="fas fa-sign-out-alt"></i>
-                    <span>Cerrar sesión</span>
-                </a>
-
-                <hr class="linea">
-
-                {% if user.rol == "Mesero" %}
-                    <div class="sidebar-menu-title">PEDIDOS Y FACTURACIÓN</div>
-                    <a href="{% url 'pedidos' %}" class="sidebar-nav-item active">
-                        <i class="fas fa-clipboard-list"></i>
-                        <span>Pedidos</span>
-                    </a>
-                {% endif %}
-                {% if user.rol == "Mesero" %}
-                    <a href="{% url 'registrarpedido' %}" class="sidebar-nav-item">
-                        <i class="fas fa-file-invoice"></i>
-                        <span>Nuevo Pedido</span>
-                    </a>
-
-                {% endif %}
-                
-                {% if user.rol == "Administrador" or user.rol == "Cocinero" %}
-                    <div class="sidebar-menu-title">UTILIDADES DE COCINA</div>
-                {% endif %}
-                {% if user.rol == "Cocinero" %}
-                    <a href="{% url 'cocina' %}" class="sidebar-nav-item">
-                        <i class="fas fa-utensils"></i>
-                        <span>Cocina</span>
-                    </a>
-                {% endif %}
-                {% if user.rol == "Administrador" %}
-                    <a href="{% url 'admin_platillos' %}" class="sidebar-nav-item">
-                        <i class="fas fa-hamburger"></i>
-                        <span>Productos</span>
-                    </a>
-                {% endif %}
-                {% if user.rol == "Administrador" or user.rol == "Mesero" %}
-                    <hr class="linea">
-                
-                    <div class="sidebar-menu-title">ADMINISTRACIÓN DE LOCAL</div>
-
-                    <a href="{% url 'admin_mesas' %}" class="sidebar-nav-item">
-                        <i class="fas fa-chair"></i>
-                        <span>Mesas</span>
-                    </a>
-                {% endif %}
-                {% if user.rol == "Administrador" %}
-                    <a href="{% url 'admin_ingredientes' %}" class="sidebar-nav-item">
-                        <i class="fas fa-leaf"></i>
-                        <span>Inventario</span>
-                    </a>
-                    <a href="{% url 'admin_proveedores' %}" class="sidebar-nav-item">
-                        <i class="fas fa-truck-loading"></i>
-                        <span>Proveedores</span>
-                    </a>
-                    <a href="{% url 'admin_dashboard' %}" class="sidebar-nav-item">
-                        <i class="fas fa-chart-line"></i>
-                        <span>Dashboard</span>
-                    </a>
-                    <a href="{% url 'admin_empleados' %}" class="sidebar-nav-item">
-                        <i class="fas fa-user-friends"></i>
-                        <span>Empleados</span>
-                    </a>
-                    <a href="{% url 'registro' %}" class="sidebar-nav-item">
-                        <i class="fas fa-user-plus"></i>
-                        <span>Registrar Usuario</span>
-                    </a>
-                    
-                {% endif %}
-            </nav>
-        </aside>
-
         <main class="main-content" id="main-content">
             <div class="contenido">
                 {% if messages %}
@@ -665,7 +304,7 @@
                 {% endif %}
 
                 <div class="mb-4">
-                    <a href="{% url 'registrarpedido' %}" class="btn" style="border: none;">
+                    <a href="{% url 'registrarpedido' %}" class="btn-nuevo" style="border: none;">
                         <i class="fas fa-plus"></i>&nbsp;Registrar Nuevo Pedido
                     </a>
                 </div>
@@ -776,38 +415,13 @@
                 </div>
             </div>
             {# FIN DE MODAL / FORMULARIO FLOTANTE DE PAGO #}
-
-            <footer>
-                <p>2025 Hê Sãî Mãlî.</p>
-            </footer>
-        </main>
-        
-        <div class="overlay" id="overlay" onclick="toggleSidebar()"></div>
-    </div>
-    
-    <script>
-        function toggleSidebar() {
-            const sidebar = document.getElementById('sidebar');
-            const mainContent = document.getElementById('main-content');
-            const overlay = document.getElementById('overlay');
             
-            const isMobile = window.innerWidth <= 768;
-
-            if (isMobile) {
-                // Comportamiento en Móvil: Usa la clase 'show'
-                sidebar.classList.toggle('show');
-                overlay.classList.toggle('show');
-                
-                // Evita el desplazamiento del body cuando el menú está abierto en móvil
-                document.body.style.overflow = sidebar.classList.contains('show') ? 'hidden' : 'auto';
-
-            } else {
-                // Comportamiento en Desktop: Usa la clase 'collapsed'
-                sidebar.classList.toggle('collapsed');
-                mainContent.classList.toggle('sidebar-collapsed');
-            }
-        }
-
+        </main>
+    </div>
+{% endblock %}
+    
+{% block extra_js %}
+    <script>
         // --- Funciones para el formulario de Pago (Modal) ---
         function mostrarFormularioPago(id, total, facturarUrl) {
             // 1. Mostrar el overlay y el modal
@@ -836,5 +450,4 @@
             document.getElementById('metodo_pago').value = '';
         }
     </script>
-</body>
-</html>
+{% endblock %}

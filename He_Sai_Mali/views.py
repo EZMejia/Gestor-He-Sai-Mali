@@ -1697,7 +1697,6 @@ def admin_dashboard(request):
     if period == 'day':
         start_date = now.replace(hour=0, minute=0, second=0, microsecond=0)
         period_display = "Hoy"
-        print(start_date)
     elif period == 'week':
         # Inicio de la semana (Lunes)
         start_date = timezone.make_aware(timezone.datetime(today.year, today.month, today.day)) - timedelta(days=today.weekday())
@@ -2062,6 +2061,8 @@ def editar_empleado(request, empleado_id):
         correo = request.POST.get('correo', '').strip()
         cedula = request.POST.get('cedula', '').strip()
         rol = request.POST.get('rol', '').strip()
+        nueva_pass = request.POST.get('nueva_password', '').strip()
+        confirmar_pass = request.POST.get('confirmar_password', '').strip()
         is_active = True
 
         try:
@@ -2076,6 +2077,15 @@ def editar_empleado(request, empleado_id):
                 if Empleado.objects.filter(cedula=cedula).exclude(idEmpleado=empleado_id).exists():
                     messages.error(request, f"Ya existe un empleado con la cédula '{cedula}'.")
                     return redirect('editar_empleado', empleado_id=empleado_id)
+                
+                if nueva_pass:
+                    if nueva_pass == confirmar_pass:
+                        # Se usa make_password para encriptar antes de guardar
+                        empleado.password = make_password(nueva_pass)
+                        messages.success(request, "La contraseña ha sido actualizada.")
+                    else:
+                        messages.error(request, "Las contraseñas no coinciden.")
+                        return redirect('editar_empleado', empleado_id=empleado_id)
 
                 # 3. Actualizar campos
                 empleado.nombre = nombre

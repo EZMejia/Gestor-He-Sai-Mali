@@ -1,12 +1,9 @@
+{% extends "He_Sai_Mali/base.html" %}
 {% load static %}
-<!DOCTYPE html>
-<html lang="es">
-<head>
-    <meta charset="UTF-8">
-    <link rel="icon" type="image/png" href="{% static 'He_Sai_Mali/logo.png' %}">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Admin - Inventario</title>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+
+{% block title %}Admin - Inventario{% endblock %}
+
+{% block extra_style %}
     <style>
         :root {
             /* Colores del diseño de la APP (He Sai Mali) */
@@ -19,234 +16,20 @@
             --menu-item-hover: #b12131; /* Rojo más claro para hover */
         }
 
-        /* Estilos generales y del body */
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-            font-family: 'Roboto', sans-serif;
-        }
-
-        body {
-            display: flex;
-            min-height: 100vh;
-            background-color: var(--bg-page);
-            overflow-x: hidden;
-        }
-
-        /* Estilos del Contenedor Principal (Layout) */
-        #app {
-            display: flex;
-            flex-direction: column;
-            width: 100%;
-        }
-
-        /* ---------------------------------------------------- */
-        /* --- Barra de Navegación Superior (HEADER ADAPTADO) --- */
-        /* ---------------------------------------------------- */
-        .header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            height: 60px;
-            background-color: var(--primary-color);
-            border-bottom: 8px solid var(--primary-color);
-            color: var(--text-light);
-            padding: 30px 15px;
-            box-shadow: 0 6px 10px black;
-            position: fixed;
-            width: 100%;
-            z-index: 1000;
-        }
-
-        .header-left {
-            display: flex;
-            align-items: center;
-        }
-
-        .header-menu-toggle {
-            font-size: 24px;
-            margin-right: 15px;
-            cursor: pointer;
-            padding: 5px;
-        }
-
-        .header-title {
-            display: flex;
-            align-items: center;
-            font-size: 1.2em;
-            font-weight: bold;
-            color: var(--text-accent);
-        }
-        .header-title img {
-            height: 40px;
-            margin-right: 10px;
-        }
-
-        .header-right {
-            display: flex;
-            align-items: center;
-        }
-        
-        /* Contenedor de Información de Usuario */
-        .user-info-badge {
-            display: flex;
-            align-items: center;
-            text-align: left;
-            color: var(--text-accent);
-            font-size: 15px;
-            background-color: var(--menu-item-hover);
-            border-radius: 5px;
-            padding: 5px 10px;
-            margin-right: 15px;
-        }
-
-        .user-info-badge img {
-            height: 30px;
-            margin-left: 10px;
-            filter: 
-                brightness(0)
-                invert(1)
-                sepia(0.9)
-                saturate(1000%)
-                hue-rotate(300deg)
-                brightness(1.0)
-                contrast(0.9);
-        }
-
-        /* ---------------------------------------------------- */
-        /* --- Menú Lateral (SIDEBAR ADAPTADO) --- */
-        /* ---------------------------------------------------- */
-        .sidebar {
-            width: 250px;
-            background-color: var(--sidebar-bg); /* Opcional: usar primary-color si se desea mantener el rojo */
-            color: var(--text-light);
-            padding-top: 68px; /* Espacio para el header fijo + borde */
-            position: fixed;
-            top: 0;
-            left: 0;
-            height: 100%;
-            transform: translateX(0); 
-            transition: transform 0.3s ease;
-            z-index: 900;
-        }
-
-        .sidebar.collapsed {
-            transform: translateX(-250px);
-        }
-
-        /* Contenido del usuario dentro del sidebar */
-        .sidebar-user-info {
-            padding: 15px;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-            display: flex;
-            align-items: center;
-            margin-bottom: 10px;
-        }
-
-        .sidebar-user-avatar {
-            width: 45px;
-            height: 45px;
-            border-radius: 50%;
-            background-color: white;
-            overflow: hidden;
-            margin-right: 10px;
-            position: relative;
-        }
-        .sidebar-user-avatar img {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-        }
-        
-        .sidebar-user-details p {
-            margin: 0;
-        }
-
-        .sidebar-user-name {
-            font-weight: bold;
-            font-size: 1.1em;
-        }
-
-        .sidebar-user-status {
-            font-size: 0.85em;
-            color: var(--online-green);
-            display: flex;
-            align-items: center;
-        }
-
-        .sidebar-user-status .fa-circle {
-            font-size: 0.6em;
-            margin-right: 5px;
-        }
-
-        .linea {
-            margin: 10px 0 0 0;
-            border: none;
-            height: 1px;
-            background-color: rgba(255, 255, 255, 0.1);
-        }
-
-        /* Menú de navegación (Adaptado de 'dropdown-content') */
-        .sidebar-nav {
-            padding: 10px 0;
-        }
-        .sidebar-nav-item {
-            display: flex;
-            align-items: center;
-            padding: 12px 15px;
-            text-decoration: none;
-            color: var(--text-light);
-            transition: background-color 0.2s;
-            cursor: pointer;
-        }
-
-        .sidebar-nav-item:hover,
-        .sidebar-nav-item.active {
-            background-color: var(--menu-item-hover);
-            border-left: 5px solid var(--secondary-color);
-            padding-left: 10px;
-        }
-
-        .sidebar-nav-item i {
-            width: 25px;
-            margin-right: 10px;
-            font-size: 1.1em;
-        }
-        
-        .sidebar-menu-title {
-            padding: 10px 15px 5px;
-            font-size: 0.9em;
-            text-transform: uppercase;
-            color: var(--text-accent);
-            font-weight: bold;
-        }
-        /*------------------------*/
+        body { height: 100%; overflow: hidden; }
 
         /* ---------------------------------------------------- */
         /* --- Contenido Principal (MAIN CONTENT) --- */
         /* ---------------------------------------------------- */
-        .main-content {
-            flex-grow: 1;
-            padding-top: 68px; /* Espacio para el header fijo + borde */
-            background-color: var(--bg-page);
-            margin-left: 250px; 
-            transition: margin-left 0.3s ease;
-        }
+        .main-content { height: calc(100vh - 60px); display: flex; flex-direction: column; overflow: hidden; transition: margin-left 0.3s ease;}
 
-        .main-content.sidebar-collapsed {
-            margin-left: 0;
-        }
+        .contenido { flex-grow: 1; padding: 20px 20px; overflow-y: auto;}
 
         /* Estilos principales para el contenido de la administración */
         .container_admin {
-            display: block;
-            box-sizing: border-box;
-            margin: 20px auto;
             background-color: white;
             box-shadow: 0 0 50px 10px rgba(0, 0, 0, 0.3);
-            width: 90%;
-            max-width: 1200px; /* Limite de ancho para la administración */
+            width: 100%;
             border-radius: 5px;
             padding: 20px;
         }
@@ -296,6 +79,7 @@
         }
         .btn-custom-danger:hover {
             background-color: #b12131;
+            color: white;
         }
         
         .form-control {
@@ -415,364 +199,209 @@
         
         .btn-custom-edit:hover { background-color: #0056b3; }
         .btn-custom-edit { background-color: #007bff; }
-
-        /* ---------------------------------------------------- */
-        /* --- FOOTER ADAPTADO --- */
-        /* ---------------------------------------------------- */
-        footer {
-            display: flex;
-            color: var(--text-accent);
-            background-color: #41444a;
-            justify-content: center;
-            align-items: center;
-            padding: 15px 0;
-            border-top: 5px solid #2c3038;
-            border-bottom: 10px solid #2c3038;
-            font-size: 14px;
-            width: 100%;
-            margin-top: 0; /* Lo gestiona el main-content */
-        }
-
-        /* ---------------------------------------------------- */
-        /* --- Comportamiento en MÓVIL (Max-width: 768px) --- */
-        /* ---------------------------------------------------- */
-        @media (max-width: 768px) {
-            .sidebar {
-                transform: translateX(-250px);
-                padding-top: 68px;
-            }
-
-            .sidebar.show {
-                transform: translateX(0);
-            }
-            
-            .main-content {
-                margin-left: 0; 
-            }
-
-            .overlay {
-                position: fixed;
-                top: 0;
-                left: 0;
-                width: 100%;
-                height: 100%;
-                background-color: rgba(0, 0, 0, 0.5);
-                z-index: 800; 
-                display: none;
-            }
-
-            .overlay.show {
-                display: block;
-            }
-        }
     </style>
-</head>
-<body>
+{% endblock %}
+
+{% block header %}ADMINISTRACIÓN DE INVENTARIO{% endblock %}
+
+{% block content %}
     <div id="app">
-        <header class="header">
-            <div class="header-left">
-                <i class="fas fa-bars header-menu-toggle" onclick="toggleSidebar()"></i>
-                <h1 class="header-title">
-                    <img src="{% static 'He_Sai_Mali/logo.png' %}" alt="Logo He Sai Mali">
-                    ADMINISTRACIÓN DE INVENTARIO
-                </h1>
-            </div>
-            
-            <div class="header-right">
-                <div class="user-info-badge">
-                    {{ user.nombre }} {{ user.apellido }}
-                    <img src="{% static 'He_Sai_Mali/avatar.png' %}" alt="Avatar">
-                </div>
-            </div>
-        </header>
-
-        <aside class="sidebar" id="sidebar">
-            <nav class="sidebar-nav">
-                <div class="sidebar-user-info">
-                    <div class="sidebar-user-avatar">
-                        <img src="{% static 'He_Sai_Mali/avatar.png' %}" alt="Avatar">
-                        <span class="online-status"></span>
-                    </div>
-                    <div class="sidebar-user-details">
-                        <p class="sidebar-user-name">{{ user.nombre }} {{ user.apellido }}</p>
-                        <p class="sidebar-user-role">
-                            {{ user.rol }}
-                        </p>
-                    </div>
-                </div>
-
-                <a href="{% url 'logout' %}" class="sidebar-nav-item">
-                    <i class="fas fa-sign-out-alt"></i>
-                    <span>Cerrar sesión</span>
-                </a>
-
-                <hr class="linea">
-
-                {% if user.rol == "Mesero" %}
-                    <div class="sidebar-menu-title">PEDIDOS Y FACTURACIÓN</div>
-                    <a href="{% url 'pedidos' %}" class="sidebar-nav-item">
-                        <i class="fas fa-clipboard-list"></i>
-                        <span>Pedidos</span>
-                    </a>
-                {% endif %}
-                {% if user.rol == "Mesero" %}
-                    <a href="{% url 'registrarpedido' %}" class="sidebar-nav-item">
-                        <i class="fas fa-file-invoice"></i>
-                        <span>Nuevo Pedido</span>
-                    </a>
-
-                    <hr class="linea">
-                    
-                {% endif %}
-                
-                {% if user.rol == "Administrador" or user.rol == "Cocinero" %}
-                    <div class="sidebar-menu-title">UTILIDADES DE COCINA</div>
-                {% endif %}
-                {% if user.rol == "Cocinero" %}
-                    <a href="{% url 'cocina' %}" class="sidebar-nav-item">
-                        <i class="fas fa-utensils"></i>
-                        <span>Cocina</span>
-                    </a>
-                {% endif %}
-                {% if user.rol == "Administrador" %}
-                    <a href="{% url 'admin_platillos' %}" class="sidebar-nav-item">
-                        <i class="fas fa-hamburger"></i>
-                        <span>Productos</span>
-                    </a>
-                {% endif %}
-                {% if user.rol == "Administrador" or user.rol == "Cocinero" %}
-                    <hr class="linea">
-                {% endif %}
-                {% if user.rol == "Administrador" %}
-                    <div class="sidebar-menu-title">ADMINISTRACIÓN DE LOCAL</div>
-
-                    <a href="{% url 'admin_mesas' %}" class="sidebar-nav-item">
-                        <i class="fas fa-chair"></i>
-                        <span>Mesas</span>
-                    </a>
-                    <a href="{% url 'admin_ingredientes' %}" class="sidebar-nav-item active">
-                        <i class="fas fa-leaf"></i>
-                        <span>Inventario</span>
-                    </a>
-                    <a href="{% url 'admin_proveedores' %}" class="sidebar-nav-item">
-                        <i class="fas fa-truck-loading"></i>
-                        <span>Proveedores</span>
-                    </a>
-                    <a href="{% url 'admin_dashboard' %}" class="sidebar-nav-item">
-                        <i class="fas fa-chart-line"></i>
-                        <span>Dashboard</span>
-                    </a>
-                    <a href="{% url 'admin_empleados' %}" class="sidebar-nav-item">
-                        <i class="fas fa-user-friends"></i>
-                        <span>Empleados</span>
-                    </a>
-                    <a href="{% url 'registro' %}" class="sidebar-nav-item">
-                        <i class="fas fa-user-plus"></i>
-                        <span>Registrar Usuario</span>
-                    </a>
-                    
-                {% endif %}
-            </nav>
-        </aside>
-
         <main class="main-content" id="main-content">
-            <div class="container_admin">
-                <h1 style="color: #981a28; margin-bottom: 20px;">Administración de Inventario</h1>
+            <div class="contenido">
+                <div class="container_admin">
+                    <h1 style="color: #981a28; margin-bottom: 20px;">Administración de Inventario</h1>
 
-                {# Mensajes de Django adaptados al nuevo estilo #}
-                {% if messages %}
-                    {% for message in messages %}
-                        <div class="alert-custom alert-{{ message.tags }}" role="alert">
-                            {{ message }}
+                    {# Mensajes de Django adaptados al nuevo estilo #}
+                    {% if messages %}
+                        {% for message in messages %}
+                            <div class="alert-custom alert-{{ message.tags }}" role="alert">
+                                {{ message }}
+                            </div>
+                        {% endfor %}
+                    {% endif %}
+                    
+                    {# MODAL / FORMULARIO FLOTANTE DE COMPRA #}
+                    <div id="formOverlay" class="overlay-custom"></div>
+
+                    <div id="compraFormContainer" class="modal-card-custom">
+                        <div class="modal-header-custom">
+                            Registrar Compra para: <span id="nombreIngrediente" style="font-weight: normal;"></span>
                         </div>
-                    {% endfor %}
-                {% endif %}
-                
-                {# MODAL / FORMULARIO FLOTANTE DE COMPRA #}
-                <div id="formOverlay" class="overlay-custom"></div>
+                        <div class="modal-body-custom">
+                            <form method="POST" action="{% url 'comprar_ingrediente' %}">
+                                {% csrf_token %}
+                                <input type="hidden" name="id_ingrediente" id="idIngredienteInput" required>
 
-                <div id="compraFormContainer" class="modal-card-custom">
-                    <div class="modal-header-custom">
-                        Registrar Compra para: <span id="nombreIngrediente" style="font-weight: normal;"></span>
+                                <div class="modal-input-group">
+                                    <label for="proveedorInput" class="form-label-custom">Proveedor:</label>
+                                    <input type="text" list="proveedores-list" id="proveedorInput" class="form-control-custom" placeholder="Seleccione un proveedor" required>
+                                    <input type="hidden" name="id_proveedor_fk" id="idProveedorInput" required>
+                                </div>
+                                
+                                <div class="modal-input-group">
+                                    <label for="precioCompra" class="form-label-custom">Precio de Compra (C$):</label>
+                                    <input type="number" step="0.01" min="0.01" name="precio_compra" id="precioCompra" class="form-control-custom" required>
+                                </div>
+                                
+                                <div class="modal-input-group">
+                                    <label for="cantidadComprada" class="form-label-custom">Cantidad Comprada:</label>
+                                    <input type="number" step="0.01" min="0.01" name="cantidad_comprada" id="cantidadComprada" class="form-control-custom" required>
+                                    <small id="unidadMedida" class="form-text-custom"></small>
+                                </div>
+                                
+                                <div class="modal-input-group">
+                                    <label for="fechaCompra" class="form-label-custom">Fecha de la Compra:</label>
+                                    <input type="date" name="fecha_compra" id="fechaCompra" class="form-control-custom" required>
+                                </div>
+                                
+                                <button type="submit" class="btn-custom-success">Registrar Compra</button>
+                                <button type="button" class="btn-custom-danger" onclick="ocultarFormularioCompra()">Cancelar</button>
+                            </form>
+                        </div>
                     </div>
-                    <div class="modal-body-custom">
-                        <form method="POST" action="{% url 'comprar_ingrediente' %}">
-                            {% csrf_token %}
-                            <input type="hidden" name="id_ingrediente" id="idIngredienteInput" required>
+                    {# FIN DE MODAL / FORMULARIO FLOTANTE DE COMPRA #}
 
-                            <div class="modal-input-group">
-                                <label for="proveedorInput" class="form-label-custom">Proveedor:</label>
-                                <input type="text" list="proveedores-list" id="proveedorInput" class="form-control-custom" placeholder="Seleccione un proveedor" required>
-                                <input type="hidden" name="id_proveedor_fk" id="idProveedorInput" required>
-                            </div>
-                            
-                            <div class="modal-input-group">
-                                <label for="precioCompra" class="form-label-custom">Precio de Compra (C$):</label>
-                                <input type="number" step="0.01" min="0.01" name="precio_compra" id="precioCompra" class="form-control-custom" required>
-                            </div>
-                            
-                            <div class="modal-input-group">
-                                <label for="cantidadComprada" class="form-label-custom">Cantidad Comprada:</label>
-                                <input type="number" step="0.01" min="0.01" name="cantidad_comprada" id="cantidadComprada" class="form-control-custom" required>
-                                <small id="unidadMedida" class="form-text-custom"></small>
-                            </div>
-                            
-                            <div class="modal-input-group">
-                                <label for="fechaCompra" class="form-label-custom">Fecha de la Compra:</label>
-                                <input type="date" name="fecha_compra" id="fechaCompra" class="form-control-custom" required>
-                            </div>
-                            
-                            <button type="submit" class="btn-custom-success">Registrar Compra</button>
-                            <button type="button" class="btn-custom-danger" onclick="ocultarFormularioCompra()">Cancelar</button>
-                        </form>
-                    </div>
-                </div>
-                {# FIN DE MODAL / FORMULARIO FLOTANTE DE COMPRA #}
-
-                {# Formulario Agregar Nuevo Ingrediente #}
-                <div class="card-custom">
-                    <div class="card-header-custom">
-                        {% if articulo_a_editar %}Editar Artículo de Inventario: {{ articulo_a_editar.nombre }}{% else %}Agregar Nuevo Artículo de Inventario{% endif %}
-                    </div>
-                    <div class="card-body-custom">
-                        <form method="post" action="{% if articulo_a_editar %}{% url 'editar_ingrediente' articulo_a_editar.idArticuloInventario %}{% else %}{% url 'agregar_ingrediente' %}{% endif %}">
-                            {% csrf_token %}
-                            
-                            <div style="flex-grow: 1; min-width: 200px;">
-                                <label for="nombre" class="form-label-custom">Nombre del Artículo:</label>
-                                <input type="text" name="nombre" id="nombre" class="form-control-custom" required autocomplete="off"
-                                    value="{{ articulo_a_editar.nombre|default:'' }}">
-                            </div>
-                            
-                            <div style="flex-grow: 0; min-width: 150px;">
-                                <label for="tipo_articulo" class="form-label-custom">Tipo de Artículo:</label>
-                                <select name="tipo_articulo" id="tipo_articulo" class="form-control-custom" required>
-                                    <option value="">Seleccione el Tipo</option>
-                                        <option value="{{ 'Ingrediente' }}"{% if articulo_a_editar.tipoArticulo == 'Ingrediente' %}selected{% endif %}>Ingrediente</option>
-                                        <option value="{{ 'Bebida' }}"{% if articulo_a_editar.tipoArticulo == 'Bebida' %}selected{% endif %}>Bebida</option>
-                                </select>
-                            </div>
-                            
-                            <div style="flex-grow: 0; min-width: 100px;">
-                                <label for="stock" class="form-label-custom">Stock Inicial:</label>
-                                <input type="number" step="0.01" min="0" name="stock" id="stock" class="form-control-custom" value="0" required>
-                            </div>
-                            
-                            <div style="flex-grow: 0; min-width: 150px;">
-                                <label for="unidad_de_medida" class="form-label-custom">Unidad de Medida (ej. lb, ml, unidad):</label>
-                                <input type="text" name="unidad_de_medida" id="unidad_de_medida" class="form-control-custom" required autocomplete="off"
-                                    value="{{ articulo_a_editar.unidad_de_medida|default:'' }}">
-                            </div>
-                            
-                            <div style="flex-grow: 1; min-width: 200px;">
-                                <label for="ubicacion" class="form-label-custom">Ubicación:</label>
-                                <input type="text" name="ubicacion" id="ubicacion" class="form-control-custom" autocomplete="off"
-                                    value="{{ articulo_a_editar.ubicacion|default:'' }}">
-                                <small class="form-text-custom">Opcional. Deja en blanco si no aplica.</small>
-                            </div>
-                            
-                            <div style="flex: 1 1 100%;">
-                                {% if articulo_a_editar %}
-                                    <div style="display: flex; gap: 5px;">
-                                        <button type="submit" class="btn-custom-success" style="flex-grow: 1;">
-                                            Actualizar Artículo
-                                        </button>
-                                        <a href="{% url 'admin_ingredientes' %}" class="btn-custom-danger" style="text-align: center; text-decoration: none; padding: 9px 20px; font-weight: normal; font-size: 13px;">
-                                            Cancelar
-                                        </a>
-                                    </div>
-                                {% else %}
-                                    <button type="submit" class="btn-custom-success" style="width: 100%;">
-                                        Guardar Artículo
-                                    </button>
-                                {% endif %}
-                            </div>
-                        </form>
-                    </div>
-                </div>
-
-                {# Listado de Ingredientes / Tabla #}
-                <h2 style="color: #981a28; margin-top: 30px; border-bottom: 2px solid #981a28; padding-bottom: 5px; margin-bottom: 10px;">Listado de Artículos</h2>
-
-                <div style="margin-bottom: 20px;">
-                    <label for="buscador" style="font-weight: bold; display: block; margin-bottom: 5px;">Buscar artículo:</label>
-                    <div style="position: relative; display: flex; align-items: center;">
-                        <span style="position: absolute; left: 10px; color: #888;">
-                            <i class="fas fa-search"></i>
-                        </span>
-                        <input type="text" id="buscador" class="form-control" 
-                            placeholder="Escribe el nombre del artículo..." 
-                            style="padding-left: 35px; padding-right: 35px; margin-bottom: 0;" 
-                            onkeyup="filtrarArticulos()">
-                        <span id="btn-limpiar" onclick="limpiarBusqueda()" 
-                            style="position: absolute; right: 10px; color: #888; cursor: pointer; display: none;">
-                            <i class="fas fa-times-circle"></i>
-                        </span>
-                    </div>
-                </div>
-
-                <div class="card-custom" style="padding: 0; overflow-x: auto;">
-                    <table class="table-custom">
-                        <thead>
-                            <tr>
-                                <th>ID</th>
-                                <th>Nombre</th>
-                                <th>Tipo de Artículo</th> 
-                                <th>Stock Actual</th>
-                                <th>Unidad de Medida</th>
-                                <th>Ubicación</th>
-                                <th></th>
-                                <th></th>
-                            </tr>
-                        </thead>
-                        <tbody id="tabla-articulos-body">
-                            {% for articulo in ingredientes %}
-                                <tr class="fila-articulo">
-                                    <td>{{ articulo.idArticuloInventario }}</td>
-                                    <td class="nombre-articulo">{{ articulo.nombre }}</td>
-                                    <td>{{ articulo.tipoArticulo|default:"N/A" }}</td>
-                                    <td>{{ articulo.stock }}</td>
-                                    <td>{{ articulo.unidad_de_medida }}</td>
-                                    <td>{{ articulo.ubicacion|default:"-" }}</td> 
-                                    <td>
-                                        <button type="button" style="font-weight: bold; padding: 5px 10px;" class="btn-custom-success" onclick="event.stopPropagation(); mostrarFormularioCompra({{ articulo.idArticuloInventario }}, '{{ articulo.nombre }}', '{{ articulo.unidad_de_medida }}')">
-                                            Comprar
-                                        </button>
-                                    </td>
-                                    <td style="white-space: nowrap;">
-                                        <a href="{% url 'editar_ingrediente' articulo.idArticuloInventario %}" class='btn-custom-edit'
-                                        style="color: white; padding: 5px 10px; border-radius: 5px; text-decoration: none; font-size: 13px; font-weight: bold; display: inline-block; margin-right: 5px;">
-                                            <i class="fas fa-edit"></i> Editar
-                                        </a>
-                                        
-                                        <form action="{% url 'eliminar_ingrediente' articulo.idArticuloInventario %}" method="POST" style="display: inline;" 
-                                            onsubmit="return confirm('¿Está seguro de que desea eliminar el ingrediente {{ articulo.nombre }}? Esta acción fallará si existen recetas o compras asociadas.');">
-                                            {% csrf_token %}
-                                            <button type="submit" class="btn-custom-danger" style="padding: 5px 10px; font-weight: bold;">
-                                                <i class="fas fa-trash-alt"></i> Eliminar
+                    {# Formulario Agregar Nuevo Ingrediente #}
+                    <div class="card-custom">
+                        <div class="card-header-custom">
+                            {% if articulo_a_editar %}Editar Artículo de Inventario: {{ articulo_a_editar.nombre }}{% else %}Agregar Nuevo Artículo de Inventario{% endif %}
+                        </div>
+                        <div class="card-body-custom">
+                            <form method="post" action="{% if articulo_a_editar %}{% url 'editar_ingrediente' articulo_a_editar.idArticuloInventario %}{% else %}{% url 'agregar_ingrediente' %}{% endif %}">
+                                {% csrf_token %}
+                                
+                                <div style="flex-grow: 1; min-width: 200px;">
+                                    <label for="nombre" class="form-label-custom">Nombre del Artículo:</label>
+                                    <input type="text" name="nombre" id="nombre" class="form-control-custom" required autocomplete="off"
+                                        value="{{ articulo_a_editar.nombre|default:'' }}">
+                                </div>
+                                
+                                <div style="flex-grow: 0; min-width: 150px;">
+                                    <label for="tipo_articulo" class="form-label-custom">Tipo de Artículo:</label>
+                                    <select name="tipo_articulo" id="tipo_articulo" class="form-control-custom" required>
+                                        <option value="">Seleccione el Tipo</option>
+                                            <option value="{{ 'Ingrediente' }}"{% if articulo_a_editar.tipoArticulo == 'Ingrediente' %}selected{% endif %}>Ingrediente</option>
+                                            <option value="{{ 'Bebida' }}"{% if articulo_a_editar.tipoArticulo == 'Bebida' %}selected{% endif %}>Bebida</option>
+                                    </select>
+                                </div>
+                                
+                                <div style="flex-grow: 0; min-width: 100px;">
+                                    <label for="stock" class="form-label-custom">Stock Inicial:</label>
+                                    <input type="number" step="0.01" min="0" name="stock" id="stock" class="form-control-custom" value="0" required>
+                                </div>
+                                
+                                <div style="flex-grow: 0; min-width: 150px;">
+                                    <label for="unidad_de_medida" class="form-label-custom">Unidad de Medida (ej. lb, ml, unidad):</label>
+                                    <input type="text" name="unidad_de_medida" id="unidad_de_medida" class="form-control-custom" required autocomplete="off"
+                                        value="{{ articulo_a_editar.unidad_de_medida|default:'' }}">
+                                </div>
+                                
+                                <div style="flex-grow: 1; min-width: 200px;">
+                                    <label for="ubicacion" class="form-label-custom">Ubicación:</label>
+                                    <input type="text" name="ubicacion" id="ubicacion" class="form-control-custom" autocomplete="off"
+                                        value="{{ articulo_a_editar.ubicacion|default:'' }}">
+                                    <small class="form-text-custom">Opcional. Deja en blanco si no aplica.</small>
+                                </div>
+                                
+                                <div style="flex: 1 1 100%;">
+                                    {% if articulo_a_editar %}
+                                        <div style="display: flex; gap: 5px;">
+                                            <button type="submit" class="btn-custom-success" style="flex-grow: 1;">
+                                                Actualizar Artículo
                                             </button>
-                                        </form>
-                                    </td>
-                                </tr>
-                            {% empty %}
-                                <tr>
-                                    <td colspan="7" style="text-align: center;">No hay artículos registrados.</td>
-                                </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
-                </div>
-                {# Fin de Listado de Ingredientes / Tabla #}
-            </div>
-            
-            <footer>
-                <p>2025 Hê Sãî Mãlî.</p>
-            </footer>
-        </main>
-        
-        <div class="overlay" id="overlay" onclick="toggleSidebar()"></div>
-    </div>
+                                            <a href="{% url 'admin_ingredientes' %}" class="btn-custom-danger" style="text-align: center; text-decoration: none; padding: 9px 20px; font-weight: normal;">
+                                                Cancelar
+                                            </a>
+                                        </div>
+                                    {% else %}
+                                        <button type="submit" class="btn-custom-success" style="width: 100%;">
+                                            Guardar Artículo
+                                        </button>
+                                    {% endif %}
+                                </div>
+                            </form>
+                        </div>
+                    </div>
 
+                    {# Listado de Ingredientes / Tabla #}
+                    <h2 style="color: #981a28; margin-top: 30px; border-bottom: 2px solid #981a28; padding-bottom: 5px; margin-bottom: 10px;">Listado de Artículos</h2>
+
+                    <div style="margin-bottom: 20px;">
+                        <label for="buscador" style="font-weight: bold; display: block; margin-bottom: 5px;">Buscar artículo:</label>
+                        <div style="position: relative; display: flex; align-items: center;">
+                            <span style="position: absolute; left: 10px; color: #888;">
+                                <i class="fas fa-search"></i>
+                            </span>
+                            <input type="text" id="buscador" class="form-control" 
+                                placeholder="Escribe el nombre del artículo..." 
+                                style="padding-left: 35px; padding-right: 35px; margin-bottom: 0;" 
+                                onkeyup="filtrarArticulos()">
+                            <span id="btn-limpiar" onclick="limpiarBusqueda()" 
+                                style="position: absolute; right: 10px; color: #888; cursor: pointer; display: none;">
+                                <i class="fas fa-times-circle"></i>
+                            </span>
+                        </div>
+                    </div>
+
+                    <div class="card-custom" style="padding: 0; overflow-x: auto;">
+                        <table class="table-custom">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Nombre</th>
+                                    <th>Tipo de Artículo</th> 
+                                    <th>Stock Actual</th>
+                                    <th>Unidad de Medida</th>
+                                    <th>Ubicación</th>
+                                    <th></th>
+                                    <th></th>
+                                </tr>
+                            </thead>
+                            <tbody id="tabla-articulos-body">
+                                {% for articulo in ingredientes %}
+                                    <tr class="fila-articulo">
+                                        <td>{{ articulo.idArticuloInventario }}</td>
+                                        <td class="nombre-articulo">{{ articulo.nombre }}</td>
+                                        <td>{{ articulo.tipoArticulo|default:"N/A" }}</td>
+                                        <td>{{ articulo.stock }}</td>
+                                        <td>{{ articulo.unidad_de_medida }}</td>
+                                        <td>{{ articulo.ubicacion|default:"-" }}</td> 
+                                        <td>
+                                            <button type="button" style="font-weight: bold; padding: 5px 10px;" class="btn-custom-success" onclick="event.stopPropagation(); mostrarFormularioCompra({{ articulo.idArticuloInventario }}, '{{ articulo.nombre }}', '{{ articulo.unidad_de_medida }}')">
+                                                Comprar
+                                            </button>
+                                        </td>
+                                        <td style="white-space: nowrap;">
+                                            <a href="{% url 'editar_ingrediente' articulo.idArticuloInventario %}" class='btn-custom-edit'
+                                            style="color: white; padding: 5px 10px; border-radius: 5px; text-decoration: none; font-weight: bold; display: inline-block; margin-right: 5px;">
+                                                <i class="fas fa-edit"></i> Editar
+                                            </a>
+                                            
+                                            <form action="{% url 'eliminar_ingrediente' articulo.idArticuloInventario %}" method="POST" style="display: inline;" 
+                                                onsubmit="return confirm('¿Está seguro de que desea eliminar el ingrediente {{ articulo.nombre }}? Esta acción fallará si existen recetas o compras asociadas.');">
+                                                {% csrf_token %}
+                                                <button type="submit" class="btn-custom-danger" style="padding: 5px 10px; font-weight: bold;">
+                                                    <i class="fas fa-trash-alt"></i> Eliminar
+                                                </button>
+                                            </form>
+                                        </td>
+                                    </tr>
+                                {% empty %}
+                                    <tr>
+                                        <td colspan="7" style="text-align: center;">No hay artículos registrados.</td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {# Fin de Listado de Ingredientes / Tabla #}
+                </div>
+            </div>
+        </main>
+    </div>
+{% endblock %}
+
+{% block extra_js %}
     <script>
         function filtrarArticulos() {
             const input = document.getElementById('buscador');
@@ -801,28 +430,6 @@
             input.value = ""; // Vaciar input
             filtrarArticulos(); // Resetear el filtrado para mostrar todo
             input.focus(); // Devolver el foco al buscador
-        }
-
-        function toggleSidebar() {
-            const sidebar = document.getElementById('sidebar');
-            const mainContent = document.getElementById('main-content');
-            const overlay = document.getElementById('overlay');
-            
-            const isMobile = window.innerWidth <= 768;
-
-            if (isMobile) {
-                // Comportamiento en Móvil: Usa la clase 'show'
-                sidebar.classList.toggle('show');
-                overlay.classList.toggle('show');
-                
-                // Evita el desplazamiento del body cuando el menú está abierto en móvil
-                document.body.style.overflow = sidebar.classList.contains('show') ? 'hidden' : 'auto';
-
-            } else {
-                // Comportamiento en Desktop: Usa la clase 'collapsed'
-                sidebar.classList.toggle('collapsed');
-                mainContent.classList.toggle('sidebar-collapsed');
-            }
         }
 
         // --- Funciones para el formulario de Compra (Modal) ---
@@ -870,6 +477,4 @@
             <option value="{{ proveedor.nombre }}" data-id="{{ proveedor.idProveedor }}">
         {% endfor %}
     </datalist>
-
-</body>
-</html>
+{% endblock %}

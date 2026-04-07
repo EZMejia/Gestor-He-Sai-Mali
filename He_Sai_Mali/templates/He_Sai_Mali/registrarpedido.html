@@ -1,951 +1,489 @@
+{% extends "He_Sai_Mali/base.html" %}
 {% load static %}
 {% load custom_filters %}
-<!DOCTYPE html>
-<html lang="es">
-<head>
-    <meta charset="UTF-8">
-    <link rel="icon" type="image/png" href="{% static 'He_Sai_Mali/logo.png' %}">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% if pedido_existente %}Añadir productos a Pedido N°{{ pedido_existente.idPedido }}{% else %}Registrar Nuevo Pedido{% endif %}</title>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+
+{% block title %}{% if pedido_existente %}Añadir a Pedido N°{{ pedido_existente.idPedido }}{% else %}Nuevo Pedido{% endif %}{% endblock %}
+
+{% block extra_style %}
+<style>
+    :root {
+        --primary-dark: #7a111d;
+        --accent-gold: #f3bb67;
+        --bg-light-gray: #f4f7f6;
+        --error-red: #dc3545;
+    }
+
+    body, html { height: 100%; background-color: var(--bg-light-gray); overflow: hidden; }
+
+    /* Chrome, Safari, Edge, Opera */
+    input::-webkit-outer-spin-button,
+    input::-webkit-inner-spin-button {
+        -webkit-appearance: none;
+        margin: 0;
+    }
+
+    /* Firefox */
+    input[type=number] {
+        -moz-appearance: textfield;
+        appearance: textfield;
+    }
+
+    .sidebar {
+        background-image: linear-gradient(to bottom, var(--primary-dark), rgba(122, 17, 29, 0.9));
+        border-radius: 0 25px 25px 0;
+        z-index: 10;
+        color: white;
+    }
+
+    .main-content { overflow-y: auto; height: calc(100vh - 60px); }
+
+    .card-platillo {
+        border: 2px solid transparent;
+        border-radius: 15px;
+        transition: all 0.3s ease;
+    }
+
+    /* Diseño para platillos originalmente agotados (Gris) */
+    .card-platillo.agotado-original {
+        background-color: #f8f9fa;
+        opacity: 0.6;
+        filter: grayscale(0.8);
+        cursor: not-allowed;
+        pointer-events: none;
+    }
+
+    .badge-agotado {
+        background-color: var(--error-red);
+        color: white;
+        font-size: 0.7rem;
+        padding: 2px 8px;
+        border-radius: 10px;
+    }
+
+    .btn-quantity {
+        background: var(--primary-dark);
+        color: white;
+        border-radius: 50%;
+        width: 30px; height: 30px; padding: 0;
+        transition: all 0.1s ease-in-out;
+    }
+
+    .btn-quantity:hover {
+        color: var(--accent-gold);
+        scale: 1.1;
+    }
+
+    .order-summary {
+        background: white;
+        border-left: 1px solid #ddd;
+        height: calc(100vh - 60px); 
+        display: flex;
+        flex-direction: column;
+    }
+
+    .category-badge {
+        background: var(--accent-gold);
+        color: #444;
+        font-weight: bold;
+        margin-bottom: 15px;
+        display: inline-block;
+        padding: 5px 15px;
+        border-radius: 20px;
+    }
     
-    <style>
-        :root {
-            /* Colores del diseño de la APP (He Sai Mali) */
-            --primary-color: #981a28; /* Rojo Oscuro (Header) */
-            --secondary-color: #f3bb67; /* Amarillo (Acento/Border) */
-            --sidebar-bg: #2b3543; /* Gris Oscuro (Usado para el menú lateral) */
-            --bg-page: #2c3038; /* Gris Oscuro (Fondo de página) */
-            --text-light: #ffffff;
-            --text-accent: #dacfb7;
-            --menu-item-hover: #b12131; /* Rojo más claro para hover */
-        }
+    .scroll-area { flex-grow: 1; padding: 15px; }
+    
+    .sticky-top-custom { position: sticky; top: 0; z-index: 5; padding: 10px 0; }
 
-        /* Estilos generales y del body */
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-            font-family: 'Roboto', sans-serif;
-        }
+    input[type="search"]::-webkit-search-cancel-button {
+        -webkit-appearance: none;
+        height: 20px;
+        width: 20px;
+        background-image: url("https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcS02I6eWL1NIo2iKDY-x2rG8RImWFVVnEsl9Q&s");
+        opacity: 0.5;
+        background-size: contain;
+        cursor: pointer;
+        margin-right: 10px;
+    }
 
-        body {
-            display: flex;
-            min-height: 100vh;
-            background-color: var(--bg-page);
-            overflow-x: hidden;
-        }
+    .btn-block { background: var(--primary-dark); border-radius: 15px; transition: all 0.1s ease-in-out;}
+    .btn-block:hover { filter: brightness(0.9); scale: 1.02; }
+</style>
+{% endblock %}
 
-        /* Estilos del Contenedor Principal (Layout) */
-        #app {
-            display: flex;
-            flex-direction: column;
-            width: 100%;
-        }
+{% block header %}REGISTRAR PEDIDO{% endblock %}
 
-        /* ---------------------------------------------------- */
-        /* --- Barra de Navegación Superior (HEADER ADAPTADO) --- */
-        /* ---------------------------------------------------- */
-        .header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            height: 60px;
-            background-color: var(--primary-color);
-            border-bottom: 8px solid var(--primary-color);
-            color: var(--text-light);
-            padding: 30px 15px;
-            box-shadow: 0 6px 10px black;
-            position: fixed;
-            width: 100%;
-            z-index: 1000;
-        }
-
-        .header-left {
-            display: flex;
-            align-items: center;
-        }
-
-        .header-menu-toggle {
-            font-size: 24px;
-            margin-right: 15px;
-            cursor: pointer;
-            padding: 5px;
-        }
-
-        .header-title {
-            display: flex;
-            align-items: center;
-            font-size: 1.2em;
-            font-weight: bold;
-            color: var(--text-accent);
-        }
-        .header-title img {
-            height: 40px;
-            margin-right: 10px;
-        }
-
-        .header-right {
-            display: flex;
-            align-items: center;
-        }
-        
-        /* Contenedor de Información de Usuario */
-        .user-info-badge {
-            display: flex;
-            align-items: center;
-            text-align: left;
-            color: var(--text-accent);
-            font-size: 15px;
-            background-color: var(--menu-item-hover);
-            border-radius: 5px;
-            padding: 5px 10px;
-            margin-right: 15px;
-        }
-
-        .user-info-badge img {
-            height: 30px;
-            margin-left: 10px;
-            filter: 
-                brightness(0)
-                invert(1)
-                sepia(0.9)
-                saturate(1000%)
-                hue-rotate(300deg)
-                brightness(1.0)
-                contrast(0.9);
-        }
-
-        /* ---------------------------------------------------- */
-        /* --- Menú Lateral (SIDEBAR ADAPTADO) --- */
-        /* ---------------------------------------------------- */
-        .sidebar {
-            width: 250px;
-            background-color: var(--sidebar-bg); /* Opcional: usar primary-color si se desea mantener el rojo */
-            color: var(--text-light);
-            padding-top: 68px; /* Espacio para el header fijo + borde */
-            position: fixed;
-            top: 0;
-            left: 0;
-            height: 100%;
-            transform: translateX(0); 
-            transition: transform 0.3s ease;
-            z-index: 900;
-        }
-
-        .sidebar.collapsed {
-            transform: translateX(-250px);
-        }
-
-        /* Contenido del usuario dentro del sidebar */
-        .sidebar-user-info {
-            padding: 15px;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-            display: flex;
-            align-items: center;
-            margin-bottom: 10px;
-        }
-
-        .sidebar-user-avatar {
-            width: 45px;
-            height: 45px;
-            border-radius: 50%;
-            background-color: white;
-            overflow: hidden;
-            margin-right: 10px;
-            position: relative;
-        }
-        .sidebar-user-avatar img {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-        }
-        
-        .sidebar-user-details p {
-            margin: 0;
-        }
-
-        .sidebar-user-name {
-            font-weight: bold;
-            font-size: 1.1em;
-        }
-
-        .sidebar-user-status {
-            font-size: 0.85em;
-            color: var(--online-green);
-            display: flex;
-            align-items: center;
-        }
-
-        .sidebar-user-status .fa-circle {
-            font-size: 0.6em;
-            margin-right: 5px;
-        }
-
-        .linea {
-            margin: 10px 0 0 0;
-            border: none;
-            height: 1px;
-            background-color: rgba(255, 255, 255, 0.1);
-        }
-
-        /* Menú de navegación (Adaptado de 'dropdown-content') */
-        .sidebar-nav {
-            padding: 10px 0;
-        }
-        .sidebar-nav-item {
-            display: flex;
-            align-items: center;
-            padding: 12px 15px;
-            text-decoration: none;
-            color: var(--text-light);
-            transition: background-color 0.2s;
-            cursor: pointer;
-        }
-
-        .sidebar-nav-item:hover,
-        .sidebar-nav-item.active {
-            background-color: var(--menu-item-hover);
-            border-left: 5px solid var(--secondary-color);
-            padding-left: 10px;
-        }
-
-        .sidebar-nav-item i {
-            width: 25px;
-            margin-right: 10px;
-            font-size: 1.1em;
-        }
-        
-        .sidebar-menu-title {
-            padding: 10px 15px 5px;
-            font-size: 0.9em;
-            text-transform: uppercase;
-            color: var(--text-accent);
-            font-weight: bold;
-        }
-
-        /* ---------------------------------------------------- */
-        /* --- Contenido Principal (MAIN CONTENT) --- */
-        /* ---------------------------------------------------- */
-        .main-content {
-            flex-grow: 1;
-            padding-top: 68px; /* Espacio para el header fijo + borde */
-            background-color: var(--bg-page);
-            margin-left: 250px; 
-            transition: margin-left 0.3s ease;
-        }
-
-        .main-content.sidebar-collapsed {
-            margin-left: 0;
-        }
-
-        /* Estilos del Contenido de Registro (Adaptados) */
-        .contenido {
-            width: 90%;
-            max-width: 1200px;
-            margin: 20px auto;
-            padding: 20px;
-            background-color: white;
-            box-shadow: 0 0 30px 5px rgba(0, 0, 0, 0.4);
-            border-radius: 8px;
-            min-height: calc(100vh - 100px - 68px); /* Ajuste dinámico */
-        }
-        .Titulo-Registro {
-            color: var(--primary-color);
-            border-bottom: 3px solid var(--primary-color);
-            padding-bottom: 10px;
-            margin-bottom: 20px;
-        }
-        .section-header {
-            background-color: #ddd; 
-            color: var(--primary-color);
-            padding: 10px;
-            border-radius: 5px 5px 0 0;
-            font-weight: bold;
-            font-size: 1.2em;
-        }
-        .card-body {
-            padding: 15px;
-            border: 1px solid #ddd;
-            border-top: none;
-            border-radius: 0 0 5px 5px;
-        }
-        /* (Otros estilos de tablas, formularios, botones se mantienen igual) */
-
-        /* ---------------------------------------------------- */
-        /* --- FOOTER ADAPTADO --- */
-        /* ---------------------------------------------------- */
-        footer {
-            display: flex;
-            color: var(--text-accent);
-            background-color: #41444a;
-            justify-content: center;
-            align-items: center;
-            padding: 15px 0;
-            border-top: 5px solid #2c3038;
-            border-bottom: 10px solid #2c3038;
-            font-size: 14px;
-            width: 100%;
-            margin-top: 0; /* Lo gestiona el main-content */
-        }
-
-        /*Diseño del form para ingresar pedido*/
-        .form-label {
-            font-weight: bold;
-            display: block;
-            margin-bottom: 5px;
-        }
-
-        .form-control, .form-select {
-            width: 100%;
-            padding: 8px;
-            margin-bottom: 10px;
-            border: 1px solid #ccc;
-            border-radius: 4px;
-            box-sizing: border-box;
-        }
-
-        .form-text {
-            font-size: 0.85em;
-            color: #666;
-            margin-top: -5px;
-            margin-bottom: 10px;
-        }
-
-        /* Botones de Acción Globales */
-
-        .action-group {
-            display: flex;
-            justify-content: flex-end;
-            gap: 10px;
-            margin-top: 20px;
-        }
-
-        .btn-success-lg {
-            background-color: #4CAF50;
-            color: white;
-            padding: 10px 20px;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
-            font-size: 1.1em;
-            text-decoration: none;
-            transition: background-color 0.2s;
-        }
-
-        .btn-success-lg:hover { background-color: #38761d; }
-
-        .btn-secondary-lg {
-            background-color: #6c757d;
-            color: white;
-            padding: 10px 20px;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
-            font-size: 1.1em;
-            text-decoration: none;
-            transition: background-color 0.2s;
-        }
-
-        .btn-secondary-lg:hover { background-color: #5a6268; }
-
-        .alert-error {
-            background-color: #f44336;
-            color: white;
-            padding: 10px;
-            margin-bottom: 10px;
-            border-radius: 5px;
-        }
-
-        .alert-success {
-            background-color: #4CAF50;
-            color: white;
-            padding: 10px;
-            margin-bottom: 10px;
-            border-radius: 5px;
-        }
-
-        .alert-warning {
-            background-color: #f6a700;
-            color: white;
-            padding: 10px;
-            margin-bottom: 10px;
-            border-radius: 5px;
-        }
-
-        /* Tabla de platillos */
-        .table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 10px;
-        }
-
-        .table thead tr {
-            background-color: var(--primary-color);
-            color: white;
-        }
-
-        .table th, .table td {
-            padding: 8px;
-            text-align: left;
-            border-bottom: 1px solid #ddd;
-        }
-
-        .table tbody tr:nth-child(even) {
-            background-color: #f2f2f2;
-        }
-
-        /* ---------------------------------------------------- */
-        /* --- Comportamiento en MÓVIL (Max-width: 768px) --- */
-        /* ---------------------------------------------------- */
-        @media (max-width: 768px) {
-            .sidebar {
-                transform: translateX(-250px);
-                padding-top: 68px;
-            }
-
-            .sidebar.show {
-                transform: translateX(0);
-            }
-            
-            .main-content {
-                margin-left: 0; 
-            }
-
-            .overlay {
-                position: fixed;
-                top: 0;
-                left: 0;
-                width: 100%;
-                height: 100%;
-                background-color: rgba(0, 0, 0, 0.5);
-                z-index: 800; 
-                display: none;
-            }
-
-            .overlay.show {
-                display: block;
-            }
-        }
-    </style>
-</head>
-<body>
-    <div id="app">
-        <header class="header">
-            <div class="header-left">
-                <i class="fas fa-bars header-menu-toggle" onclick="toggleSidebar()"></i>
-                <h1 class="header-title">
-                    <img src="{% static 'He_Sai_Mali/logo.png' %}" alt="Logo He Sai Mali">
-                    {% if pedido_existente %}AÑADIR PRODUCTOS{% else %}REGISTRAR PEDIDO{% endif %}
-                </h1>
-            </div>
-            
-            <div class="header-right">
-                <div class="user-info-badge">
-                    {{ nombre_empleado }} {{ apellido_empleado }}
-                    <img src="{% static 'He_Sai_Mali/avatar.png' %}" alt="Avatar">
+{% block content %}
+<form method="POST" class="container-fluid">
+    {% csrf_token %}
+    <div class="row">
+        <div class="col-md-8 main-content px-4">
+            <div class="sticky-top-custom">
+                <div class="input-group mb-3 shadow-sm border border-secondary rounded">
+                    <div class="input-group-prepend">
+                        <span class="input-group-text bg-white border-0"><i class="fa fa-search text-muted"></i></span>
+                    </div>
+                    <input type="search" id="busquedaPlatillo" class="form-control border-0 py-4" style="box-shadow: none;" placeholder="Buscar platillo por nombre...">
                 </div>
             </div>
-        </header>
 
-        <aside class="sidebar" id="sidebar">
-            <nav class="sidebar-nav">
-                <div class="sidebar-user-info">
-                    <div class="sidebar-user-avatar">
-                        <img src="{% static 'He_Sai_Mali/avatar.png' %}" alt="Avatar">
-                        <span class="online-status"></span>
-                    </div>
-                    <div class="sidebar-user-details">
-                        <p class="sidebar-user-name">{{ user.nombre }} {{ user.apellido }}</p>
-                        <p class="sidebar-user-role">
-                            {{ user.rol }}
-                        </p>
-                    </div>
-                </div>
-
-                <a href="{% url 'logout' %}" class="sidebar-nav-item">
-                    <i class="fas fa-sign-out-alt"></i>
-                    <span>Cerrar sesión</span>
-                </a>
-
-                <hr class="linea">
-
-                {% if user.rol == "Mesero" %}
-                    <div class="sidebar-menu-title">PEDIDOS Y FACTURACIÓN</div>
-                    <a href="{% url 'pedidos' %}" class="sidebar-nav-item">
-                        <i class="fas fa-clipboard-list"></i>
-                        <span>Pedidos</span>
-                    </a>
-                {% endif %}
-                {% if user.rol == "Mesero" %}
-                    <a href="{% url 'registrarpedido' %}" class="sidebar-nav-item active">
-                        <i class="fas fa-file-invoice"></i>
-                        <span>Nuevo Pedido</span>
-                    </a>
-
-                    <hr class="linea">
-                    
-                {% endif %}
-                
-                {% if user.rol == "Administrador" or user.rol == "Cocinero" %}
-                    <div class="sidebar-menu-title">UTILIDADES DE COCINA</div>
-                {% endif %}
-                {% if user.rol == "Cocinero" %}
-                    <a href="{% url 'cocina' %}" class="sidebar-nav-item">
-                        <i class="fas fa-utensils"></i>
-                        <span>Cocina</span>
-                    </a>
-                {% endif %}
-                {% if user.rol == "Administrador" %}
-                    <a href="{% url 'admin_platillos' %}" class="sidebar-nav-item">
-                        <i class="fas fa-hamburger"></i>
-                        <span>Productos</span>
-                    </a>
-                
-                    <hr class="linea">
-                
-                {% endif %}
-                {% if user.rol == "Administrador" or user.rol == "Mesero" %}
-                    <div class="sidebar-menu-title">ADMINISTRACIÓN DE LOCAL</div>
-
-                    <a href="{% url 'admin_mesas' %}" class="sidebar-nav-item">
-                        <i class="fas fa-chair"></i>
-                        <span>Mesas</span>
-                    </a>
-                {% endif %}
-                {% if user.rol == "Administrador" %}
-                    <a href="{% url 'admin_ingredientes' %}" class="sidebar-nav-item">
-                        <i class="fas fa-leaf"></i>
-                        <span>Inventario</span>
-                    </a>
-                    <a href="{% url 'admin_proveedores' %}" class="sidebar-nav-item">
-                        <i class="fas fa-truck-loading"></i>
-                        <span>Proveedores</span>
-                    </a>
-                    <a href="{% url 'admin_dashboard' %}" class="sidebar-nav-item">
-                        <i class="fas fa-chart-line"></i>
-                        <span>Dashboard</span>
-                    </a>
-                    <a href="{% url 'admin_empleados' %}" class="sidebar-nav-item">
-                        <i class="fas fa-user-friends"></i>
-                        <span>Empleados</span>
-                    </a>
-                    <a href="{% url 'registro' %}" class="sidebar-nav-item">
-                        <i class="fas fa-user-plus"></i>
-                        <span>Registrar Usuario</span>
-                    </a>
-                    
-                {% endif %}
-            </nav>
-        </aside>
-
-        <main class="main-content" id="main-content">
-            <div class="contenido">
-                {% if error_message %}
-                    <div class="alert-error">
-                        **Error:** {{ error_message }}
-                    </div>
-                {% endif %}
-                
-                {% if messages %}
-                    {% for message in messages %}
-                        <div class="{% if message.tags == 'error' %}alert-error{% elif message.tags == 'success' %}alert-success{% else %}alert-warning{% endif %}">
-                            {{ message }}
-                        </div>
-                    {% endfor %}
-                {% endif %}
-                
-                <h1 class="Titulo-Registro">
-                    {% if pedido_existente %}
-                        Añadir Productos a Pedido N°{{ pedido_existente.idPedido }}
-                        <p style="font-size: 0.7em; color: #555; margin-top: 5px;">
-                            Cliente: {{ pedido_existente.idCliente.nombre }} | Telefono: {% if pedido_existente.idCliente.telefono %}{{ pedido_existente.idCliente.telefono }}{% else %}Ninguno{% endif %} | Mesa: {% if pedido_existente.idMesa %}{{ pedido_existente.idMesa.idMesa }}{% else %}Ninguna{% endif %}
-                        </p>
-                    {% else %}
-                        Registrar Nuevo Pedido
-                    {% endif %}
-                </h1>
-
-                <form method="post">
-                    {% csrf_token %}
-
-                    <div style="display: flex; flex-wrap: wrap; gap: 20px; margin-bottom: 20px;">
-                        <div style="flex: 1; min-width: 300px;">
-                            {% if pedido_existente %}
-                                <p style="color: #666;">Cliente y mesa no se pueden cambiar en pedidos existentes.</p>
-                                <input type="hidden" name="nombre_cliente" value="{{ pedido_existente.idCliente.nombre }}" autocomplete="off">
-                                <input type="hidden" name="telefono_cliente" value="{{ pedido_existente.idCliente.telefono }}" autocomplete="off">
-                                <input type="hidden" name="tipo_cliente" value="persona">
-                            {% else %}
-                                <h3 style="color: var(--primary-color); border-bottom: 1px solid #ccc; padding-bottom: 5px; margin-bottom: 10px;">Datos del Cliente</h3>
-
-                                <div>
-                                    <label for="nombre_cliente" class="form-label">Nombre del Cliente *</label>
-                                    <input type="text" class="form-control" id="nombre_cliente" name="nombre_cliente" required value="{{ nombre_cliente_previo }}">
-                                </div>
-                                
-                                <div>
-                                    <label for="tipo_cliente" class="form-label">Tipo de Cliente *</label>
-                                    <select name="tipo_cliente" id="tipo_cliente" class="form-select" onchange="toggleIdentificacion()">
-                                        <option value="persona" selected>Persona</option>
-                                        <option value="empresa">Empresa</option>
-                                    </select>
-                                </div>
-                                
-                                <div id="identificacion_field" style="display: none;">
-                                    <label for="identificacion_cliente" class="form-label">Identificación (RUC) *</label>
-                                    <input type="text" class="form-control" id="identificacion_cliente" name="identificacion_cliente" autocomplete="off">
-                                </div>
-                                
-                                <div>
-                                    <label for="telefono_cliente" class="form-label">Teléfono</label>
-                                    <input type="text" class="form-control" id="telefono_cliente" name="telefono_cliente" value="{{ telefono_cliente_previo }}" autocomplete="off" inputmode="numeric" pattern="[0-9]{8}" title="El teléfono debe contener exactamente 8 dígitos numéricos.">
-                                </div>
-                                <div>
-                                    <label for="correo_cliente" class="form-label">Correo</label>
-                                    <input type="email" class="form-control" id="correo_cliente" name="correo_cliente" autocomplete="off">
-                                </div>
-                            {% endif %}
-                        </div>
-
-                        <div style="flex: 1; min-width: 300px;">
-                            {% if not pedido_existente %}
-                                <h3 style="color: var(--primary-color); border-bottom: 1px solid #ccc; padding-bottom: 5px; margin-bottom: 10px;">Asignación de Mesa</h3>
-                                <div>
-                                    <label for="mesa" class="form-label">Número de Mesa:</label>
-                                    <select name="mesa" id="mesa" class="form-select">
-                                        <option value="ninguna" selected>Ninguna Mesa (Pedido Externo)</option>
-                                        
-                                        {% for mesa in mesas_disponibles %}
-                                            <option value="{{ mesa.idMesa }}">Mesa {{ mesa.idMesa }}</option>
-                                        {% endfor %}
-                                    </select>
-                                    <div class="form-text">Solo se muestran las mesas que no están ocupadas.</div>
-                                </div>
-                            {% endif %}
-                        </div>
-                    </div>
-
-                    <div>
-                        <div class="section-header">
-                            Selección de Productos
-                        </div>
-                        
-                        <div class="card-body">
-                            <div style="margin-bottom: 20px;">
-                                <label for="buscador" class="form-label">Buscar producto:</label>
-                                <div style="position: relative; display: flex; align-items: center;">
-                                    <span style="position: absolute; left: 10px; color: #888;">
-                                        <i class="fas fa-search"></i>
-                                    </span>
-                                    <input type="text" id="buscador" class="form-control" 
-                                        placeholder="Escribe el nombre del producto..." 
-                                        style="padding-left: 35px; padding-right: 35px; margin-bottom: 0;" 
-                                        onkeyup="filtrarProductos()">
-                                    <span id="btn-limpiar" onclick="limpiarBusqueda()" 
-                                        style="position: absolute; right: 10px; color: #888; cursor: pointer; display: none;">
-                                        <i class="fas fa-times-circle"></i>
-                                    </span>
+            <div id="contenedorMenu">
+                {% for categoria, platillos in platillos_agrupados.items %}
+                <div class="categoria-seccion" data-categoria="{{ categoria }}">
+                    <span class="category-badge shadow-sm">{{ categoria }}</span>
+                    <div class="row" id="fila_categoria_{{ forloop.counter }}">
+                        {% for p in platillos %}
+                        <div class="col-md-4 mb-4 item-platillo" id="card_container_{{ p.idProductoMenu }}" data-original-category="fila_categoria_{{ forloop.parentloop.counter }}">
+                            <div class="card card-platillo shadow-sm h-100" id="card_{{ p.idProductoMenu }}">
+                                <div class="card-body d-flex flex-column">
+                                    <div class="d-flex justify-content-between align-items-start">
+                                        <h6 class="font-weight-bold mb-1">{{ p.nombre }}</h6>
+                                        <span id="status_{{ p.idProductoMenu }}" class="badge-agotado d-none">Agotado</span>
+                                    </div>
+                                    <p class="text-danger font-weight-bold mb-2">C$ {{ p.precio }}</p>
+                                    
+                                    <div class="mt-auto d-flex align-items-center justify-content-between">
+                                        <button type="button" class="btn btn-quantity" onclick="cambiarCantidad('{{ p.idProductoMenu }}', -1)">-</button>
+                                        <input type="number" 
+                                            name="cantidad_{{ p.idProductoMenu }}" 
+                                            id="input_{{ p.idProductoMenu }}" 
+                                            class="form-control mx-2 text-center border-0 font-weight-bold" 
+                                            value="0" min="0"
+                                            oninput="validarPositivo(this)"
+                                            data-precio="{{ p.precio }}"
+                                            style="width: 80px; background: transparent; padding: 0; font-size: 1.2rem;">
+                                        <button type="button" class="btn btn-quantity" onclick="cambiarCantidad('{{ p.idProductoMenu }}', 1)">+</button>
+                                    </div>
                                 </div>
                             </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endfor %}
 
-                            {# Itera sobre el diccionario de platillos agrupados por categoría #}
-                            {% for categoria, lista_platillos in platillos_agrupados.items %}
-                                
-                                <div class="contenedor-categoria">
-                                    <h4 class="titulo-categoria" style="color: var(--primary-color); border-bottom: 2px solid #ddd; padding-top: 15px; margin-bottom: 10px;">
-                                        {{ categoria|upper }}
-                                    </h4>
+                <!-- Sección de Agotados -->
+                <div id="seccionAgotados" class="d-none mt-4">
+                    <span class="category-badge shadow-sm" style="background-color: #6c757d; color: white;">Agotado</span>
+                    <div class="row" id="listaAgotados">
+                    </div>
+                </div>
 
-                                    <table class="table">
-                                        <thead>
-                                            <tr>
-                                                <th style="width: 60%;">Producto</th>
-                                                <th style="width: 25%;">Precio</th>
-                                                <th style="width: 50px; text-align: center;">Cantidad</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            {% for platillo in lista_platillos %}
-                                                <tr class="fila-producto" id="fila-platillo-{{ platillo.idProductoMenu }}"> 
-                                                    <td class="nombre-producto">{{ platillo.nombre }}</td>
-                                                    <td><span>C$ {{ platillo.precio|floatformat:2 }}</span></td>
-                                                    <td>
-                                                        <input type="number" 
-                                                        name="cantidad_{{ platillo.idProductoMenu }}" 
-                                                        id="input-platillo-{{ platillo.idProductoMenu }}" 
-                                                        class="form-control input-platillo" 
-                                                        data-id="{{ platillo.idProductoMenu }}" 
-                                                        min="0" 
-                                                        value="0" 
-                                                        oninput="actualizarInventarioYDisponibilidad()">
-                                                    </td>
-                                                </tr>
-                                            {% endfor %}
-                                        </tbody>
-                                    </table>
-                                </div>
-                            {% empty %}
-                                <p>No hay productos disponibles para ordenar en este momento.</p>
-                            {% endfor %}
+                <div id="mensajeNoResultados" class="text-center py-5 d-none">
+                    <i class="fa fa-search-minus fa-3x text-muted mb-3"></i>
+                    <h5 class="text-muted">No se encontraron platillos que coincidan con tu búsqueda.</h5>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4 order-summary p-0">
+            <div class="p-4" style="overflow-y: auto;">
+                <h4 class="font-weight-bold mb-4" style="color: #981a28;">Detalles del Pedido</h4>
+                
+                <div class="shadow-sm rounded border mb-3 p-3">
+                    <div class="form-group">
+                        <label class="small font-weight-bold">Nombre del Cliente</label>
+                        {% if pedido_existente %}
+                            <input type="text" class="form-control form-control-sm" value="{{ nombre_cliente_previo }}" disabled>
+                            <input type="hidden" name="nombre_cliente" value="{{ nombre_cliente_previo }}">
+                        {% else %}
+                            <input type="text" name="nombre_cliente" class="form-control form-control-sm" placeholder="Nombre del cliente" required>
+                        {% endif %}
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group col-md-6">
+                            <label class="small font-weight-bold">Teléfono</label>
+                            <input type="text" name="telefono_cliente" class="form-control form-control-sm" value="{{ telefono_cliente_previo }}" {% if pedido_existente %}disabled{% endif %}>
+                        </div>
+                        <div class="form-group col-md-6">
+                            <label class="small font-weight-bold">Tipo</label>
+                            <select name="tipo_cliente" id="tipo_cliente" class="form-control form-control-sm" onchange="toggleIdentificacion()" {% if pedido_existente %}disabled{% endif %}>
+                                <option value="persona">Persona</option>
+                                <option value="empresa">Empresa</option>
+                            </select>
                         </div>
                     </div>
 
-                    <div class="action-group">
-                        <a href="{% url 'pedidos' %}" class="btn-secondary-lg">Cancelar y Volver</a>
-                        <button type="button" id="btnPrepararConfirmacion" class="btn-success-lg">
-                            {% if pedido_existente %}
-                                Añadir Productos a Pedido
-                            {% else %}
-                                Guardar Pedido y Enviar a Cocina
-                            {% endif %}
-                        </button>
+                    <div class="form-group" id="identificacion_field" style="display:none;">
+                        <label class="small font-weight-bold">RUC / Cédula</label>
+                        <input type="text" name="identificacion_cliente" id="identificacion_cliente" class="form-control form-control-sm" {% if pedido_existente %}disabled{% endif %}>
                     </div>
-                </form>
-            </div>
-            
-            <footer>
-                <p>2025 Hê Sãî Mãlî.</p>
-            </footer>
-        </main>
-        
-        <div class="overlay" id="overlay" onclick="toggleSidebar()"></div>
-    </div>
-    
-    <div id="modalConfirmacion" style="display: none; position: fixed; z-index: 2000; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.7); display: flex; align-items: center; justify-content: center;">
-        <div style="background-color: white; padding: 25px; border-radius: 8px; width: 90%; max-width: 500px; box-shadow: 0 5px 15px rgba(0,0,0,0.3);">
-            <h2 style="color: var(--primary-color); border-bottom: 2px solid var(--secondary-color); padding-bottom: 10px; margin-bottom: 15px;">Confirmar Pedido</h2>
-            
-            <div id="resumenPedido" style="margin-bottom: 20px; max-height: 300px; overflow-y: auto;">
+
+                    <div class="form-group">
+                        <label class="small font-weight-bold">Mesa</label>
+                        {% if pedido_existente %}
+                            <select class="form-control form-control-sm" disabled>
+                                <option selected>{{ pedido_existente.idMesa|default:"Sin Mesa" }}</option>
+                            </select>
+                            <input type="hidden" name="mesa" value="{{ pedido_existente.idMesa }}">
+                        {% else %}
+                            <select name="mesa" class="form-control form-control-sm">
+                                <option value="ninguna">Para llevar</option>
+                                {% for m in mesas_disponibles %}
+                                    <option value="{{ m.idMesa }}">{{ m.idMesa }}</option>
+                                {% endfor %}
+                            </select>
+                        {% endif %}
+                    </div>
                 </div>
 
-            <div style="display: flex; justify-content: flex-end; gap: 10px;">
-                <button onclick="cerrarModal()" style="padding: 10px 15px; border: none; border-radius: 4px; cursor: pointer; background: #ccc;">Corregir</button>
-                <button id="btnConfirmarFinal" style="padding: 10px 15px; border: none; border-radius: 4px; cursor: pointer; background: var(--primary-color); color: white;">Confirmar y Enviar</button>
+                <div class="scroll-area rounded border shadow-sm p-1 mb-1">
+                    <label class="small font-weight-bold text-uppercase px-2 pt-2">Resumen de Selección</label>
+                    <div id="resumen_platillos" class="small">
+                        <table class="table table-sm table-borderless">
+                            <thead>
+                                <tr class="border-bottom">
+                                    <th>Platillo</th>
+                                    <th class="text-center">Cantidad</th>
+                                    <th class="text-right">Total</th>
+                                </tr>
+                            </thead>
+                            <tbody id="cuerpo_resumen">
+                                <tr>
+                                    <td colspan="3" class="text-center text-muted italic">No hay platillos seleccionados</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <div class="mt-auto p-4">
+                <div class="d-flex justify-content-between mb-2">
+                    <span>Subtotal</span>
+                    <span class="font-weight-bold">C$ <span id="total_display">0.00</span></span>
+                </div>
+                <button type="submit" class="btn btn-block py-3 font-weight-bold text-white shadow">
+                    {% if pedido_existente %}Actualizar Pedido{% else %}Confirmar Pedido{% endif %}
+                </button>
             </div>
         </div>
     </div>
+</form>
+{% endblock %}
 
-    <script>
-        function filtrarProductos() {
-            const input = document.getElementById('buscador');
-            const btnLimpiar = document.getElementById('btn-limpiar');
-            const textoBusqueda = input.value.toLowerCase();
-            const categorias = document.querySelectorAll('.contenedor-categoria');
+{% block extra_js %}
+<script>
+    const inventarioOriginal = JSON.parse('{{ inventario_json|safe }}');
+    const recetas = JSON.parse('{{ recetas_json|safe }}');
 
-            // Mostrar/ocultar botón de limpiar
-            btnLimpiar.style.display = textoBusqueda.length > 0 ? "block" : "none";
+    function cambiarCantidad(id, delta) {
+        const input = document.getElementById('input_' + id);
+        if (!input) return;
 
-            categorias.forEach(categoria => {
-                const filas = categoria.querySelectorAll('.fila-producto');
-                let tieneProductosVisibles = false;
-
-                filas.forEach(fila => {
-                    const nombre = fila.querySelector('.nombre-producto').innerText.toLowerCase();
-                    
-                    if (nombre.includes(textoBusqueda)) {
-                        fila.style.display = ""; 
-                        tieneProductosVisibles = true;
-                    } else {
-                        fila.style.display = "none";
-                    }
-                });
-
-                // Ocultar categoría si no hay coincidencias
-                categoria.style.display = tieneProductosVisibles ? "" : "none";
-            });
-        }
-
-        function limpiarBusqueda() {
-            const input = document.getElementById('buscador');
-            input.value = ""; // Vaciar input
-            filtrarProductos(); // Resetear el filtrado para mostrar todo
-            input.focus(); // Devolver el foco al buscador
-        }
-
-        // Datos cargados desde Django
-        const inventarioOriginal = JSON.parse('{{ inventario_json|safe }}');
-        const recetas = JSON.parse('{{ recetas_json|safe }}');
-
-        function actualizarInventarioYDisponibilidad() {
-            let inventarioTemporal = { ...inventarioOriginal };
-
-            // 1. PRIMERA PASADA: Calcular cuánto inventario queda tras las selecciones actuales
-            document.querySelectorAll('.input-platillo').forEach(input => {
-                const idPlatillo = input.getAttribute('data-id');
-                const cantidad = parseInt(input.value) || 0;
-                
-                if (cantidad > 0 && recetas[idPlatillo]) {
-                    recetas[idPlatillo].forEach(ingrediente => {
-                        inventarioTemporal[ingrediente.idArticulo] -= (ingrediente.cantidad * cantidad);
-                    });
-                }
-            });
-
-            // 2. SEGUNDA PASADA: Validar cada platillo individualmente
-            document.querySelectorAll('.input-platillo').forEach(input => {
-                const idPlatillo = input.getAttribute('data-id');
-                const fila = document.getElementById(`fila-platillo-${idPlatillo}`);
-                const cantidadActual = parseInt(input.value) || 0;
-
-                // Revisar si podemos hacer UNO MÁS de este platillo
-                let sePuedeIncrementar = true;
-                if (recetas[idPlatillo]) {
-                    recetas[idPlatillo].forEach(ingrediente => {
-                        // Si lo que queda en el inventario temporal es menor a lo que pide la receta
-                        if (inventarioTemporal[ingrediente.idArticulo] < ingrediente.cantidad) {
-                            sePuedeIncrementar = false;
-                        }
-                    });
-                }
-
-                // LÓGICA DE BLOQUEO DINÁMICO
-                if (!sePuedeIncrementar) {
-                    // Si ya no hay para más, no permitimos subir el número (max = valor actual)
-                    input.setAttribute('max', cantidadActual);
-                    
-                    // Si el platillo no ha sido seleccionado (cantidad 0) y no hay stock, lo deshabilitamos
-                    if (cantidadActual === 0) {
-                        fila.style.opacity = "0.4";
-                        fila.style.backgroundColor = "#2c1a1d"; // Tono oscuro/rojizo para tu tema
-                        input.disabled = true;
-                    }
-                } else {
-                    // Si hay stock, quitamos el límite del máximo
-                    input.removeAttribute('max');
-                    input.disabled = false;
-                    fila.style.opacity = "1";
-                    fila.style.backgroundColor = "";
-                }
-
-                // Validación visual: si por alguna razón el número es negativo (exceso)
-                let tieneExceso = false;
-                if (recetas[idPlatillo]) {
-                    recetas[idPlatillo].forEach(ing => {
-                        if (inventarioTemporal[ing.idArticulo] < 0) tieneExceso = true;
-                    });
-                }
-
-                if (tieneExceso) {
-                    input.style.border = "2px solid #ff4d4d";
-                    input.style.color = "#ff4d4d";
-                } else {
-                    input.style.border = "";
-                    input.style.color = "";
-                }
-            });
-        }
-
-        // Escuchar el evento input para reaccionar mientras escriben
-        document.addEventListener('input', function(e) {
-            if (e.target.classList.contains('input-platillo')) {
-                const val = parseInt(e.target.value) || 0;
-                const max = parseInt(e.target.getAttribute('max'));
-                
-                // Si el usuario intenta escribir un número mayor al permitido por el stock
-                if (max !== NaN && val > max) {
-                    e.target.value = max;
-                    alert("No hay suficiente stock en inventario para aumentar la cantidad de este producto.");
-                }
-                actualizarInventarioYDisponibilidad();
-            }
-        });
-
-        document.addEventListener('DOMContentLoaded', actualizarInventarioYDisponibilidad);
-
-        // Modal ----------------------
-
-        document.getElementById('btnPrepararConfirmacion').addEventListener('click', function() {
-            const modal = document.getElementById('modalConfirmacion');
-            const resumen = document.getElementById('resumenPedido');
-            const nombreCliente = document.getElementById('nombre_cliente')?.value || "{{ pedido_existente.idCliente.nombre }}";
-            const mesaSelect = document.getElementById('mesa');
-            const mesaText = mesaSelect ? mesaSelect.options[mesaSelect.selectedIndex].text : "N/A";
-            
-            let productosHtml = `<p><strong>Cliente:</strong> ${nombreCliente}</p>`;
-            if (mesaSelect) productosHtml += `<p><strong>Ubicación:</strong> ${mesaText}</p>`;
-            productosHtml += `<table style="width:100%; margin-top:30px; border-collapse: collapse;">
-                                <thead><tr style="text-align:left; border-bottom: 1px solid #ddd;">
-                                <th>Producto</th><th>Cant.</th></tr></thead><tbody>`;
-
-            let tieneProductos = false;
-            document.querySelectorAll('.input-platillo').forEach(input => {
-                const cantidad = parseInt(input.value) || 0;
-                if (cantidad > 0) {
-                    const nombre = input.closest('tr').querySelector('.nombre-producto').innerText;
-                    productosHtml += `<tr style="border-bottom: 1px solid #eee;">
-                                        <td style="padding: 5px 0;">${nombre}</td>
-                                        <td>${cantidad}</td>
-                                    </tr>`;
-                    tieneProductos = true;
-                }
-            });
-
-            productosHtml += `</tbody></table>`;
-
-            if (!tieneProductos) {
-                alert("Por favor, selecciona al menos un producto.");
-                return;
-            }
-
-            resumen.innerHTML = productosHtml;
-            modal.style.display = 'flex';
-        });
-
-        function cerrarModal() {
-            document.getElementById('modalConfirmacion').style.display = 'none';
-        }
-
-        document.getElementById('btnConfirmarFinal').addEventListener('click', function() {
-            // Busca el formulario padre y haz el submit real
-            document.querySelector('form').submit();
-        });
-
-        // Asegurarse de que el modal inicie oculto al cargar la página (corrección CSS inline)
-        document.addEventListener('DOMContentLoaded', () => {
-            document.getElementById('modalConfirmacion').style.display = 'none';
-        });
-
-        // ----------------------
-
-        function toggleSidebar() {
-            const sidebar = document.getElementById('sidebar');
-            const mainContent = document.getElementById('main-content');
-            const overlay = document.getElementById('overlay');
-            
-            const isMobile = window.innerWidth <= 768;
-
-            if (isMobile) {
-                // Comportamiento en Móvil: Usa la clase 'show'
-                sidebar.classList.toggle('show');
-                overlay.classList.toggle('show');
-                
-                // Evita el desplazamiento del body cuando el menú está abierto en móvil
-                document.body.style.overflow = sidebar.classList.contains('show') ? 'hidden' : 'auto';
-
-            } else {
-                // Comportamiento en Desktop: Usa la clase 'collapsed'
-                sidebar.classList.toggle('collapsed');
-                mainContent.classList.toggle('sidebar-collapsed');
-            }
-        }
-
-        function toggleIdentificacion() {
-            var tipoCliente = document.getElementById('tipo_cliente').value;
-            var identificacionField = document.getElementById('identificacion_field');
-            var identificacionInput = document.getElementById('identificacion_cliente');
-            
-            if (tipoCliente === 'empresa') {
-                identificacionField.style.display = 'block';
-                identificacionInput.setAttribute('required', 'required');
-            } else {
-                identificacionField.style.display = 'none';
-                identificacionInput.removeAttribute('required');
-                identificacionInput.value = ''; 
-            }
-        }
+        let valActual = parseInt(input.value) || 0;
+        let nuevoVal = valActual + delta;
         
-        document.addEventListener('DOMContentLoaded', toggleIdentificacion);
-    </script>
-</body>
-</html>
+        if (nuevoVal < 0) nuevoVal = 0;
+        if (delta > 0 && !puedeIncrementar(id, 1)) return; 
+
+        input.value = nuevoVal;
+        verificarDisponibilidadGlobal();
+        calcularTotal();
+    }
+
+    function puedeIncrementar(idProducto, incremento) {
+        const invTemporal = calcularInventarioRestante();
+        const receta = recetas[idProducto];
+        if (!receta) return true;
+
+        for (const ing of receta) {
+            const stockDisponible = invTemporal[ing.idArticulo] || 0;
+            if (stockDisponible < (parseFloat(ing.cantidad) * incremento)) return false;
+        }
+        return true;
+    }
+
+    function calcularInventarioRestante() {
+        const invRestante = { ...inventarioOriginal };
+        document.querySelectorAll('input[name^="cantidad_"]').forEach(input => {
+            const idProd = input.name.split('_')[1];
+            const cantidad = parseInt(input.value) || 0;
+            const receta = recetas[idProd];
+            if (cantidad > 0 && receta) {
+                receta.forEach(ing => {
+                    invRestante[ing.idArticulo] -= (parseFloat(ing.cantidad) * cantidad);
+                });
+            }
+        });
+        return invRestante;
+    }
+
+    function verificarDisponibilidadGlobal() {
+        const invRestante = calcularInventarioRestante();
+        const listaAgotados = document.getElementById('listaAgotados');
+        const seccionAgotados = document.getElementById('seccionAgotados');
+        let hayAgotadosOriginales = false;
+
+        for (const idProducto in recetas) {
+            const ingredientes = recetas[idProducto];
+            let puedePrepararseSiquieraUno = true;
+
+            for (const ing of ingredientes) {
+                const stockDisponible = invRestante[ing.idArticulo] || 0;
+                if (stockDisponible < parseFloat(ing.cantidad)) {
+                    puedePrepararseSiquieraUno = false;
+                    break;
+                }
+            }
+
+            const cardContainer = document.getElementById(`card_container_${idProducto}`);
+            const card = document.getElementById(`card_${idProducto}`);
+            const statusBadge = document.getElementById(`status_${idProducto}`);
+            const input = document.getElementById(`input_${idProducto}`);
+            const cantidadActual = parseInt(input?.value) || 0;
+
+            if (card) {
+                // LÓGICA DE AGOTADOS ORIGINALES (Stock 0 desde el inicio)
+                const stockInicialSuficiente = ingredientes.every(ing => inventarioOriginal[ing.idArticulo] >= parseFloat(ing.cantidad));
+                
+                if (!stockInicialSuficiente && cantidadActual === 0) {
+                    // Si nunca hubo stock, se va a la sección de abajo (Funcionalidad previa)
+                    card.classList.add('agotado-original');
+                    listaAgotados.appendChild(cardContainer);
+                    hayAgotadosOriginales = true;
+                } else if (!puedePrepararseSiquieraUno && cantidadActual === 0) {
+                    // LÓGICA DINÁMICA: Se quedó sin stock por otras selecciones
+                    card.classList.add('agotado-original');
+                    if (statusBadge) statusBadge.classList.remove('d-none');
+                    regresarACategoria(cardContainer);
+                } else {
+                    // Tiene stock o tiene cantidad seleccionada (Normal)
+                    card.classList.remove('agotado-original');
+                    if (statusBadge) statusBadge.classList.add('d-none');
+                    regresarACategoria(cardContainer);
+                }
+            }
+        }
+
+        seccionAgotados.classList.toggle('d-none', !hayAgotadosOriginales);
+
+        document.querySelectorAll('.categoria-seccion').forEach(seccion => {
+            const platosVisibles = seccion.querySelectorAll('.row .item-platillo').length;
+            if (platosVisibles === 0) {
+                seccion.style.display = 'none';
+            }
+        });
+    }
+
+    function regresarACategoria(container) {
+        const originalId = container.getAttribute('data-original-category');
+        const filaOriginal = document.getElementById(originalId);
+        if (filaOriginal && !filaOriginal.contains(container)) {
+            filaOriginal.appendChild(container);
+        }
+    }
+
+    function calcularTotal() {
+        let total = 0;
+        const cuerpoResumen = document.getElementById('cuerpo_resumen');
+        let htmlResumen = "";
+        let hayItems = false;
+
+        // Seleccionamos todos los inputs de cantidad
+        document.querySelectorAll('input[name^="cantidad_"]').forEach(input => {
+            const cantidad = parseInt(input.value);
+            const precio = parseFloat(input.getAttribute('data-precio'));
+            
+            if (cantidad > 0) {
+                hayItems = true;
+                // Buscamos el nombre del platillo en la tarjeta correspondiente
+                const nombrePlatillo = input.closest('.card-body').querySelector('h6').innerText;
+                const subtotalItem = cantidad * precio;
+                total += subtotalItem;
+
+                // Creamos la fila para el resumen
+                htmlResumen += `
+                    <tr>
+                        <td>${nombrePlatillo}<br><small class="text-muted">C$ ${precio.toFixed(2)} c/u</small></td>
+                        <td class="text-center align-middle">${cantidad}</td>
+                        <td class="text-right align-middle font-weight-bold">C$ ${subtotalItem.toFixed(2)}</td>
+                    </tr>
+                `;
+            }
+        });
+
+        // Si no hay nada, mostramos el mensaje por defecto
+        if (!hayItems) {
+            cuerpoResumen.innerHTML = '<tr><td colspan="3" class="text-center text-muted italic">No hay platillos seleccionados</td></tr>';
+        } else {
+            cuerpoResumen.innerHTML = htmlResumen;
+        }
+
+        document.getElementById('total_display').innerText = total.toFixed(2);
+    }
+
+    function validarPositivo(input) {
+        let valor = parseInt(input.value);
+        if (isNaN(valor) || valor < 0) {
+            input.value = 0;
+        } else {
+            const idProd = input.name.split('_')[1];
+            const sol = valor;
+            input.value = 0; 
+            if (puedeIncrementar(idProd, sol)) {
+                input.value = sol;
+            } else {
+                let max = 0;
+                while (puedeIncrementar(idProd, max + 1)) max++;
+                input.value = max;
+            }
+        }
+        verificarDisponibilidadGlobal();
+        calcularTotal();
+    }
+
+    document.getElementById('busquedaPlatillo').addEventListener('input', function(e) {
+        const busqueda = e.target.value.toLowerCase();
+        let totalVisibles = 0; // Contador para rastrear si algo quedó visible
+
+        // 1. Filtrar los platillos
+        document.querySelectorAll('.item-platillo').forEach(item => {
+            const nombre = item.querySelector('h6').innerText.toLowerCase();
+            if (nombre.includes(busqueda)) {
+                item.classList.remove('d-none');
+                item.style.display = 'block';
+                totalVisibles++; // Incrementamos si hay coincidencia
+            } else {
+                item.classList.add('d-none');
+                item.style.display = 'none';
+            }
+        });
+
+        // 2. Ocultar o mostrar las secciones de categorías
+        document.querySelectorAll('.categoria-seccion').forEach(seccion => {
+            const platillosVisibles = seccion.querySelectorAll('.item-platillo:not(.d-none)').length;
+            seccion.style.display = (platillosVisibles > 0) ? 'block' : 'none';
+        });
+
+        // 3. Caso especial: Sección de Agotados
+        const seccionAgotados = document.getElementById('seccionAgotados');
+        const listaAgotados = document.getElementById('listaAgotados');
+        const agotadosVisibles = listaAgotados.querySelectorAll('.item-platillo:not(.d-none)').length;
+        
+        if (agotadosVisibles > 0) {
+            seccionAgotados.classList.remove('d-none');
+        } else {
+            seccionAgotados.classList.add('d-none');
+        }
+
+        // 4. LÓGICA NUEVA: Mostrar mensaje si el total de visibles es 0
+        const mensajeNoResultados = document.getElementById('mensajeNoResultados');
+        if (totalVisibles === 0) {
+            mensajeNoResultados.classList.remove('d-none');
+        } else {
+            mensajeNoResultados.classList.add('d-none');
+        }
+    });
+
+    function toggleIdentificacion() {
+        const tipo = document.getElementById('tipo_cliente').value;
+        document.getElementById('identificacion_field').style.display = (tipo === 'empresa') ? 'block' : 'none';
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+        setTimeout(verificarDisponibilidadGlobal, 10);
+    });
+</script>
+{% endblock %}
