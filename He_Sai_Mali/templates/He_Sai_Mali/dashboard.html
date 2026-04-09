@@ -604,6 +604,21 @@
         });
 
         // ============================================
+        // FUNCIÓN PARA ACTUALIZAR EL ENLACE DEL PDF
+        // ============================================
+        function actualizarEnlacePDF(filtro) {
+            const pdfButton = document.getElementById('generatePdfButton');
+            if (pdfButton) {
+                const currentPeriod = document.getElementById('period-select').value;
+                let href = `/dashboard/pdf/?period=${currentPeriod}`;
+                if (filtro && filtro.trim().length > 0) {
+                    href += `&search=${encodeURIComponent(filtro.trim())}`;
+                }
+                pdfButton.href = href;
+            }
+        }
+
+        // ============================================
         // FILTRO EN TIEMPO REAL (SIN RECARGAR PÁGINA)
         // ============================================
         let timeoutId = null;
@@ -625,6 +640,8 @@
             // Si el filtro está vacío, ocultar la sección de resultados
             if (filtro.length === 0) {
                 resultadosSection.style.display = 'none';
+                // Actualizar enlace PDF sin búsqueda
+                actualizarEnlacePDF('');
                 return;
             }
             
@@ -649,6 +666,9 @@
             const currentPeriod = document.getElementById('period-select').value;
             const resultadosSection = document.getElementById('resultados-busqueda');
             const tbody = document.getElementById('tabla-resultados-body');
+            
+            // ✅ ACTUALIZAR EL ENLACE DEL PDF
+            actualizarEnlacePDF(filtro);
             
             // Mostrar loading
             if (tbody) {
@@ -727,6 +747,8 @@
         // Función para limpiar la búsqueda
         function limpiarBusqueda() {
             const currentPeriod = document.getElementById('period-select').value;
+            // ✅ ACTUALIZAR EL ENLACE DEL PDF
+            actualizarEnlacePDF('');
             window.location.href = `/dashboard/?period=${currentPeriod}`;
         }
         
@@ -746,12 +768,19 @@
                         e.preventDefault();
                         const filtro = this.value.trim();
                         const currentPeriod = document.getElementById('period-select').value;
+                        // ✅ ACTUALIZAR EL ENLACE DEL PDF
+                        actualizarEnlacePDF(filtro);
                         if (filtro) {
                             window.location.href = `/dashboard/?period=${currentPeriod}&search=${encodeURIComponent(filtro)}`;
                         }
                     }
                 });
             }
+            
+            // Si hay búsqueda inicial, asegurar que el enlace PDF esté correcto
+            {% if search_query %}
+            actualizarEnlacePDF('{{ search_query }}');
+            {% endif %}
         });
     </script>
 {% endblock %}

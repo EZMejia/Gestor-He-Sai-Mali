@@ -1859,33 +1859,63 @@ def generate_dashboard_pdf(request):
         start_date = timezone.make_aware(timezone.datetime(today.year, today.month, 1))
         period_display = "Este Mes"
     
+    # Filtro base por fecha y estado facturado
     date_filter = {'fecha__gte': start_date, 'estadoDePago': True}
     
-    # --- Aplicar búsqueda si existe ---
+    # --- Aplicar búsqueda si existe (IGUAL que en admin_dashboard) ---
     if search_query:
+        # Primero, obtenemos TODOS los pedidos facturados en el período
+        pedidos_periodo = Pedido.objects.filter(**date_filter)
+        
+        # Intentar buscar por ID de pedido (si es un número)
         try:
             pedido_id = int(search_query)
-            date_filter['idPedido'] = pedido_id
+            # Buscar por ID exacto dentro del período
+            search_results = pedidos_periodo.filter(idPedido=pedido_id)
         except ValueError:
-            date_filter['idCliente__nombre__icontains'] = search_query
+            # Si no es número, buscar por nombre de cliente
+            search_results = pedidos_periodo.filter(
+                idCliente__nombre__icontains=search_query
+            )
+        
+        # Obtener resultados con relaciones
+        search_results = search_results.select_related('idCliente', 'idMesa').order_by('-fecha')
+        search_results_count = search_results.count()
+        
+        # Actualizar el filtro para las métricas
+        if search_results_count > 0:
+            pedidos_encontrados_ids = list(search_results.values_list('idPedido', flat=True))
+            date_filter = {'idPedido__in': pedidos_encontrados_ids}
+        else:
+            date_filter = {'idPedido__in': []}
     
     # --- 2. Obtener Métricas y Pedidos ---
-    total_sales_agg = Pedido.objects.filter(**date_filter).aggregate(
-        total=Sum(F('montoTotal') * TASA_IMPUESTO_FACTOR, output_field=FloatField())
-    )
-    total_sales = total_sales_agg['total'] if total_sales_agg['total'] else 0.00
-    total_orders = Pedido.objects.filter(**date_filter).count()
+    if date_filter.get('idPedido__in') == []:
+        total_sales = 0.00
+        total_orders = 0
+    else:
+        total_sales_agg = Pedido.objects.filter(**date_filter).aggregate(
+            total=Sum(F('montoTotal') * TASA_IMPUESTO_FACTOR, output_field=FloatField())
+        )
+        total_sales = total_sales_agg['total'] if total_sales_agg['total'] else 0.00
+        total_orders = Pedido.objects.filter(**date_filter).count()
+    
     total_mesas = Mesa.objects.count()
     platillos_en_menu = ProductoMenu.objects.filter(disponible=True).count()
     
-    # Obtener la lista detallada de pedidos
-    pedidos_list = Pedido.objects.filter(**date_filter).select_related('idCliente', 'idMesa').order_by('-fecha')
+    # Obtener la lista detallada de pedidos (usando el mismo filtro)
+    if date_filter.get('idPedido__in') == []:
+        pedidos_list = Pedido.objects.none()
+    else:
+        pedidos_list = Pedido.objects.filter(**date_filter).select_related('idCliente', 'idMesa').order_by('-fecha')
 
     # --- 3. Generación del PDF (ReportLab) ---
     response = HttpResponse(content_type='application/pdf')
     filename = f"dashboard_reporte_{period}"
     if search_query:
-        filename += f"_busqueda_{search_query[:20]}"
+        # Limpiar el término de búsqueda para el nombre del archivo
+        clean_search = re.sub(r'[^a-zA-Z0-9]', '_', search_query)[:20]
+        filename += f"_busqueda_{clean_search}"
     filename += f"_{timezone.now().strftime('%Y%m%d')}.pdf"
     response['Content-Disposition'] = f'attachment; filename="{filename}"'
 
@@ -1936,12 +1966,16 @@ def generate_dashboard_pdf(request):
     story.append(Spacer(1, 0.15 * inch))
 
     story.append(Paragraph(f"Generado el: <b>{tiempo_generacion_str}</b>", styles['Normal']))
+    story.append(Paragraph(f"Período: <b>{period_display}</b>", styles['Normal']))
     if search_query:
         story.append(Paragraph(f"Búsqueda: <b>{search_query}</b>", styles['Normal']))
+        story.append(Paragraph(f"Resultados encontrados: <b>{total_orders}</b>", styles['Normal']))
     story.append(Spacer(1, 0.15 * inch))
     
     # --- SECCIÓN DE MÉTRICAS CLAVE ---
     story.append(Paragraph(f"<b>Métricas Clave ({period_display})</b>", styles['h2']))
+    if search_query:
+        story.append(Paragraph(f"<i>Filtrado por: '{search_query}'</i>", styles['Normal']))
     story.append(Spacer(1, 0.1 * inch))
     
     metrics_data = [
