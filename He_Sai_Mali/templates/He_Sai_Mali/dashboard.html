@@ -15,15 +15,13 @@
 {% block extra_style %}
     <style>
         :root {
-            /* Colores del diseño de la APP (He Sai Mali) */
-            --primary-color: #981a28; /* Rojo Oscuro (Header) */
-            --secondary-color: #f3bb67; /* Amarillo (Acento/Border) */
-            --sidebar-bg: #2b3543; /* Gris Oscuro (Usado para el menú lateral) */
-            --bg-page: #2c3038; /* Gris Oscuro (Fondo de página) */
+            --primary-color: #981a28;
+            --secondary-color: #f3bb67;
+            --sidebar-bg: #2b3543;
+            --bg-page: #2c3038;
             --text-light: #ffffff;
             --text-accent: #dacfb7;
-            --menu-item-hover: #b12131; /* Rojo más claro para hover */
-            /* Colores de estado */
+            --menu-item-hover: #b12131;
             --success-color: #28a745;
             --info-color: #17a2b8;
             --warning-color: #ffc107;
@@ -32,9 +30,6 @@
 
         body { height: 100%; overflow: hidden; }
 
-        /* ---------------------------------------------------- */
-        /* --- Contenido Principal (MAIN CONTENT) --- */
-        /* ---------------------------------------------------- */
         .main-content {
             height: calc(100vh - 60px);
             display: flex;
@@ -45,7 +40,6 @@
 
         .contenido { flex-grow: 1; padding: 20px 20px; overflow-y: auto;}
         
-        /* Mensajes (Alertas de Django) */
         .messages {
             list-style: none;
             padding: 0;
@@ -64,7 +58,6 @@
         .messages .success { background-color: var(--success-color); color: var(--text-light); }
         .messages .info { background-color: var(--info-color); color: var(--text-light); }
         
-        /* Contenedor de Dashboard */
         .dashboard-container {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
@@ -107,61 +100,33 @@
             color: var(--primary-color);
         }
         
-        /* Filtro de Periodo */
-        .filter-section {
+        /* Filtro de fechas */
+        .date-filter-section {
             display: flex;
             justify-content: space-between;
             align-items: center;
             margin-bottom: 20px;
-            gap: 10px;
-            padding: 15px;
+            gap: 15px;
+            padding: 20px;
             background-color: var(--text-light);
             border-radius: 8px;
             flex-wrap: wrap;
         }
 
-        .filter-left {
+        .date-input-group {
             display: flex;
             align-items: center;
             gap: 15px;
+            flex-wrap: wrap;
         }
 
-        .filter-right {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-
-        .filter-section label {
+        .date-input-group label {
             font-weight: bold;
             color: var(--primary-color);
         }
 
-        .filter-section select {
-            padding: 8px;
-            border-radius: 5px;
-            border: 2px solid var(--secondary-color);
-            background-color: white;
-            color: black;
-            cursor: pointer;
-        }
-
-        /* Estilos para el buscador */
-        .search-container {
-            margin-top: 0px;
-            margin-bottom: 20px;
-        }
-
-        .search-box {
-            position: relative;
-            display: flex;
-            align-items: center;
-            max-width: 500px;
-        }
-
-        .search-box input {
-            width: 100%;
-            padding: 10px 40px 10px 40px;
+        .date-input-group input {
+            padding: 8px 12px;
             border-radius: 5px;
             border: 2px solid var(--secondary-color);
             background-color: white;
@@ -169,26 +134,60 @@
             font-size: 14px;
         }
 
-        .search-box .search-icon {
-            position: absolute;
-            left: 12px;
-            color: #888;
+        .btn-aplicar-filtro {
+            background-color: var(--primary-color);
+            color: white;
+            padding: 8px 20px;
+            border-radius: 5px;
+            text-decoration: none;
+            font-weight: bold;
+            border: none;
+            cursor: pointer;
+            transition: background-color 0.2s;
         }
 
-        .search-box .clear-icon {
+        .btn-aplicar-filtro:hover {
+            background-color: var(--menu-item-hover);
+        }
+
+        /* Buscador por cliente (ancho completo) */
+        .client-search-section {
+            margin-bottom: 25px;
+        }
+
+        .client-search-box {
+            position: relative;
+            display: flex;
+            align-items: center;
+            width: 100%;
+        }
+
+        .client-search-box input {
+            width: 100%;
+            padding: 14px 50px 14px 50px;
+            border-radius: 8px;
+            border: 2px solid var(--secondary-color);
+            background-color: white;
+            color: black;
+            font-size: 16px;
+        }
+
+        .client-search-box .search-icon {
             position: absolute;
-            right: 12px;
+            left: 18px;
+            color: #888;
+            font-size: 18px;
+        }
+
+        .client-search-box .clear-icon {
+            position: absolute;
+            right: 18px;
             color: #888;
             cursor: pointer;
+            font-size: 18px;
         }
 
-        .search-hint {
-            margin-top: 5px;
-            font-size: 0.85rem;
-            color: #888;
-        }
-
-        /* Sección de resultados de búsqueda */
+        /* Resultados de búsqueda */
         .search-results-section {
             margin-top: 20px;
             margin-bottom: 20px;
@@ -266,7 +265,6 @@
             opacity: 0.5;
         }
 
-        /* Sección de Gráficos (Grid de 2x1) */
         .chart-grid {
             margin-top: 20px;
             display: grid;
@@ -274,19 +272,13 @@
             gap: 20px;
         }
 
-        /* Responsive */
         @media (max-width: 768px) {
-            .filter-section {
+            .date-filter-section {
                 flex-direction: column;
                 align-items: stretch;
             }
-            
-            .search-box {
-                max-width: 100%;
-            }
         }
 
-        /* Animación para el spinner de carga */
         .fa-spinner {
             animation: spin 1s linear infinite;
         }
@@ -302,10 +294,8 @@
 
 {% block content %}
     <div id="app">
-        <!-- Contenido Principal -->
         <main class="main-content" id="main-content">         
             <div class="contenido">
-                <!-- Mensajes de Django -->
                 {% if messages %}
                 <ul class="messages">
                     {% for message in messages %}
@@ -314,26 +304,28 @@
                 </ul>
                 {% endif %}
                 
-                <!-- Sección de Filtros (Período) -->
-                <div class="filter-section">
-                    <div class="filter-left">
-                        <form id="filterForm" method="GET" action="{% url 'admin_dashboard' %}">
-                            <label for="period-select">Periodo de Análisis:</label>
-                            <select id="period-select" name="period" onchange="document.getElementById('filterForm').submit()">
-                                <option value="day" {% if period == 'day' %}selected{% endif %}>Hoy</option>
-                                <option value="week" {% if period == 'week' %}selected{% endif %}>Semana</option>
-                                <option value="month" {% if period == 'month' %}selected{% endif %}>Mes</option>
-                                <option value="year" {% if period == 'year' %}selected{% endif %}>Año</option>
-                            </select>
-                            {% if search_query %}
-                                <input type="hidden" name="search" value="{{ search_query }}">
-                            {% endif %}
-                        </form>
-                    </div>
-
-                    <div class="filter-right">
+                <!-- 1. FILTRO DE FECHAS (INICIO - FIN) -->
+                <div class="date-filter-section">
+                    <form id="dateFilterForm" method="GET" action="{% url 'admin_dashboard' %}" style="display: contents;" onsubmit="return validarFechas()">
+                        <div class="date-input-group">
+                            <label for="start_date">Fecha Inicio:</label>
+                            <input type="date" id="start_date" name="start_date" value="{{ start_date_str|default:'' }}" required>
+                            
+                            <label for="end_date">Fecha Fin:</label>
+                            <input type="date" id="end_date" name="end_date" value="{{ end_date_str|default:'' }}" required>
+                            
+                            <button type="submit" class="btn-aplicar-filtro">
+                                <i class="fas fa-filter"></i> Aplicar Filtro
+                            </button>
+                        </div>
+                        <!-- Mantener término de búsqueda si existe -->
+                        {% if search_query %}
+                            <input type="hidden" name="search" value="{{ search_query }}">
+                        {% endif %}
+                    </form>
+                    <div>
                         <a id="generatePdfButton" 
-                           href="{% url 'generate_dashboard_pdf' %}?period={{ period }}{% if search_query %}&search={{ search_query }}{% endif %}" 
+                           href="{% url 'generate_dashboard_pdf' %}?start_date={{ start_date_str|default:'' }}&end_date={{ end_date_str|default:'' }}{% if search_query %}&search={{ search_query }}{% endif %}" 
                            target="_blank"
                            style="background-color: var(--primary-color); color: white; padding: 8px 15px; border-radius: 5px; text-decoration: none; font-weight: bold;">
                             <i class="fas fa-file-pdf"></i> Generar PDF
@@ -341,35 +333,87 @@
                     </div>
                 </div>
 
-                <!-- Sección de Búsqueda -->
-                <div class="search-container">
-                    <label for="buscador" style="font-weight: bold; display: block; margin-bottom: 8px; color: var(--secondary-color);">
-                        <i class="fas fa-search" style="margin-right: 5px;"></i>Buscar pedido:
+                <!-- 2. MÉTRICAS CLAVE -->
+                <h2 style="color: var(--secondary-color); margin-bottom: 10px; margin-top: 0; border-bottom: 2px solid var(--primary-color); padding-bottom: 10px;">
+                    Métricas Clave: {{ start_date_str }} al {{ end_date_str }}
+                    {% if search_query %}
+                        <span style="font-size: 0.9rem; margin-left: 15px; color: var(--text-accent);">
+                            (Filtrado por cliente: "{{ search_query }}")
+                        </span>
+                    {% endif %}
+                </h2>
+
+                <div class="dashboard-container">
+                    <div class="card" style="border-left: 5px solid var(--success-color);">
+                        <div class="card-header">
+                            <h3>Ventas Totales</h3>
+                            <i class="fas fa-dollar-sign card-icon" style="color: var(--success-color);"></i>
+                        </div>
+                        <div class="card-value">C${{ total_sales|floatformat:2 }}</div>
+                        <p style="color: #6c757d; font-size: 0.9rem;">Total facturado en el periodo.</p>
+                    </div>
+
+                    <div class="card" style="border-left: 5px solid var(--info-color);">
+                        <div class="card-header">
+                            <h3>Pedidos Facturados</h3>
+                            <i class="fas fa-receipt card-icon" style="color: var(--info-color);"></i>
+                        </div>
+                        <div class="card-value">{{ total_orders }}</div>
+                        <p style="color: #6c757d; font-size: 0.9rem;">Órdenes completadas y pagadas.</p>
+                    </div>
+
+                    <div class="card" style="border-left: 5px solid var(--warning-color);">
+                        <div class="card-header">
+                            <h3>Mesas Registradas</h3>
+                            <i class="fas fa-chair card-icon" style="color: var(--warning-color);"></i>
+                        </div>
+                        <div class="card-value">{{ total_mesas }}</div>
+                        <p style="color: #6c757d; font-size: 0.9rem;">Capacidad total del restaurante.</p>
+                    </div>
+                    
+                    <div class="card" style="border-left: 5px solid var(--primary-color);">
+                        <div class="card-header">
+                            <h3>Productos en el Menú</h3>
+                            <i class="fas fa-list-alt card-icon" style="color: var(--primary-color);"></i>
+                        </div>
+                        <div class="card-value">{{ platillos_en_menu }}</div>
+                        <p style="color: #6c757d; font-size: 0.9rem;">Variedad de productos activos.</p>
+                    </div>
+                </div>
+
+                <!-- 3. BUSCADOR POR CLIENTE (ANCHO COMPLETO) -->
+                <div class="client-search-section">
+                    <label for="clienteBuscador" style="font-weight: bold; display: block; margin-bottom: 10px; color: var(--secondary-color); font-size: 1.1rem;">
+                        <i class="fas fa-user-search" style="margin-right: 8px;"></i>Filtrar por cliente:
                     </label>
-                    <div class="search-box">
+                    <div class="client-search-box">
                         <span class="search-icon">
                             <i class="fas fa-search"></i>
                         </span>
                         <input type="text" 
-                               id="buscador" 
+                               id="clienteBuscador" 
                                name="search" 
-                               placeholder="Buscar por ID de pedido o nombre del cliente..." 
+                               placeholder="Escribe el nombre del cliente..." 
                                value="{{ search_query }}"
                                autocomplete="off">
-                        <span id="btn-limpiar" class="clear-icon" onclick="limpiarBusqueda()" style="display: {% if search_query %}block{% else %}none{% endif %};">
+                        {% if search_query %}
+                        <span id="btn-limpiar" class="clear-icon" onclick="limpiarBusqueda()">
                             <i class="fas fa-times-circle"></i>
                         </span>
+                        {% else %}
+                        <span id="btn-limpiar" class="clear-icon" onclick="limpiarBusqueda()" style="display: none;">
+                            <i class="fas fa-times-circle"></i>
+                        </span>
+                        {% endif %}
                     </div>
-                    <div class="search-hint">
-                        <i class="fas fa-info-circle"></i> Puedes buscar por número de pedido (ej: "123") o por nombre del cliente
-                    </div>
+                    <!-- Mensaje de ayuda eliminado -->
                 </div>
 
-                <!-- Resultados de Búsqueda (SIEMPRE RENDERIZADO) -->
+                <!-- Resultados de Búsqueda (se muestra solo si hay término) -->
                 <div id="resultados-busqueda" class="search-results-section" style="display: {% if search_query %}block{% else %}none{% endif %};">
                     <h3 class="results-header">
-                        <i class="fas fa-search"></i> 
-                        Resultados de búsqueda para "<span id="search-term-display">{{ search_query }}</span>"
+                        <i class="fas fa-list"></i> 
+                        Pedidos de "<span id="search-term-display">{{ search_query }}</span>"
                         <span style="font-size: 0.9rem; margin-left: 10px; color: #666;">
                             (<span id="results-count-display">{{ search_results_count }}</span> <span id="results-text-display">{% if search_results_count == 1 %}resultado{% else %}resultados{% endif %}</span>)
                         </span>
@@ -406,13 +450,9 @@
                                         <td>{{ pedido.metodoPago|default:"N/A" }}</td>
                                         <td>
                                             {% if pedido.estadoDePago %}
-                                                <span class="badge-pagado">
-                                                    <i class="fas fa-check-circle"></i> Pagado
-                                                </span>
+                                                <span class="badge-pagado"><i class="fas fa-check-circle"></i> Pagado</span>
                                             {% else %}
-                                                <span class="badge-pendiente">
-                                                    <i class="fas fa-clock"></i> Pendiente
-                                                </span>
+                                                <span class="badge-pendiente"><i class="fas fa-clock"></i> Pendiente</span>
                                             {% endif %}
                                         </td>
                                     </tr>
@@ -421,8 +461,8 @@
                                     <tr id="empty-results-row">
                                         <td colspan="7">
                                             <div class="empty-results">
-                                                <i class="fas fa-search"></i>
-                                                <p>No se encontraron pedidos que coincidan con "<span id="empty-search-term">{{ search_query }}</span>"</p>
+                                                <i class="fas fa-user-slash"></i>
+                                                <p>No se encontraron pedidos para "<span id="empty-search-term">{{ search_query }}</span>"</p>
                                             </div>
                                         </td>
                                     </tr>
@@ -432,61 +472,8 @@
                     </div>
                 </div>
 
-                <h2 style="color: var(--secondary-color); margin-bottom: 10px; margin-top: 20px; border-bottom: 2px solid var(--primary-color); padding-bottom: 10px;">
-                    Métricas Clave: {{ period_display }}
-                    {% if search_query %}
-                        <span style="font-size: 0.9rem; margin-left: 15px; color: var(--text-accent);">
-                            (Filtrado por: "{{ search_query }}")
-                        </span>
-                    {% endif %}
-                </h2>
-
-                <!-- Contenedor de Métricas Clave (Cards) -->
-                <div class="dashboard-container">
-                    <!-- Card 1: Total de Ventas -->
-                    <div class="card" style="border-left: 5px solid var(--success-color);">
-                        <div class="card-header">
-                            <h3>Ventas Totales</h3>
-                            <i class="fas fa-dollar-sign card-icon" style="color: var(--success-color);"></i>
-                        </div>
-                        <div class="card-value">C${{ total_sales|floatformat:2 }}</div>
-                        <p style="color: #6c757d; font-size: 0.9rem;">Total facturado en el periodo.</p>
-                    </div>
-
-                    <!-- Card 2: Pedidos Realizados -->
-                    <div class="card" style="border-left: 5px solid var(--info-color);">
-                        <div class="card-header">
-                            <h3>Pedidos Facturados</h3>
-                            <i class="fas fa-receipt card-icon" style="color: var(--info-color);"></i>
-                        </div>
-                        <div class="card-value">{{ total_orders }}</div>
-                        <p style="color: #6c757d; font-size: 0.9rem;">Órdenes completadas y pagadas.</p>
-                    </div>
-
-                    <!-- Card 3: Mesas Totales -->
-                    <div class="card" style="border-left: 5px solid var(--warning-color);">
-                        <div class="card-header">
-                            <h3>Mesas Registradas</h3>
-                            <i class="fas fa-chair card-icon" style="color: var(--warning-color);"></i>
-                        </div>
-                        <div class="card-value">{{ total_mesas }}</div>
-                        <p style="color: #6c757d; font-size: 0.9rem;">Capacidad total del restaurante.</p>
-                    </div>
-                    
-                    <!-- Card 4: Productos en el Menú -->
-                    <div class="card" style="border-left: 5px solid var(--primary-color);">
-                        <div class="card-header">
-                            <h3>Productos en el Menú</h3>
-                            <i class="fas fa-list-alt card-icon" style="color: var(--primary-color);"></i>
-                        </div>
-                        <div class="card-value">{{ platillos_en_menu }}</div>
-                        <p style="color: #6c757d; font-size: 0.9rem;">Variedad de productos activos.</p>
-                    </div>
-                </div>
-
-                <!-- Sección de Gráficos -->
+                <!-- 4 y 5. GRÁFICOS -->
                 <div class="chart-grid">
-                    <!-- Gráfico 1: Productos más populares -->
                     <div class="card">
                         <div class="card-header">
                             <h3>Productos más Vendidos</h3>
@@ -494,7 +481,6 @@
                         <canvas id="popularProductsChart"></canvas>
                     </div>
 
-                    <!-- Gráfico 2: Mesas más utilizadas -->
                     <div class="card">
                         <div class="card-header">
                             <h3>Mesas más Usadas (Órdenes)</h3>
@@ -510,21 +496,20 @@
 {% block extra_js %}
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js"></script>
     <script>
-        // Datos de Django (se pasan como JSON seguro)
+        // Datos para gráficos
         const topProductsLabels = JSON.parse('{{ top_products_labels|safe }}');
         const topProductsData = JSON.parse('{{ top_products_data|safe }}');
         const topTablesLabels = JSON.parse('{{ top_tables_labels|safe }}');
         const topTablesData = JSON.parse('{{ top_tables_data|safe }}');
         
-        // Colores principales de la aplicación
         const primaryColor = getComputedStyle(document.documentElement).getPropertyValue('--primary-color').trim();
         const secondaryColor = getComputedStyle(document.documentElement).getPropertyValue('--secondary-color').trim();
         const infoColor = getComputedStyle(document.documentElement).getPropertyValue('--info-color').trim();
         const dangerColor = getComputedStyle(document.documentElement).getPropertyValue('--danger-color').trim();
 
-        // 1. Gráfico de Productos más Populares
+        // Gráfico Productos
         const ctxProducts = document.getElementById('popularProductsChart').getContext('2d');
-        const popularProductsChart = new Chart(ctxProducts, {
+        new Chart(ctxProducts, {
             type: 'bar',
             data: {
                 labels: topProductsLabels,
@@ -543,28 +528,18 @@
                 scales: {
                     y: {
                         beginAtZero: true,
-                        title: {
-                            display: true,
-                            text: 'Unidades Vendidas',
-                            color: secondaryColor
-                        },
+                        title: { display: true, text: 'Unidades Vendidas', color: secondaryColor },
                         ticks: { color: secondaryColor }
                     },
-                    x: {
-                        ticks: { color: secondaryColor }
-                    }
+                    x: { ticks: { color: secondaryColor } }
                 },
-                plugins: {
-                    legend: {
-                        display: false
-                    }
-                }
+                plugins: { legend: { display: false } }
             }
         });
 
-        // 2. Gráfico de Mesas más Utilizadas
+        // Gráfico Mesas
         const ctxTables = document.getElementById('popularTablesChart').getContext('2d');
-        const popularTablesChart = new Chart(ctxTables, {
+        new Chart(ctxTables, {
             type: 'bar',
             data: {
                 labels: topTablesLabels,
@@ -584,200 +559,145 @@
                 scales: {
                     x: {
                         beginAtZero: true,
-                        title: {
-                            display: true,
-                            text: 'Número de Órdenes',
-                            color: secondaryColor
-                        },
+                        title: { display: true, text: 'Número de Órdenes', color: secondaryColor },
                         ticks: { color: secondaryColor }
                     },
-                    y: {
-                        ticks: { color: secondaryColor }
-                    }
+                    y: { ticks: { color: secondaryColor } }
                 },
-                plugins: {
-                    legend: {
-                        display: false
-                    }
-                }
+                plugins: { legend: { display: false } }
             }
         });
 
-        // ============================================
-        // FUNCIÓN PARA ACTUALIZAR EL ENLACE DEL PDF
-        // ============================================
-        function actualizarEnlacePDF(filtro) {
-            const pdfButton = document.getElementById('generatePdfButton');
-            if (pdfButton) {
-                const currentPeriod = document.getElementById('period-select').value;
-                let href = `/dashboard/pdf/?period=${currentPeriod}`;
-                if (filtro && filtro.trim().length > 0) {
-                    href += `&search=${encodeURIComponent(filtro.trim())}`;
-                }
-                pdfButton.href = href;
+        // ========== VALIDACIÓN DE FECHAS ==========
+        function validarFechas() {
+            const startInput = document.getElementById('start_date');
+            const endInput = document.getElementById('end_date');
+            const startDate = new Date(startInput.value + 'T00:00:00');
+            const endDate = new Date(endInput.value + 'T00:00:00');
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            
+            if (startDate > endDate) {
+                alert('La fecha de inicio no puede ser mayor que la fecha de fin.');
+                return false;
             }
+            
+            if (endDate > today) {
+                alert('La fecha de fin no puede ser mayor que la fecha de hoy.');
+                return false;
+            }
+            
+            return true;
         }
 
-        // ============================================
-        // FILTRO EN TIEMPO REAL (SIN RECARGAR PÁGINA)
-        // ============================================
+        // ========== LÓGICA DE BÚSQUEDA EN TIEMPO REAL (SOLO POR CLIENTE) ==========
         let timeoutId = null;
         
-        function filtrarPedidos() {
-            const input = document.getElementById('buscador');
-            const filtro = input.value.trim();
+        function actualizarEnlacePDF(termino) {
+            const pdfBtn = document.getElementById('generatePdfButton');
+            if (!pdfBtn) return;
+            const startDate = document.getElementById('start_date').value;
+            const endDate = document.getElementById('end_date').value;
+            let href = `/dashboard/pdf/?start_date=${startDate}&end_date=${endDate}`;
+            if (termino && termino.trim().length > 0) {
+                href += `&search=${encodeURIComponent(termino.trim())}`;
+            }
+            pdfBtn.href = href;
+        }
+
+        function filtrarClientes() {
+            const input = document.getElementById('clienteBuscador');
+            const termino = input.value.trim();
             const resultadosSection = document.getElementById('resultados-busqueda');
             const btnLimpiar = document.getElementById('btn-limpiar');
             
-            // Mostrar/ocultar botón limpiar
             if (btnLimpiar) {
-                btnLimpiar.style.display = filtro.length > 0 ? 'block' : 'none';
+                btnLimpiar.style.display = termino.length > 0 ? 'block' : 'none';
             }
             
-            // Si no hay resultados section, no hacer nada
             if (!resultadosSection) return;
             
-            // Si el filtro está vacío, ocultar la sección de resultados
-            if (filtro.length === 0) {
+            if (termino.length === 0) {
                 resultadosSection.style.display = 'none';
-                // Actualizar enlace PDF sin búsqueda
                 actualizarEnlacePDF('');
                 return;
             }
             
-            // Mostrar la sección de resultados
             resultadosSection.style.display = 'block';
+            document.getElementById('search-term-display').textContent = termino;
             
-            // Actualizar el término de búsqueda en el título
-            document.getElementById('search-term-display').textContent = filtro;
-            
-            // Limpiar timeout anterior
-            if (timeoutId) {
-                clearTimeout(timeoutId);
-            }
-            
-            // Esperar 300ms antes de buscar (para no hacer muchas peticiones)
-            timeoutId = setTimeout(() => {
-                realizarBusqueda(filtro);
-            }, 300);
+            if (timeoutId) clearTimeout(timeoutId);
+            timeoutId = setTimeout(() => realizarBusqueda(termino), 300);
         }
-        
-        function realizarBusqueda(filtro) {
-            const currentPeriod = document.getElementById('period-select').value;
-            const resultadosSection = document.getElementById('resultados-busqueda');
+
+        function realizarBusqueda(termino) {
+            const startDate = document.getElementById('start_date').value;
+            const endDate = document.getElementById('end_date').value;
             const tbody = document.getElementById('tabla-resultados-body');
             
-            // ✅ ACTUALIZAR EL ENLACE DEL PDF
-            actualizarEnlacePDF(filtro);
+            actualizarEnlacePDF(termino);
             
-            // Mostrar loading
             if (tbody) {
-                tbody.innerHTML = `
-                    <tr>
-                        <td colspan="7">
-                            <div class="empty-results">
-                                <i class="fas fa-spinner fa-spin"></i>
-                                <p>Buscando pedidos...</p>
-                            </div>
-                        </td>
-                    </tr>
-                `;
+                tbody.innerHTML = `<tr><td colspan="7"><div class="empty-results"><i class="fas fa-spinner fa-spin"></i><p>Buscando pedidos...</p></div></td></tr>`;
             }
             
-            // Hacer la petición AJAX
-            fetch(`/dashboard/?period=${currentPeriod}&search=${encodeURIComponent(filtro)}`, {
-                headers: {
-                    'X-Requested-With': 'XMLHttpRequest'
-                }
+            fetch(`/dashboard/?start_date=${startDate}&end_date=${endDate}&search=${encodeURIComponent(termino)}`, {
+                headers: { 'X-Requested-With': 'XMLHttpRequest' }
             })
             .then(response => response.text())
             .then(html => {
-                // Extraer solo la tabla de resultados del HTML recibido
                 const parser = new DOMParser();
                 const doc = parser.parseFromString(html, 'text/html');
                 const nuevaTabla = doc.getElementById('tabla-resultados-body');
-                
                 if (nuevaTabla && tbody) {
-                    // Actualizar la tabla
                     tbody.innerHTML = nuevaTabla.innerHTML;
-                    
-                    // Contar resultados
                     const filas = tbody.querySelectorAll('.fila-pedido');
-                    const resultadosCount = filas.length;
-                    
-                    // Actualizar el contador
-                    document.getElementById('results-count-display').textContent = resultadosCount;
-                    document.getElementById('results-text-display').textContent = resultadosCount === 1 ? 'resultado' : 'resultados';
-                    
-                    // Si no hay filas, mostrar mensaje
-                    if (resultadosCount === 0) {
+                    const count = filas.length;
+                    document.getElementById('results-count-display').textContent = count;
+                    document.getElementById('results-text-display').textContent = count === 1 ? 'resultado' : 'resultados';
+                    if (count === 0) {
                         const emptyRow = document.createElement('tr');
                         emptyRow.id = 'empty-results-row';
-                        emptyRow.innerHTML = `
-                            <td colspan="7">
-                                <div class="empty-results">
-                                    <i class="fas fa-search"></i>
-                                    <p>No se encontraron pedidos que coincidan con "<span id="empty-search-term">${filtro}</span>"</p>
-                                </div>
-                            </td>
-                        `;
+                        emptyRow.innerHTML = `<td colspan="7"><div class="empty-results"><i class="fas fa-user-slash"></i><p>No se encontraron pedidos para "<span>${termino}</span>"</p></div></td>`;
                         tbody.appendChild(emptyRow);
                     }
                 }
             })
             .catch(error => {
-                console.error('Error en la búsqueda:', error);
+                console.error('Error en búsqueda:', error);
                 if (tbody) {
-                    tbody.innerHTML = `
-                        <tr>
-                            <td colspan="7">
-                                <div class="empty-results">
-                                    <i class="fas fa-exclamation-triangle"></i>
-                                    <p>Error al buscar. Intenta de nuevo.</p>
-                                </div>
-                            </td>
-                        </tr>
-                    `;
+                    tbody.innerHTML = `<tr><td colspan="7"><div class="empty-results"><i class="fas fa-exclamation-triangle"></i><p>Error al buscar.</p></div></td></tr>`;
                 }
                 document.getElementById('results-count-display').textContent = '0';
                 document.getElementById('results-text-display').textContent = 'resultados';
             });
         }
-        
-        // Función para limpiar la búsqueda
+
         function limpiarBusqueda() {
-            const currentPeriod = document.getElementById('period-select').value;
-            // ✅ ACTUALIZAR EL ENLACE DEL PDF
+            const startDate = document.getElementById('start_date').value;
+            const endDate = document.getElementById('end_date').value;
             actualizarEnlacePDF('');
-            window.location.href = `/dashboard/?period=${currentPeriod}`;
+            window.location.href = `/dashboard/?start_date=${startDate}&end_date=${endDate}`;
         }
-        
-        // Inicializar todo cuando el DOM esté cargado
+
         document.addEventListener('DOMContentLoaded', function() {
-            const buscador = document.getElementById('buscador');
-            
+            const buscador = document.getElementById('clienteBuscador');
             if (buscador) {
-                // Filtro en tiempo real mientras escribe
-                buscador.addEventListener('input', function() {
-                    filtrarPedidos();
-                });
-                
-                // Búsqueda al presionar Enter (recarga la página)
+                buscador.addEventListener('input', filtrarClientes);
                 buscador.addEventListener('keypress', function(e) {
                     if (e.key === 'Enter') {
                         e.preventDefault();
-                        const filtro = this.value.trim();
-                        const currentPeriod = document.getElementById('period-select').value;
-                        // ✅ ACTUALIZAR EL ENLACE DEL PDF
-                        actualizarEnlacePDF(filtro);
-                        if (filtro) {
-                            window.location.href = `/dashboard/?period=${currentPeriod}&search=${encodeURIComponent(filtro)}`;
+                        const termino = this.value.trim();
+                        const startDate = document.getElementById('start_date').value;
+                        const endDate = document.getElementById('end_date').value;
+                        actualizarEnlacePDF(termino);
+                        if (termino) {
+                            window.location.href = `/dashboard/?start_date=${startDate}&end_date=${endDate}&search=${encodeURIComponent(termino)}`;
                         }
                     }
                 });
             }
-            
-            // Si hay búsqueda inicial, asegurar que el enlace PDF esté correcto
+            // Si hay término inicial, actualizar enlace PDF
             {% if search_query %}
             actualizarEnlacePDF('{{ search_query }}');
             {% endif %}
