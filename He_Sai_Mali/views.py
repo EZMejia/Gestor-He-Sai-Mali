@@ -1686,86 +1686,74 @@ def eliminar_mesa(request, mesa_id):
 @never_cache
 @user_passes_test(es_rol("Administrador"), login_url='login')
 def admin_dashboard(request):
-    # 1. Lógica de Filtrado por Fecha
-    period = request.GET.get('period', 'day')
+    # Obtener parámetros de fecha
+    start_date_str = request.GET.get('start_date')
+    end_date_str = request.GET.get('end_date')
     search_query = request.GET.get('search', '').strip()
 
-    now = timezone.localtime(timezone.now())
+    # Si no vienen fechas, usar hoy como rango predeterminado
     today = timezone.now().date()
-    start_date = None
-
-    if period == 'day':
-        start_date = now.replace(hour=0, minute=0, second=0, microsecond=0)
-        period_display = "Hoy"
-    elif period == 'week':
-        start_date = timezone.make_aware(timezone.datetime(today.year, today.month, today.day)) - timedelta(days=today.weekday())
-        period_display = "Esta Semana"
-    elif period == 'month':
-        start_date = timezone.make_aware(timezone.datetime(today.year, today.month, 1))
-        period_display = "Este Mes"
-    elif period == 'year':
-        start_date = timezone.make_aware(timezone.datetime(today.year, 1, 1))
-        period_display = "Este Año"
+    if not start_date_str:
+        start_date = timezone.make_aware(timezone.datetime(today.year, today.month, today.day))
+        start_date_str = today.strftime('%Y-%m-%d')
     else:
-        start_date = timezone.make_aware(timezone.datetime(today.year, today.month, 1))
-        period = 'month'
-        period_display = "Este Mes"
-    
-    # Filtro base por fecha y estado
-    date_filter = {'fecha__gte': start_date, 'estadoDePago': True}
-    
-    # --- LÓGICA DE BÚSQUEDA CORREGIDA ---
+        start_date = timezone.make_aware(timezone.datetime.strptime(start_date_str, '%Y-%m-%d'))
+        start_date = start_date.replace(hour=0, minute=0, second=0, microsecond=0)
+
+    if not end_date_str:
+        end_date = timezone.make_aware(timezone.datetime(today.year, today.month, today.day, 23, 59, 59))
+        end_date_str = today.strftime('%Y-%m-%d')
+    else:
+        end_date = timezone.make_aware(timezone.datetime.strptime(end_date_str, '%Y-%m-%d'))
+        end_date = end_date.replace(hour=23, minute=59, second=59, microsecond=999999)
+
+    # Validar que start_date <= end_date
+    if start_date > end_date:
+        messages.error(request, "La fecha de inicio no puede ser mayor que la fecha de fin.")
+        # Ajustar a valores por defecto
+        start_date = timezone.make_aware(timezone.datetime(today.year, today.month, today.day))
+        end_date = start_date + timedelta(days=1) - timedelta(microseconds=1)
+        start_date_str = today.strftime('%Y-%m-%d')
+        end_date_str = today.strftime('%Y-%m-%d')
+
+    # Filtro base por rango de fechas y estado facturado
+    date_filter = {
+        'fecha__gte': start_date,
+        'fecha__lte': end_date,
+        'estadoDePago': True
+    }
+
+    # Lógica de búsqueda SOLO por nombre de cliente
     search_results = []
     search_results_count = 0
-    
+
     if search_query:
-        # Primero, obtenemos TODOS los pedidos facturados en el período
         pedidos_periodo = Pedido.objects.filter(**date_filter)
-        
-        # Intentar buscar por ID de pedido (si es un número)
-        try:
-            pedido_id = int(search_query)
-            # Buscar por ID exacto dentro del período
-            search_results = pedidos_periodo.filter(idPedido=pedido_id)
-        except ValueError:
-            # Si no es número, buscar por nombre de cliente (case-insensitive)
-            search_results = pedidos_periodo.filter(
-                idCliente__nombre__icontains=search_query
-            )
-        
-        # Obtener resultados con relaciones
-        search_results = search_results.select_related('idCliente', 'idMesa').order_by('-fecha')
+        search_results = pedidos_periodo.filter(
+            idCliente__nombre__icontains=search_query
+        ).select_related('idCliente', 'idMesa').order_by('-fecha')
         search_results_count = search_results.count()
-        
-        # IMPORTANTE: Si hay resultados de búsqueda, actualizar el filtro de fecha
-        # para que las métricas reflejen solo estos pedidos
+
         if search_results_count > 0:
-            # Crear un nuevo filtro que incluya solo los pedidos encontrados
             pedidos_encontrados_ids = list(search_results.values_list('idPedido', flat=True))
             date_filter = {'idPedido__in': pedidos_encontrados_ids}
         else:
-            # Si no hay resultados, mostrar métricas en cero
             date_filter = {'idPedido__in': []}
-    
-    # 2. Ventas Realizadas (Total Sales)
+
+    # Cálculo de totales
     TASA_IMPUESTO_FACTOR = 1.15
-    
-    # Asegurarnos de que el filtro tenga al menos la condición de estado
-    if 'estadoDePago' not in date_filter and 'idPedido__in' not in date_filter:
-        date_filter['estadoDePago'] = True
-    
-    # Calcular total de ventas
+
     if date_filter.get('idPedido__in') == []:
         total_sales = 0.00
         total_orders = 0
     else:
         total_sales_agg = Pedido.objects.filter(**date_filter).aggregate(
             total=Sum(F('montoTotal') * TASA_IMPUESTO_FACTOR, output_field=FloatField())
-        )    
-        total_sales = total_sales_agg['total'] if total_sales_agg['total'] else 0.00
+        )
+        total_sales = total_sales_agg['total'] or 0.00
         total_orders = Pedido.objects.filter(**date_filter).count()
-    
-    # 3. Productos del Menú más Populares (Top 5)
+
+    # Gráficos
     if date_filter.get('idPedido__in') == []:
         top_products_labels = []
         top_products_data = []
@@ -1773,46 +1761,33 @@ def admin_dashboard(request):
         top_tables_data = []
     else:
         pedidos_del_periodo_ids = Pedido.objects.filter(**date_filter).values_list('idPedido', flat=True)
-
         top_products_query = Pedido_ProductoMenu.objects.filter(
             idPedido__in=pedidos_del_periodo_ids
         ).values(
             nombre=F('idProductoMenu__nombre')
         ).annotate(
             total_quantity=Sum('cantidad')
-        ).filter(
-            total_quantity__gt=0
-        ).order_by('-total_quantity')[:5]
+        ).filter(total_quantity__gt=0).order_by('-total_quantity')[:5]
 
         top_products_labels = [p['nombre'] for p in top_products_query]
         top_products_data = [float(p['total_quantity']) for p in top_products_query]
-        
-        # 4. Mesas más Utilizadas (Top Tables)
-        top_tables_query = Pedido.objects.filter(
-            **date_filter
-        ).exclude(
-            idMesa__isnull=True
-        ).values(
-            'idMesa'
-        ).annotate(
+
+        top_tables_query = Pedido.objects.filter(**date_filter).exclude(idMesa__isnull=True).values('idMesa').annotate(
             total_orders=Count('idMesa')
         ).order_by('-total_orders')
-
-        top_tables_labels = [f"Mesa {t['idMesa']}" for t in top_tables_query] 
+        top_tables_labels = [f"Mesa {t['idMesa']}" for t in top_tables_query]
         top_tables_data = [t['total_orders'] for t in top_tables_query]
 
-    # Métricas generales (no afectadas por búsqueda)
     total_mesas = Mesa.objects.count()
     platillos_en_menu = ProductoMenu.objects.filter(disponible=True).count()
 
-    # Al final de admin_dashboard, antes del return render
     context = {
         'total_sales': total_sales,
         'total_orders': total_orders,
         'total_mesas': total_mesas,
         'platillos_en_menu': platillos_en_menu,
-        'period': period,
-        'period_display': period_display,
+        'start_date_str': start_date_str,
+        'end_date_str': end_date_str,
         'top_products_labels': json.dumps(top_products_labels),
         'top_products_data': json.dumps(top_products_data),
         'top_tables_labels': json.dumps(top_tables_labels),
@@ -1822,171 +1797,130 @@ def admin_dashboard(request):
         'search_results_count': search_results_count,
     }
 
-    # Si es una petición AJAX, solo devolver el HTML de la tabla
     if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
         return render(request, 'He_Sai_Mali/dashboard.html', context)
-        
     return render(request, 'He_Sai_Mali/dashboard.html', context)
 
 @user_passes_test(es_rol("Administrador"), login_url='login')
 def generate_dashboard_pdf(request):
-    # --- 1. Misma lógica de filtro que en admin_dashboard ---
     TASA_IMPUESTO_FACTOR = 1.15
-
-    period = request.GET.get('period', 'month')
+    start_date_str = request.GET.get('start_date')
+    end_date_str = request.GET.get('end_date')
     search_query = request.GET.get('search', '').strip()
 
-    tiempo_generacion = timezone.localtime(timezone.now()) - timedelta(hours=6)
-    tiempo_generacion_str = tiempo_generacion.strftime('%d/%m/%Y %H:%M:%S')
-
-    now = timezone.localtime(timezone.now())
     today = timezone.now().date()
-    start_date = None
-
-    if period == 'day':
-        start_date = now.replace(hour=0, minute=0, second=0, microsecond=0)
-        period_display = "Hoy"
-    elif period == 'week':
-        start_date = timezone.make_aware(timezone.datetime(today.year, today.month, today.day)) - timedelta(days=today.weekday())
-        period_display = "Esta Semana"
-    elif period == 'month':
-        start_date = timezone.make_aware(timezone.datetime(today.year, today.month, 1))
-        period_display = "Este Mes"
-    elif period == 'year':
-        start_date = timezone.make_aware(timezone.datetime(today.year, 1, 1))
-        period_display = "Este Año"
+    if not start_date_str:
+        start_date = timezone.make_aware(timezone.datetime(today.year, today.month, today.day))
     else:
-        start_date = timezone.make_aware(timezone.datetime(today.year, today.month, 1))
-        period_display = "Este Mes"
-    
-    # Filtro base por fecha y estado facturado
-    date_filter = {'fecha__gte': start_date, 'estadoDePago': True}
-    
-    # --- Aplicar búsqueda si existe (IGUAL que en admin_dashboard) ---
+        start_date = timezone.make_aware(timezone.datetime.strptime(start_date_str, '%Y-%m-%d'))
+        start_date = start_date.replace(hour=0, minute=0, second=0, microsecond=0)
+
+    if not end_date_str:
+        end_date = timezone.make_aware(timezone.datetime(today.year, today.month, today.day, 23, 59, 59))
+    else:
+        end_date = timezone.make_aware(timezone.datetime.strptime(end_date_str, '%Y-%m-%d'))
+        end_date = end_date.replace(hour=23, minute=59, second=59, microsecond=999999)
+
+    if start_date > end_date:
+        # swap or set default
+        start_date = timezone.make_aware(timezone.datetime(today.year, today.month, today.day))
+        end_date = start_date + timedelta(days=1) - timedelta(microseconds=1)
+
+    date_filter = {
+        'fecha__gte': start_date,
+        'fecha__lte': end_date,
+        'estadoDePago': True
+    }
+
     if search_query:
-        # Primero, obtenemos TODOS los pedidos facturados en el período
         pedidos_periodo = Pedido.objects.filter(**date_filter)
-        
-        # Intentar buscar por ID de pedido (si es un número)
-        try:
-            pedido_id = int(search_query)
-            # Buscar por ID exacto dentro del período
-            search_results = pedidos_periodo.filter(idPedido=pedido_id)
-        except ValueError:
-            # Si no es número, buscar por nombre de cliente
-            search_results = pedidos_periodo.filter(
-                idCliente__nombre__icontains=search_query
-            )
-        
-        # Obtener resultados con relaciones
-        search_results = search_results.select_related('idCliente', 'idMesa').order_by('-fecha')
+        search_results = pedidos_periodo.filter(
+            idCliente__nombre__icontains=search_query
+        ).select_related('idCliente', 'idMesa').order_by('-fecha')
         search_results_count = search_results.count()
-        
-        # Actualizar el filtro para las métricas
         if search_results_count > 0:
             pedidos_encontrados_ids = list(search_results.values_list('idPedido', flat=True))
             date_filter = {'idPedido__in': pedidos_encontrados_ids}
         else:
             date_filter = {'idPedido__in': []}
-    
-    # --- 2. Obtener Métricas y Pedidos ---
+
     if date_filter.get('idPedido__in') == []:
         total_sales = 0.00
         total_orders = 0
+        pedidos_list = Pedido.objects.none()
     else:
         total_sales_agg = Pedido.objects.filter(**date_filter).aggregate(
             total=Sum(F('montoTotal') * TASA_IMPUESTO_FACTOR, output_field=FloatField())
         )
-        total_sales = total_sales_agg['total'] if total_sales_agg['total'] else 0.00
+        total_sales = total_sales_agg['total'] or 0.00
         total_orders = Pedido.objects.filter(**date_filter).count()
-    
-    total_mesas = Mesa.objects.count()
-    platillos_en_menu = ProductoMenu.objects.filter(disponible=True).count()
-    
-    # Obtener la lista detallada de pedidos (usando el mismo filtro)
-    if date_filter.get('idPedido__in') == []:
-        pedidos_list = Pedido.objects.none()
-    else:
         pedidos_list = Pedido.objects.filter(**date_filter).select_related('idCliente', 'idMesa').order_by('-fecha')
 
-    # --- 3. Generación del PDF (ReportLab) ---
+    total_mesas = Mesa.objects.count()
+    platillos_en_menu = ProductoMenu.objects.filter(disponible=True).count()
+
+    # Generación del PDF (similar a antes, pero usando start_date_str y end_date_str)
     response = HttpResponse(content_type='application/pdf')
-    filename = f"dashboard_reporte_{period}"
+    filename = f"dashboard_{start_date_str}_to_{end_date_str}"
     if search_query:
-        # Limpiar el término de búsqueda para el nombre del archivo
         clean_search = re.sub(r'[^a-zA-Z0-9]', '_', search_query)[:20]
-        filename += f"_busqueda_{clean_search}"
+        filename += f"_cliente_{clean_search}"
     filename += f"_{timezone.now().strftime('%Y%m%d')}.pdf"
     response['Content-Disposition'] = f'attachment; filename="{filename}"'
 
     doc = SimpleDocTemplate(response, pagesize=letter)
     story = []
     styles = getSampleStyleSheet()
-
-    # Estilos Personalizados
     style_center_h1 = ParagraphStyle(name='CenterH1', alignment=1, fontSize=18)
     style_center_h2 = ParagraphStyle(name='CenterH2', alignment=1, fontSize=14)
     PAGE_WIDTH = 6.5 * inch
-    
-    # --- ENCABEZADO ---
-    logo_path = find('He_Sai_Mali/logo.png') 
-    LOGO_WIDTH = 0.8 * inch 
+
+    # Encabezado...
+    logo_path = find('He_Sai_Mali/logo.png')
+    LOGO_WIDTH = 0.8 * inch
     LOGO_HEIGHT = 0.8 * inch
-
     header_data = []
-
     if logo_path:
         logo = Image(logo_path, width=LOGO_WIDTH, height=LOGO_HEIGHT)
         logo.hAlign = 'LEFT'
         header_data.append(logo)
     else:
-        header_data.append(Paragraph("", styles['Normal'])) 
-
+        header_data.append(Paragraph("", styles['Normal']))
     titulo_bloque = [
         Paragraph("<b>Hê Sãî Mãlî</b>", style_center_h1),
         Spacer(1, 0.05 * inch),
         Paragraph("Reporte de ventas", style_center_h2),
     ]
     header_data.append(titulo_bloque)
-
-    header_table = Table(
-        data=[header_data], 
-        colWidths=[1.5 * inch, 5.0 * inch] 
-    )
-
+    header_table = Table(data=[header_data], colWidths=[1.5 * inch, 5.0 * inch])
     header_table.setStyle(TableStyle([
         ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
         ('ALIGN', (0, 0), (0, 0), 'LEFT'),
         ('ALIGN', (1, 0), (1, 0), 'CENTER'),
         ('BOTTOMPADDING', (0, 0), (-1, -1), 10),
     ]))
-    
     story.append(header_table)
     story.append(Line(PAGE_WIDTH, 1))
     story.append(Spacer(1, 0.15 * inch))
 
-    story.append(Paragraph(f"Generado el: <b>{tiempo_generacion_str}</b>", styles['Normal']))
-    story.append(Paragraph(f"Período: <b>{period_display}</b>", styles['Normal']))
+    tiempo_generacion = timezone.localtime(timezone.now()) - timedelta(hours=6)
+    story.append(Paragraph(f"Generado el: <b>{tiempo_generacion.strftime('%d/%m/%Y %H:%M:%S')}</b>", styles['Normal']))
+    story.append(Paragraph(f"Período: <b>{start_date_str} al {end_date_str}</b>", styles['Normal']))
     if search_query:
-        story.append(Paragraph(f"Búsqueda: <b>{search_query}</b>", styles['Normal']))
-        story.append(Paragraph(f"Resultados encontrados: <b>{total_orders}</b>", styles['Normal']))
+        story.append(Paragraph(f"Cliente: <b>{search_query}</b>", styles['Normal']))
+        story.append(Paragraph(f"Pedidos encontrados: <b>{total_orders}</b>", styles['Normal']))
     story.append(Spacer(1, 0.15 * inch))
-    
-    # --- SECCIÓN DE MÉTRICAS CLAVE ---
-    story.append(Paragraph(f"<b>Métricas Clave ({period_display})</b>", styles['h2']))
+
+    story.append(Paragraph(f"<b>Métricas Clave</b>", styles['h2']))
     if search_query:
-        story.append(Paragraph(f"<i>Filtrado por: '{search_query}'</i>", styles['Normal']))
+        story.append(Paragraph(f"<i>Filtrado por cliente: '{search_query}'</i>", styles['Normal']))
     story.append(Spacer(1, 0.1 * inch))
-    
+
     metrics_data = [
         ['Ventas Totales:', f"C${total_sales:.2f}", 'Pedidos Facturados:', f"{total_orders}"],
         ['Mesas Registradas:', f"{total_mesas}", 'Productos en el Menú:', f"{platillos_en_menu}"],
     ]
-    
-    metrics_table = Table(
-        metrics_data, 
-        colWidths=[2 * inch, 1.25 * inch, 1.5 * inch, 1.75 * inch]
-    )
+    metrics_table = Table(metrics_data, colWidths=[2 * inch, 1.25 * inch, 1.5 * inch, 1.75 * inch])
     metrics_table.setStyle(TableStyle([
         ('ALIGN', (1, 0), (1, -1), 'RIGHT'),
         ('ALIGN', (3, 0), (3, -1), 'RIGHT'),
@@ -1996,47 +1930,39 @@ def generate_dashboard_pdf(request):
         ('RIGHTPADDING', (1, 0), (1, -1), 0),
         ('RIGHTPADDING', (3, 0), (3, -1), 0),
     ]))
-    
     story.append(metrics_table)
     story.append(Spacer(1, 0.25 * inch))
 
-    # --- LISTADO DETALLADO DE PEDIDOS ---
     story.append(Paragraph("<b>Listado Detallado de Pedidos Facturados</b>", styles['h2']))
     story.append(Spacer(1, 0.1 * inch))
-    
+
     if pedidos_list.exists():
-        pedidos_data = [
-            ['ID', 'Fecha', 'Cliente', 'Mesa', 'Total']
-        ]
-        
+        pedidos_data = [['ID', 'Fecha', 'Cliente', 'Mesa', 'Total']]
         for pedido in pedidos_list:
-            cliente_nombre = f"{pedido.idCliente.nombre}" if pedido.idCliente else "N/A"
+            cliente_nombre = pedido.idCliente.nombre if pedido.idCliente else "N/A"
             mesa_label = f"Mesa {pedido.idMesa.idMesa}" if pedido.idMesa else "Sin Mesa"
             total_con_iva = Decimal(str(pedido.montoTotal)) * Decimal(str(TASA_IMPUESTO_FACTOR))
-            
             pedidos_data.append([
-                f"{pedido.idPedido}",
+                str(pedido.idPedido),
                 pedido.fecha.strftime('%d/%m/%Y %H:%M'),
                 cliente_nombre,
                 mesa_label,
                 f"C${total_con_iva:.2f}",
             ])
-
         pedidos_table = Table(pedidos_data, colWidths=[0.75*inch, 1.75*inch, 1.75*inch, 1.25*inch, 1*inch])
         pedidos_table.setStyle(TableStyle([
             ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#41444a')),
             ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
-            ('ALIGN', (0, 0), (3, -1), 'LEFT'), 
+            ('ALIGN', (0, 0), (3, -1), 'LEFT'),
             ('ALIGN', (4, 1), (4, -1), 'RIGHT'),
             ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
             ('GRID', (0, 0), (-1, -1), 0.25, colors.black),
         ]))
         story.append(pedidos_table)
-        
     else:
         mensaje = "No hay pedidos facturados en el periodo seleccionado"
         if search_query:
-            mensaje += f" que coincidan con '{search_query}'"
+            mensaje += f" para el cliente '{search_query}'"
         mensaje += "."
         story.append(Paragraph(mensaje, styles['Normal']))
 
