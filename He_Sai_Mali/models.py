@@ -37,7 +37,7 @@ class Empleado(AbstractBaseUser, PermissionsMixin):
 
     USERNAME_FIELD = 'usuario' 
     
-    REQUIRED_FIELDS = ['apellido', 'nombre','correo','cedula','rol']
+    REQUIRED_FIELDS = ['nombre','apellido', 'telefono','correo','cedula','rol']
 
     def __str__(self):
         return self.usuario
