@@ -15,6 +15,7 @@
             --text-light: #ffffff;
             --text-accent: #dacfb7;
             --menu-item-hover: #b12131; /* Rojo más claro para hover */
+            --progress-bg: #e0e0e0;
         }
 
         body { height: 100%; overflow: hidden; }
@@ -29,26 +30,13 @@
             padding: 10px;
             border-radius: 6px;
             border: 2px solid #f3bb67;
-            
             max-width: 220px;
             margin: 20px 0px;
         }
 
-        .Mas {
-            height: 15px;
-            margin-right: 10px;
-            filter: invert(1);
-        }
-        .btn-nuevo:hover {
-            background-color:#832630;
-            color: white;
-            text-decoration: none;
-        }
-        .btn-nuevo:active {
-            background-color:#b12131;
-        }
+        .btn-nuevo:hover { background-color:#832630; color: white; text-decoration: none;}
 
-        /*Pedido general*/
+        /* Contenedor General */
         .container_pedidos {
             display: block;
             box-sizing: border-box;
@@ -56,25 +44,13 @@
             background-color: white;
             width: 100%;
             border-radius: 6px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
         }
         
-        .info {
-            display: flex;
-            justify-content: flex-end;
-        }
-        .total {
-            align-items: center;
-            display: flex;
-            margin-right: auto;
-            margin-left: 20px;
-        }
-        .fecha {
-            justify-content: flex-end;
-            padding: 5px;
-            margin: 5px;
-            border-radius: 5px;
-        }
-        /*Titulo del pedido*/
+        .info { display: flex; justify-content: flex-end; }
+        .total { align-items: center; display: flex; margin-right: auto; margin-left: 20px; }
+        .fecha { justify-content: flex-end; padding: 5px; margin: 5px; border-radius: 5px; }
+
         .pedido_head {
             display: flex;
             background-color: #f2f2f2;
@@ -83,207 +59,101 @@
             padding: 2px;
             border-bottom: 1px solid #dfe3e6;
         }
-        .pedido_head .numero {
-            align-items: center;
-            display: flex;
-            margin-right: auto;
-            margin-left: 10px;
-        }
-        .pedido_head .cliente {
-            justify-content: flex-end;
-            padding: 5px;
-            margin: 5px;
-            border-radius: 5px;
-        }
-        /*Lista de platillos*/
-        h3 {
-            margin-left: 20px;
-            margin-bottom: 0;
-        }
-        .lista_platillos li.platillos {
-            display: flex;
-            justify-content: flex-end;
-            border-style: solid;
-            border-color: #dfe3e6;
-            border-width: 1px 0 1px 0;
-            list-style-type: none;
-        }
-        .lista_platillos li.platillos .platillo {
-            align-items: center;
-            display: flex;
-            margin-right: auto;
-            margin-left: 10px;
-        }
-        .lista_platillos li.platillos .platillo_estado { 
-            justify-content: flex-end;
-            padding: 5px;
-            margin: 5px;
-            border-radius: 5px;
-            cursor: pointer;
-            text-decoration: none;
-            color: white;
-            font-weight: bold;
-        }
-        .lista_platillos li.platillos:nth-child(odd) {
-            background-color: #F8F8F8;
-        }
-        .lista_platillos li.platillos:nth-child(even) {
-            background-color: #EEEEEE;
-        }
-        .lista_platillos {
-            margin: 20px;
-            margin-top: 10px;
-            padding-left: 0;
-            padding-bottom: 20px; /* Reducido para los botones */
-        }
-        /* Estilos para los botones de acción */
-        .action-buttons {
-            display: flex;
-            justify-content: flex-end;
-            gap: 10px;
-            padding: 0 20px 20px 0;
-            margin-left: 20px;
-        }
-        .btn-facturar,
-        .btn-agregar,
-        .btn-eliminar {
-            padding: 8px 15px;
-            border-radius: 5px;
-            font-size: 14px;
-            text-decoration: none;
-            color: white;
-            border: none;
-            cursor: pointer;
-            transition: background-color 0.2s;
-        }
-        .action-buttons .btn-facturar { background-color: #38761d; } /* Verde oscuro */
-        .action-buttons .btn-facturar:hover:not(:disabled) { background-color: #274e13; }
+        .pedido_head .numero { align-items: center; display: flex; margin-right: auto; margin-left: 10px; }
+        .pedido_head .cliente { justify-content: flex-end; padding: 5px; margin: 5px; }
+
+        /* Lista de Platillos */
+        h3 { margin-left: 20px; margin-bottom: 0; font-size: 1.1rem; color: #444; }
+        .lista_platillos { margin: 20px; margin-top: 10px; padding-left: 0; padding-bottom: 10px; }
         
-        .action-buttons .btn-agregar { background-color: #3c78d8; } /* Azul */
-        .action-buttons .btn-agregar:hover { background-color: #1c4587; }
-
-        .action-buttons .btn-eliminar { background-color: #cc0000; } /* Rojo */
-        .action-buttons .btn-eliminar:hover:not(:disabled) { background-color: #990000; }
-
-        /* Estilo para botones deshabilitados */
-        .action-buttons button:disabled,
-        .action-buttons a:disabled {
-            background-color: #ccc;
-            cursor: not-allowed;
-            opacity: 0.6;
-            color: #666;
+        .lista_platillos li.platillos {
+            display: grid;
+            grid-template-columns: 1fr 150px 200px;
+            align-items: center;
+            border-bottom: 1px solid #dfe3e6;
+            list-style-type: none;
+            padding: 8px 10px;
         }
 
-        /* ---------------------------------------------------- */
-        /* --- Contenido Principal (MAIN CONTENT) --- */
-        /* ---------------------------------------------------- */
-        .main-content {
-            display: flex;         /* Agregado */
-            flex-direction: column; /* Agregado */
-            height: calc(100vh - 60px);         /* Ocupa el 100% de la ventana del navegador */
-            overflow: hidden;      /* Evita que el padre tenga scroll propio */
-        }
-
-        /* 2. Configuramos el div contenido para que sea el que haga scroll */
-        .contenido {
-            width: 100%;
-            padding:0 20px;
-            
-            flex-grow: 1;
-            overflow-y: auto;
-        }
-
-        /*------------------------*/
-        .alert-error {
-            background-color: #f44336;
-            color: white;
-            padding: 10px;
-            margin-bottom: 10px;
-            border-radius: 5px;
-        }
-
-        .alert-success {
-            background-color: #4CAF50;
-            color: white;
-            padding: 10px;
-            margin-bottom: 10px;
-            border-radius: 5px;
-        }
-
-        .alert-warning {
-            background-color: #f6a700;
-            color: white;
-            padding: 10px;
-            margin-bottom: 10px;
-            border-radius: 5px;
-        }
-
-        .overlay-custom {
-            display: none; /* Inicia oculto */
-            position: fixed; 
-            top: 0; 
-            left: 0; 
-            width: 100%; 
-            height: 100%; 
-            background: rgba(0, 0, 0, 0.5); 
-            z-index: 1000;
-        }
-
-        .modal-card-custom {
-            display: none; /* Inicia oculto */
-            position: fixed; 
-            top: 50%; 
-            left: 50%; 
-            transform: translate(-50%, -50%); 
-            z-index: 1001; 
-            width: 400px; 
-            max-width: 90%; 
-            background-color: white;
-            border-radius: 5px;
-            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.5);
-            border: 3px solid var(--secondary-color); /* Color de acento */
-        }
-
-        .modal-header-custom {
-            background-color: var(--primary-color); 
-            color: white; 
-            padding: 15px; 
-            border-bottom: 3px solid var(--secondary-color); 
-            border-radius: 5px 5px 0 0;
-            font-weight: bold;
-            text-align: center;
-            font-size: 1.1em;
-        }
-
-        .modal-content-custom {
-            padding: 20px;
-        }
-
-        .form-label-custom {
-            display: block;
-            margin-bottom: 5px;
-            font-weight: bold;
-        }
-        .form-control-custom {
-            width: 100%;
-            padding: 8px;
-            margin-bottom: 10px;
+        /* Progress Bar */
+        .progress-container {
+            width: 120px;
+            background-color: var(--progress-bg);
+            border-radius: 10px;
+            height: 10px;
+            margin: 0 15px;
+            overflow: hidden;
             border: 1px solid #ccc;
-            border-radius: 4px;
-            box-sizing: border-box;
+        }
+        .progress-bar {
+            height: 100%;
+            border-radius: 5px;
+            transition: width 0.5s ease-in-out;
+            background: var(--primary-color);
         }
 
-        .platillo_estado {
-            transition: background-color 0.3s ease;
+        /* Botón de Estado del Platillo */
+        .platillo_estado { 
+            justify-self: end;
+            padding: 6px 12px;
+            border-radius: 5px;
+            cursor: pointer;
+            text-decoration: none;
+            color: white;
+            font-weight: bold;
+            font-size: 0.85rem;
+            width: 100%;
+            text-align: center;
+            transition: all 0.3s ease;
+            border: none;
         }
 
-        .platillo_estado[style*="981a28"]:hover {
-            background-color: #7a1520 !important;
+        /* Lógica de HOVER condicional */
+        /* Solo aplicar hover si NO tiene el atributo disabled */
+        .platillo_estado:not(:disabled):hover {
+            opacity: 0.8;
+            filter: brightness(1.2);
+            transform: translateY(-1px);
         }
 
-        .platillo_estado[style*="891724"]:hover {
-            background-color: #6a121c !important;
+        /* Si está deshabilitado (Servido), quitar cursor y efectos */
+        .platillo_estado:disabled {
+            cursor: default;
+            transform: none;
+            filter: none;
+            opacity: 1; /* Asegura que no se vea desvanecido */
         }
+
+        .lista_platillos li.platillos:nth-child(odd) { background-color: #F8F8F8; }
+        .lista_platillos li.platillos:nth-child(even) { background-color: #EEEEEE; }
+
+        /* Botones de acción inferior */
+        .action-buttons { display: flex; justify-content: flex-end; gap: 10px; padding: 0 20px 20px 0; margin-left: 20px; }
+        .btn-facturar, .btn-agregar, .btn-eliminar {
+            padding: 8px 15px; border-radius: 5px; font-size: 14px; color: white; border: none; cursor: pointer; transition: background-color 0.2s;
+        }
+        .action-buttons .btn-facturar { background-color: #38761d; }
+        .action-buttons .btn-facturar:not(:disabled):hover { background-color: #2d5e17; text-decoration: none; color: white;}
+        .action-buttons .btn-agregar { background-color: #3c78d8; }
+        .action-buttons .btn-agregar:hover { background-color: #3060ad; text-decoration: none; color: white;}
+        .action-buttons .btn-eliminar { background-color: #cc0000; }
+        .action-buttons .btn-eliminar:not(:disabled):hover { background-color: #a30000; text-decoration: none; color: white;}
+        
+        .action-buttons button:disabled { background-color: #ccc; cursor: not-allowed; opacity: 0.6; }
+
+        .main-content { display: flex; flex-direction: column; height: calc(100vh - 60px); overflow: hidden; }
+        .contenido { width: 100%; padding:0 20px; flex-grow: 1; overflow-y: auto; }
+
+        /* Modales */
+        .overlay-custom { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.5); z-index: 1000; }
+        .modal-card-custom {
+            display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); 
+            z-index: 1001; width: 400px; max-width: 90%; background-color: white; border-radius: 5px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.5); border: 3px solid var(--secondary-color);
+        }
+        .modal-header-custom { background-color: var(--primary-color); color: white; padding: 15px; text-align: center; }
+        .modal-content-custom { padding: 20px; }
+        .form-control-custom { width: 100%; padding: 8px; margin-bottom: 10px; border: 1px solid #ccc; border-radius: 4px; }
     </style>
 {% endblock %}
 
@@ -296,7 +166,7 @@
                 {% if messages %}
                     <div style="width: 90%; margin: 10px auto;">
                     {% for message in messages %}
-                        <div class="{% if message.tags == 'error' %}alert-error{% elif message.tags == 'success' %}alert-success{% else %}alert-warning{% endif %}">
+                        <div class="alert-{{ message.tags }}" style="padding: 10px; margin-bottom: 10px; border-radius: 5px; background-color: {% if message.tags == 'error' %}#f44336{% else %}#4CAF50{% endif %}; color: white;">
                             {{ message }}
                         </div>
                     {% endfor %}
@@ -308,19 +178,18 @@
                         <i class="fas fa-plus"></i>&nbsp;Registrar Nuevo Pedido
                     </a>
                 </div>
+
                 {% if cola_pedidos %}
                     {% for pedido in cola_pedidos %}
-                        {% with estado=estado_botones|get_item:pedido.idPedido %}
+                        {% with estado_general=estado_botones|get_item:pedido.idPedido %}
                         <div class="container_pedidos">
-                            <div>
-                                <div class="pedido_head">
-                                    <span class="numero"><b>Pedido N° {{ pedido.idPedido }}&nbsp;&nbsp;|{% if pedido.idMesa_id != None %}&nbsp;&nbsp;Mesa N° {{ pedido.idMesa_id }}{% else %}&nbsp;&nbsp;Sin Mesa {% endif %}</b></span>
-                                    <span class="cliente"><b>Cliente:</b> {{ pedido.nombre }}</span>
-                                </div>
-                                <div class="info">
-                                    <span class="total"><b>Total</b>: C${{ pedido.montoTotal|floatformat:2 }}</span>
-                                    <span class="fecha"><b>Fecha</b>: {{ pedido.fecha|date:"d/m/Y H:i" }}</span>
-                                </div>
+                            <div class="pedido_head">
+                                <span class="numero"><b>Pedido N° {{ pedido.idPedido }} | Mesa: {{ pedido.idMesa_id|default:"Sin Mesa" }}</b></span>
+                                <span class="cliente"><b>Cliente:</b> {{ pedido.nombre }}</span>
+                            </div>
+                            <div class="info">
+                                <span class="total"><b>Total</b>: C${{ pedido.montoTotal|floatformat:2 }}</span>
+                                <span class="fecha"><b>Fecha</b>: {{ pedido.fecha|date:"d/m/Y H:i" }}</span>
                             </div>
                             
                             <div>
@@ -329,18 +198,31 @@
                                     {% for platillo in platillos_por_pedido|get_item:pedido.idPedido %}
                                         <li class="platillos">
                                             <div class="platillo">{{ platillo.Cantidad }}x {{ platillo.Nombre }}</div>
-                                            <form method="POST" action="{% url 'cambiar_estado_platillo' platillo.IdPedido_Platillo %}" style="display:inline;">
+                                            
+                                            <div class="progress-container" title="Estado: {{ platillo.Estado }}">
+                                                <div class="progress-bar" 
+                                                     style="width: {% if platillo.Estado == 'Registrado' %}33%{% elif platillo.Estado == 'Listo' %}66%{% else %}100%{% endif %};">
+                                                </div>
+                                            </div>
+
+                                            <form method="POST" action="{% url 'cambiar_estado_platillo' platillo.IdPedido_Platillo %}" style="display:inline; width: 100%;">
                                                 {% csrf_token %}
                                                 <button type="submit" 
                                                     class="platillo_estado" 
+                                                    {% if platillo.Estado == 'Servido' %} disabled {% endif %}
                                                     style="background-color: 
                                                         {% if platillo.Estado == 'Registrado' %}#981a28;
-                                                        {% elif platillo.Estado == 'Listo' %}#891724;
-                                                        {% elif platillo.Estado == 'Servido' %}#7a1520;
-                                                        {% endif %};
-                                                    border: none; cursor: 
-                                                        {% if platillo.Estado == 'Servido' %} default; {% endif %};">
-                                                    {% if platillo.Estado == "Registrado" %} Cambiar a Listo {% elif platillo.Estado == "Listo" %} Cambiar a Servido {% else %} Esperando Facturación {% endif %}
+                                                        {% elif platillo.Estado == 'Listo' %}#981a28;
+                                                        {% elif platillo.Estado == 'Servido' %}#981a28; /* Mantiene tu color rojo oscuro original */
+                                                        {% endif %};">
+                                                    
+                                                    {% if platillo.Estado == "Registrado" %}
+                                                        <i class="fas fa-fire"></i> Preparar
+                                                    {% elif platillo.Estado == "Listo" %}
+                                                        <i class="fas fa-check"></i> Servir
+                                                    {% else %}
+                                                        <i class="fas fa-concierge-bell"></i> Servido
+                                                    {% endif %}
                                                 </button>
                                             </form>
                                         </li>
@@ -349,105 +231,61 @@
                             </div>
 
                             <div class="action-buttons">
-                                <button 
-                                    type="button" 
-                                    class="btn-facturar" 
+                                <button type="button" class="btn-facturar" 
                                     onclick="mostrarFormularioPago('{{ pedido.idPedido }}', '{{ pedido.montoTotal|floatformat:2 }}', '{% url 'facturar_pedido' pedido.idPedido %}')"
-                                    {% if not estado_botones|get_item:pedido.idPedido|get_item:'puede_facturar' %}disabled{% endif %} 
-                                    title="{% if not estado_botones|get_item:pedido.idPedido|get_item:'puede_facturar' %}El pedido tiene productos pendientes de servir.{% else %}Facturar y finalizar el pedido.{% endif %}"
-                                >
-                                    <i class="fas fa-receipt card-icon"></i> Facturar Pedido
+                                    {% if not estado_general.puede_facturar %}disabled{% endif %}>
+                                    <i class="fas fa-receipt"></i> Facturar
                                 </button>
-
-                                <a href="{% url 'registrarpedido_agregar' pedido.idPedido %}" class="btn-agregar" style="text-align: center;">
-                                    <i class="fas fa-plus"></i> Agregar Productos
+                                <a href="{% url 'registrarpedido_agregar' pedido.idPedido %}" class="btn-agregar">
+                                    <i class="fas fa-plus"></i> Agregar
                                 </a>
-
-                                <form method="POST" action="{% url 'eliminar_pedido' pedido.idPedido %}" style="display:inline;" onsubmit="return confirm('¿Está seguro de que desea eliminar el Pedido N°{{ pedido.idPedido }}? Esta acción es irreversible.');">
+                                <form method="POST" action="{% url 'eliminar_pedido' pedido.idPedido %}" style="display:inline;">
                                     {% csrf_token %}
-                                    <button type="submit" 
-                                            class="btn-eliminar" 
-                                            {% if not estado.puede_eliminar %}disabled{% endif %}
-                                            title="{% if not estado.puede_eliminar %}Solo se puede eliminar si todos los platillos están en 'Registrado'.{% else %}Eliminar el pedido completamente.{% endif %}">
-                                        <i class="fas fa-trash-alt"></i> Eliminar Pedido
+                                    <button type="submit" class="btn-eliminar" {% if not estado_general.puede_eliminar %}disabled{% endif %}>
+                                        <i class="fas fa-trash-alt"></i> Eliminar
                                     </button>
                                 </form>
                             </div>
                         </div>
                         {% endwith %}
                     {% endfor %}
-                {% else %}
-                    <div class="alert" style="width: 90%; margin: 10px auto; padding: 10px; border-radius: 5px; background-color: #f0ad4e; color: black;">
-                        No hay pedidos activos en la cola. ¡A esperar nuevos clientes!
-                    </div>
                 {% endif %}
             </div>
-            
-            {# INICIO DE MODAL / FORMULARIO FLOTANTE DE PAGO #}
-            <div class="overlay-custom" id="formOverlayPago" onclick="ocultarFormularioPago()"></div>
 
+            {# MODAL PAGO #}
+            <div class="overlay-custom" id="formOverlayPago" onclick="ocultarFormularioPago()"></div>
             <div class="modal-card-custom" id="modalFormularioPago">
-                <div class="modal-header-custom">
-                    <h2 id="modalTitle">Método de Pago</h2>
-                </div>
+                <div class="modal-header-custom"><h2>Método de Pago</h2></div>
                 <div class="modal-content-custom">
                     <h3 id="montoTotalDisplay">Monto Total: </h3>
-                    
-                    {# ¡IMPORTANTE! El action se establecerá por JavaScript #}
                     <form method="POST" action="" id="formularioPago"> 
                         {% csrf_token %}
-                        <div class="modal-input-group">
-                            <label for="metodo_pago" class="form-label-custom">Seleccione el Método de Pago:</label>
-                            <select id="metodo_pago" name="metodo_pago" required class="form-control-custom">
-                                <option value="">-- Seleccione --</option>
-                                {% for metodo in metodos %}
-                                    <option value="{{ metodo }}">{{ metodo }}</option>
-                                {% endfor %}
-                            </select>
-                        </div>
-
-                        {# ESTE ES EL BOTÓN QUE DISPARA LA REDIRECCIÓN A FACTURA #}
-                        <div class="action-buttons" style="display: flex;">
-                            <button type="submit" class="btn-facturar" style="flex: 50%;">Confirmar Pago</button> 
-                            <button type="button" class="btn-eliminar" style="flex: 50%;" onclick="ocultarFormularioPago()">Cancelar</button>
+                        <select id="metodo_pago" name="metodo_pago" required class="form-control-custom">
+                            <option value="">-- Seleccione --</option>
+                            {% for metodo in metodos %}<option value="{{ metodo }}">{{ metodo }}</option>{% endfor %}
+                        </select>
+                        <div class="action-buttons" style="margin-top:10px;">
+                            <button type="submit" class="btn-facturar" style="flex:1;">Confirmar</button> 
+                            <button type="button" class="btn-eliminar" style="flex:1;" onclick="ocultarFormularioPago()">Cancelar</button>
                         </div>
                     </form>
                 </div>
             </div>
-            {# FIN DE MODAL / FORMULARIO FLOTANTE DE PAGO #}
-            
         </main>
     </div>
 {% endblock %}
     
 {% block extra_js %}
     <script>
-        // --- Funciones para el formulario de Pago (Modal) ---
         function mostrarFormularioPago(id, total, facturarUrl) {
-            // 1. Mostrar el overlay y el modal
             document.getElementById('formOverlayPago').style.display = 'block';
             document.getElementById('modalFormularioPago').style.display = 'block';
-
-            // 2. Llenar los datos dinámicos en el modal
-            document.getElementById('modalTitle').textContent = `Método de Pago para Pedido N°${id}`;
-            document.getElementById('montoTotalDisplay').textContent = `Monto Total: $${parseFloat(total).toFixed(2)} + IVA`;
-            
-            // 3. AJUSTE CLAVE: Establecer la acción del formulario
-            const form = document.getElementById('formularioPago');
-            form.action = facturarUrl; // Esto establece la acción a '/pedidos/facturar/<id>/'
-            
-            // Opcional: Centrar la atención en el selector de método
-            document.getElementById('metodo_pago').focus();
+            document.getElementById('montoTotalDisplay').textContent = `Monto Total: C$${parseFloat(total).toFixed(2)}`;
+            document.getElementById('formularioPago').action = facturarUrl;
         }
-
         function ocultarFormularioPago() {
-            // 1. Ocultar el overlay y el modal
             document.getElementById('formOverlayPago').style.display = 'none';
             document.getElementById('modalFormularioPago').style.display = 'none';
-            
-            // 2. Limpiar la acción del formulario y la selección (buena práctica)
-            document.getElementById('formularioPago').action = '';
-            document.getElementById('metodo_pago').value = '';
         }
     </script>
 {% endblock %}

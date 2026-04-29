@@ -113,6 +113,20 @@
             color: #31708f;
             text-align: center;
         }
+
+        .sortable-ghost {
+            opacity: 0.4;
+            border: 2px dashed var(--primary-color);
+        }
+
+        /* Cambiar el cursor al pasar sobre el encabezado para indicar que es arrastrable */
+        .card-header {
+            cursor: grab;
+        }
+
+        .card-header:active {
+            cursor: grabbing;
+        }
     </style>
 {% endblock %}
 
@@ -139,7 +153,7 @@
                 <h2 style="color: #dacfb7; text-align: center; padding: 20px 0;">Productos Pendientes por Elaborar</h2>
 
                 {% if pedidos_en_cola %}
-                    <div class="cola-cocina">
+                    <div id="lista-pedidos" class="cola-cocina">
                         {% for pedido in pedidos_en_cola %}
                             <div class="pedido-card {% if forloop.first %}pedido-mas-antiguo{% endif %}">
                                 <div class="card-header">
@@ -177,4 +191,23 @@
             </div>
         </main>
     </div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        var el = document.getElementById('lista-pedidos');
+        var sortable = Sortable.create(el, {
+            animation: 150,      // Velocidad de la animación en ms
+            ghostClass: 'sortable-ghost', // Clase para el elemento fantasma
+            handle: '.card-header',       // El arrastre se inicia solo desde el header
+            onEnd: function (evt) {
+                console.log('Nuevo orden establecido');
+                // Aquí podrías realizar una petición AJAX (fetch) a Django 
+                // si necesitas guardar el orden en la base de datos de PostgreSQL.
+            },
+        });
+    });
+</script>
 {% endblock %}

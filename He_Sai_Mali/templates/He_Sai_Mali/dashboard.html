@@ -309,10 +309,10 @@
                     <form id="dateFilterForm" method="GET" action="{% url 'admin_dashboard' %}" style="display: contents;" onsubmit="return validarFechas()">
                         <div class="date-input-group">
                             <label for="start_date">Fecha Inicio:</label>
-                            <input type="date" id="start_date" name="start_date" value="{{ start_date_str|default:'' }}" required>
+                            <input type="date" id="start_date" name="start_date" value="{{ start_date_str|default:'' }}" onchange="validarYEnviar()" required>
                             
                             <label for="end_date">Fecha Fin:</label>
-                            <input type="date" id="end_date" name="end_date" value="{{ end_date_str|default:'' }}" required>
+                            <input type="date" id="end_date" name="end_date" value="{{ end_date_str|default:'' }}" onchange="validarYEnviar()" required>
                             
                             <button type="submit" class="btn-aplicar-filtro">
                                 <i class="fas fa-filter"></i> Aplicar Filtro
@@ -335,7 +335,7 @@
 
                 <!-- 2. MÉTRICAS CLAVE -->
                 <h2 style="color: var(--secondary-color); margin-bottom: 10px; margin-top: 0; border-bottom: 2px solid var(--primary-color); padding-bottom: 10px;">
-                    Métricas Clave: {{ start_date_str }} al {{ end_date_str }}
+                    Métricas Clave: {{ start_date_obj|date:"d/m/Y" }} al {{ end_date_obj|date:"d/m/Y" }}
                     {% if search_query %}
                         <span style="font-size: 0.9rem; margin-left: 15px; color: var(--text-accent);">
                             (Filtrado por cliente: "{{ search_query }}")
@@ -383,7 +383,7 @@
 
                 <!-- 3. BUSCADOR POR CLIENTE (ANCHO COMPLETO) -->
                 <div class="client-search-section">
-                    <label for="clienteBuscador" style="font-weight: bold; display: block; margin-bottom: 10px; color: var(--secondary-color); font-size: 1.1rem;">
+                    <label for="clienteBuscador" style="font-weight: bold; display: block; margin-bottom: 10px; margin-top: 15px; color: var(--secondary-color); font-size: 1.1rem;">
                         <i class="fas fa-user-search" style="margin-right: 8px;"></i>Filtrar por cliente:
                     </label>
                     <div class="client-search-box">
@@ -569,26 +569,34 @@
         });
 
         // ========== VALIDACIÓN DE FECHAS ==========
-        function validarFechas() {
+        function validarYEnviar() {
             const startInput = document.getElementById('start_date');
             const endInput = document.getElementById('end_date');
-            const startDate = new Date(startInput.value + 'T00:00:00');
-            const endDate = new Date(endInput.value + 'T00:00:00');
-            const today = new Date();
-            today.setHours(0, 0, 0, 0);
-            
-            if (startDate > endDate) {
-                alert('La fecha de inicio no puede ser mayor que la fecha de fin.');
-                return false;
+            const form = document.getElementById('dateFilterForm');
+
+            // Solo enviamos si ambos campos tienen valor
+            if (startInput.value && endInput.value) {
+                const startDate = new Date(startInput.value + 'T00:00:00');
+                const endDate = new Date(endInput.value + 'T00:00:00');
+                const today = new Date();
+                today.setHours(0, 0, 0, 0);
+
+                // Reutilizamos tu lógica de validación actual
+                if (startDate > endDate) {
+                    startInput.value = endInput.value;
+                    return;
+                }
+
+                if (endDate > today) {
+                    endInput.value = today.toISOString().split('T')[0];;
+                    return;
+                }
+
+                // Si pasa las validaciones, enviamos el formulario
+                form.submit();
             }
-            
-            if (endDate > today) {
-                alert('La fecha de fin no puede ser mayor que la fecha de hoy.');
-                return false;
-            }
-            
-            return true;
         }
+
 
         // ========== LÓGICA DE BÚSQUEDA EN TIEMPO REAL (SOLO POR CLIENTE) ==========
         let timeoutId = null;

@@ -19,6 +19,7 @@ from io import BytesIO
 import base64
 from decimal import Decimal
 import re
+from datetime import datetime
 
 # Importaciones para generar pdf
 from django.contrib.staticfiles.finders import find
@@ -1691,30 +1692,42 @@ def admin_dashboard(request):
     end_date_str = request.GET.get('end_date')
     search_query = request.GET.get('search', '').strip()
 
-    # Si no vienen fechas, usar hoy como rango predeterminado
-    today = timezone.now().date()
-    if not start_date_str:
-        start_date = timezone.make_aware(timezone.datetime(today.year, today.month, today.day))
-        start_date_str = today.strftime('%Y-%m-%d')
-    else:
-        start_date = timezone.make_aware(timezone.datetime.strptime(start_date_str, '%Y-%m-%d'))
-        start_date = start_date.replace(hour=0, minute=0, second=0, microsecond=0)
+    today_dt = timezone.now()
+    today_date = today_dt.date()
 
-    if not end_date_str:
-        end_date = timezone.make_aware(timezone.datetime(today.year, today.month, today.day, 23, 59, 59))
-        end_date_str = today.strftime('%Y-%m-%d')
-    else:
-        end_date = timezone.make_aware(timezone.datetime.strptime(end_date_str, '%Y-%m-%d'))
-        end_date = end_date.replace(hour=23, minute=59, second=59, microsecond=999999)
+    # 2. Procesar Fecha de Inicio
+    try:
+        if start_date_str:
+            start_date = timezone.make_aware(datetime.strptime(start_date_str, '%Y-%m-%d'))
+        else:
+            start_date = timezone.make_aware(datetime.combine(today_date, datetime.min.time()))
+    except (ValueError, TypeError):
+        start_date = timezone.make_aware(datetime.combine(today_date, datetime.min.time()))
 
-    # Validar que start_date <= end_date
+    # 3. Procesar Fecha de Fin
+    try:
+        if end_date_str:
+            end_date = timezone.make_aware(datetime.strptime(end_date_str, '%Y-%m-%d'))
+        else:
+            end_date = timezone.make_aware(datetime.combine(today_date, datetime.max.time()))
+    except (ValueError, TypeError):
+        end_date = timezone.make_aware(datetime.combine(today_date, datetime.max.time()))
+
+    # Ajustar horas exactas para el filtro de base de datos
+    start_date = start_date.replace(hour=0, minute=0, second=0, microsecond=0)
+    end_date = end_date.replace(hour=23, minute=59, second=59, microsecond=999999)
+
+    # 4. Lógica de "Auto-corrección" (Sustituye a las alertas)
+    if end_date > today_dt:
+        end_date = today_dt.replace(hour=23, minute=59, second=59, microsecond=999999)
+    
     if start_date > end_date:
-        messages.error(request, "La fecha de inicio no puede ser mayor que la fecha de fin.")
-        # Ajustar a valores por defecto
-        start_date = timezone.make_aware(timezone.datetime(today.year, today.month, today.day))
-        end_date = start_date + timedelta(days=1) - timedelta(microseconds=1)
-        start_date_str = today.strftime('%Y-%m-%d')
-        end_date_str = today.strftime('%Y-%m-%d')
+        start_date = end_date.replace(hour=0, minute=0, second=0, microsecond=0)
+
+    # 5. Generar STRINGS para los inputs HTML (Siempre YYYY-MM-DD)
+    # Esto evita el AttributeError y mantiene el calendario funcionando
+    start_date_input = start_date.strftime('%Y-%m-%d')
+    end_date_input = end_date.strftime('%Y-%m-%d')
 
     # Filtro base por rango de fechas y estado facturado
     date_filter = {
@@ -1786,8 +1799,10 @@ def admin_dashboard(request):
         'total_orders': total_orders,
         'total_mesas': total_mesas,
         'platillos_en_menu': platillos_en_menu,
-        'start_date_str': start_date_str,
-        'end_date_str': end_date_str,
+        'start_date_obj': start_date,
+        'end_date_obj': end_date,
+        'start_date_str': start_date_input,
+        'end_date_str': end_date_input,
         'top_products_labels': json.dumps(top_products_labels),
         'top_products_data': json.dumps(top_products_data),
         'top_tables_labels': json.dumps(top_tables_labels),
