@@ -671,6 +671,8 @@ def vista_registrarpedido(request, pedido_id=None):
     # Permite registrar un nuevo pedido o agregar platillos a un pedido existente (si se pasa pedido_id).
     # Filtra mesas disponibles, asigna la mesa al crear el pedido y la marca como OCUPADA.
     
+    platillos_previos = []
+
     # Obtener el inventario actual
     inventario_actual = {
         art.idArticuloInventario: float(art.stock)
@@ -730,6 +732,16 @@ def vista_registrarpedido(request, pedido_id=None):
             
             pedido_existente = PedidoData()
 
+        with connection.cursor() as cursor:
+            sql_detalles_previos = """
+                SELECT pm.nombre, pp.cantidad, pm.precio, (pp.cantidad * pm.precio) as subtotal
+                FROM "Pedido_ProductoMenu" pp
+                JOIN "ProductoMenu" pm ON pp."idProductoMenu_id" = pm."idProductoMenu"
+                WHERE pp."idPedido_id" = %s;
+            """
+            cursor.execute(sql_detalles_previos, [pedido_id])
+            columns = [col[0] for col in cursor.description]
+            platillos_previos = [dict(zip(columns, row)) for row in cursor.fetchall()]
 
     # ------------------ LOGICA POST ------------------
     if request.method == 'POST':
@@ -778,11 +790,42 @@ def vista_registrarpedido(request, pedido_id=None):
                 mesa_asignada_obj = None # Inicializar para usar fuera de los bloques
 
                 if pedido_existente:
-                    # Opción 1: Agregar a pedido existente
                     id_pedido_a_usar = pedido_existente.idPedido
-                    # La mesa y cliente se mantienen del pedido existente
-                    mesa_asignada_obj = pedido_existente.idMesa
                     
+                    # --- LÓGICA PARA CAMBIAR MESA ---
+                    id_mesa_nueva = request.POST.get('mesa')
+                    mesa_actual = pedido_existente.idMesa # Objeto Mesa actual
+
+                    # Si la mesa seleccionada es diferente a la actual
+                    if str(id_mesa_nueva) != str(mesa_actual.idMesa if mesa_actual else 'ninguna'):
+                        # 1. Liberar mesa anterior si existía
+                        if mesa_actual:
+                            mesa_actual.ocupada = False
+                            mesa_actual.save()
+                        
+                        # 2. Asignar nueva mesa si no es 'ninguna'
+                        if id_mesa_nueva and id_mesa_nueva != 'ninguna':
+                            nueva_mesa_obj = get_object_or_404(Mesa, pk=id_mesa_nueva)
+                            nueva_mesa_obj.ocupada = True
+                            nueva_mesa_obj.save()
+                            mesa_id_para_sql = nueva_mesa_obj.idMesa
+                            mesa_asignada_obj = nueva_mesa_obj
+                        else:
+                            mesa_id_para_sql = None
+                            mesa_asignada_obj = None
+
+                        # 3. Actualizar el registro del Pedido en la BD
+                        with connection.cursor() as cursor:
+                            cursor.execute('UPDATE "Pedido" SET "idMesa_id" = %s WHERE "idPedido" = %s', 
+                                        [mesa_id_para_sql, id_pedido_a_usar])
+                        
+                        if mesa_id_para_sql == None:
+                            messages.info(request, f"Sin Mesa asignada al Pedido N°{id_pedido_a_usar}")
+                        else:
+                            messages.info(request, f"Mesa N°{mesa_id_para_sql} asignada al Pedido N°{id_pedido_a_usar}")
+                    else:
+                        mesa_asignada_obj = mesa_actual
+                        messages.info(request,"")
                 else:
                     # Opción 2: Crear nuevo Cliente y Pedido (Encabezado)
                     
@@ -952,9 +995,7 @@ def vista_registrarpedido(request, pedido_id=None):
                         
                         messages.error(request, "Debe seleccionar al menos un platillo para registrar el pedido.")
                         # Retornar a la misma vista con el mensaje de error
-                        return redirect('registrarpedido') 
-                    else:
-                        messages.info(request, "No se añadieron nuevos platillos al pedido existente.")
+                        return redirect('registrarpedido')
                 
                 # 4. Actualizar el MontoTotal del pedido (usando ORM y F expressions)
                 if items_registrados > 0:
@@ -986,6 +1027,7 @@ def vista_registrarpedido(request, pedido_id=None):
         'apellido_empleado': request.user.apellido,
         'inventario_json': json.dumps(inventario_actual),
         'recetas_json': json.dumps(recetas),
+        'platillos_previos': platillos_previos,
     }
     # ------------------ FIN: CAMBIO 2 -------------------------------------------------
     return render(request, 'He_Sai_Mali/registrarpedido.html', context)
