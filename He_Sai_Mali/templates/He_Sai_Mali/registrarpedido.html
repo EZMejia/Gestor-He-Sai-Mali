@@ -111,7 +111,7 @@
 </style>
 {% endblock %}
 
-{% block header %}REGISTRAR PEDIDO{% endblock %}
+{% block header %}{% if pedido_existente %}EDITAR PEDIDO N°{{ pedido_existente.idPedido }}{% else %}REGISTRAR PEDIDO{% endif %}{% endblock %}
 
 {% block content %}
 <form method="POST" class="container-fluid">
@@ -194,7 +194,9 @@
                     <div class="form-row">
                         <div class="form-group col-md-6">
                             <label class="small font-weight-bold">Teléfono</label>
-                            <input type="text" name="telefono_cliente" class="form-control form-control-sm" value="{{ telefono_cliente_previo }}" {% if pedido_existente %}disabled{% endif %}>
+                            <input type="text" pattern="[0-9]{8}" name="telefono_cliente" 
+                            oninput="this.value = this.value.replace(/[^0-9]/g, '').slice(0, 8);"
+                            class="form-control form-control-sm" value="{{ telefono_cliente_previo }}" {% if pedido_existente %}disabled{% endif %}>
                         </div>
                         <div class="form-group col-md-6">
                             <label class="small font-weight-bold">Tipo</label>
@@ -212,25 +214,27 @@
 
                     <div class="form-group">
                         <label class="small font-weight-bold">Mesa</label>
-                        {% if pedido_existente %}
-                            <select class="form-control form-control-sm" disabled>
-                                <option selected>{{ pedido_existente.idMesa|default:"Sin Mesa" }}</option>
-                            </select>
-                            <input type="hidden" name="mesa" value="{{ pedido_existente.idMesa }}">
-                        {% else %}
-                            <select name="mesa" class="form-control form-control-sm">
-                                <option value="ninguna">Para llevar</option>
-                                {% for m in mesas_disponibles %}
-                                    <option value="{{ m.idMesa }}">{{ m.idMesa }}</option>
-                                {% endfor %}
-                            </select>
-                        {% endif %}
+                        <select name="mesa" class="form-control form-control-sm">
+                            <option value="ninguna" {% if pedido_existente and not pedido_existente.idMesa %}selected{% endif %}>Para llevar</option>
+                            
+                            {% if pedido_existente and pedido_existente.idMesa %}
+                                <option value="{{ pedido_existente.idMesa.idMesa }}" selected>
+                                    Mesa {{ pedido_existente.idMesa.idMesa }} (Actual)
+                                </option>
+                            {% endif %}
+
+                            {% for m in mesas_disponibles %}
+                                {% if not pedido_existente or m.idMesa != pedido_existente.idMesa.idMesa %}
+                                    <option value="{{ m.idMesa }}">Mesa {{ m.idMesa }}</option>
+                                {% endif %}
+                            {% endfor %}
+                        </select>
                     </div>
                 </div>
 
                 <div class="scroll-area rounded border shadow-sm p-1 mb-1">
                     <label class="small font-weight-bold text-uppercase px-2 pt-2">Resumen de Selección</label>
-                    <div id="resumen_platillos" class="small">
+                    <div class="platillos-anteriores mb-3 small">
                         <table class="table table-sm table-borderless">
                             <thead>
                                 <tr class="border-bottom">
@@ -239,12 +243,24 @@
                                     <th class="text-right">Total</th>
                                 </tr>
                             </thead>
-                            <tbody id="cuerpo_resumen">
+                            <tbody id="cuerpo_resumen" {% if platillos_previos %}class="border-bottom"{% endif %}>
                                 <tr>
-                                    <td colspan="3" class="text-center text-muted italic">No hay platillos seleccionados</td>
+                                    <td colspan="3" class="text-center text-muted italic">No hay platillos seleccionados<br>&nbsp;</td>
                                 </tr>
                             </tbody>
+                            {% if platillos_previos %}
+                            <tbody style="color: #666;">
+                                {% for p in platillos_previos %}
+                                <tr>
+                                    <td>{{ p.nombre }}<br><small class="text-muted">C$ {{p.precio }} c/u</small></td>
+                                    <td class="text-center">{{ p.cantidad }}</td>
+                                    <td class="text-right">C$ {{ p.subtotal }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                            {% endif %}
                         </table>
+                        
                     </div>
                 </div>
             </div>
@@ -267,6 +283,8 @@
 <script>
     const inventarioOriginal = JSON.parse('{{ inventario_json|safe }}');
     const recetas = JSON.parse('{{ recetas_json|safe }}');
+
+    calcularTotal();
 
     function cambiarCantidad(id, delta) {
         const input = document.getElementById('input_' + id);
@@ -404,9 +422,20 @@
             }
         });
 
+        // Sumar platillos previos (Si existen en el contexto de Django)
+        const filasPrevias = document.querySelectorAll('.platillos-anteriores tbody:nth-child(3) tr');
+        filasPrevias.forEach(fila => {
+            // Extraemos el texto del subtotal (ej: "C$ 150.00") y lo limpiamos
+            const textoSubtotal = fila.querySelector('.text-right').innerText;
+            const valorSubtotal = parseFloat(textoSubtotal.replace('C$', '').trim());
+            if (!isNaN(valorSubtotal)) {
+                total += valorSubtotal;
+            }
+        });
+
         // Si no hay nada, mostramos el mensaje por defecto
         if (!hayItems) {
-            cuerpoResumen.innerHTML = '<tr><td colspan="3" class="text-center text-muted italic">No hay platillos seleccionados</td></tr>';
+            cuerpoResumen.innerHTML = '<tr><td colspan="3" class="text-center text-muted italic">No hay platillos seleccionados<br>&nbsp;</td></tr>';
         } else {
             cuerpoResumen.innerHTML = htmlResumen;
         }

@@ -671,6 +671,8 @@ def vista_registrarpedido(request, pedido_id=None):
     # Permite registrar un nuevo pedido o agregar platillos a un pedido existente (si se pasa pedido_id).
     # Filtra mesas disponibles, asigna la mesa al crear el pedido y la marca como OCUPADA.
     
+    platillos_previos = []
+
     # Obtener el inventario actual
     inventario_actual = {
         art.idArticuloInventario: float(art.stock)
@@ -730,6 +732,16 @@ def vista_registrarpedido(request, pedido_id=None):
             
             pedido_existente = PedidoData()
 
+        with connection.cursor() as cursor:
+            sql_detalles_previos = """
+                SELECT pm.nombre, pp.cantidad, pm.precio, (pp.cantidad * pm.precio) as subtotal
+                FROM "Pedido_ProductoMenu" pp
+                JOIN "ProductoMenu" pm ON pp."idProductoMenu_id" = pm."idProductoMenu"
+                WHERE pp."idPedido_id" = %s;
+            """
+            cursor.execute(sql_detalles_previos, [pedido_id])
+            columns = [col[0] for col in cursor.description]
+            platillos_previos = [dict(zip(columns, row)) for row in cursor.fetchall()]
 
     # ------------------ LOGICA POST ------------------
     if request.method == 'POST':
@@ -778,11 +790,42 @@ def vista_registrarpedido(request, pedido_id=None):
                 mesa_asignada_obj = None # Inicializar para usar fuera de los bloques
 
                 if pedido_existente:
-                    # Opción 1: Agregar a pedido existente
                     id_pedido_a_usar = pedido_existente.idPedido
-                    # La mesa y cliente se mantienen del pedido existente
-                    mesa_asignada_obj = pedido_existente.idMesa
                     
+                    # --- LÓGICA PARA CAMBIAR MESA ---
+                    id_mesa_nueva = request.POST.get('mesa')
+                    mesa_actual = pedido_existente.idMesa # Objeto Mesa actual
+
+                    # Si la mesa seleccionada es diferente a la actual
+                    if str(id_mesa_nueva) != str(mesa_actual.idMesa if mesa_actual else 'ninguna'):
+                        # 1. Liberar mesa anterior si existía
+                        if mesa_actual:
+                            mesa_actual.ocupada = False
+                            mesa_actual.save()
+                        
+                        # 2. Asignar nueva mesa si no es 'ninguna'
+                        if id_mesa_nueva and id_mesa_nueva != 'ninguna':
+                            nueva_mesa_obj = get_object_or_404(Mesa, pk=id_mesa_nueva)
+                            nueva_mesa_obj.ocupada = True
+                            nueva_mesa_obj.save()
+                            mesa_id_para_sql = nueva_mesa_obj.idMesa
+                            mesa_asignada_obj = nueva_mesa_obj
+                        else:
+                            mesa_id_para_sql = None
+                            mesa_asignada_obj = None
+
+                        # 3. Actualizar el registro del Pedido en la BD
+                        with connection.cursor() as cursor:
+                            cursor.execute('UPDATE "Pedido" SET "idMesa_id" = %s WHERE "idPedido" = %s', 
+                                        [mesa_id_para_sql, id_pedido_a_usar])
+                        
+                        if mesa_id_para_sql == None:
+                            messages.info(request, f"Sin Mesa asignada al Pedido N°{id_pedido_a_usar}")
+                        else:
+                            messages.info(request, f"Mesa N°{mesa_id_para_sql} asignada al Pedido N°{id_pedido_a_usar}")
+                    else:
+                        mesa_asignada_obj = mesa_actual
+                        messages.info(request,"")
                 else:
                     # Opción 2: Crear nuevo Cliente y Pedido (Encabezado)
                     
@@ -952,9 +995,7 @@ def vista_registrarpedido(request, pedido_id=None):
                         
                         messages.error(request, "Debe seleccionar al menos un platillo para registrar el pedido.")
                         # Retornar a la misma vista con el mensaje de error
-                        return redirect('registrarpedido') 
-                    else:
-                        messages.info(request, "No se añadieron nuevos platillos al pedido existente.")
+                        return redirect('registrarpedido')
                 
                 # 4. Actualizar el MontoTotal del pedido (usando ORM y F expressions)
                 if items_registrados > 0:
@@ -986,6 +1027,7 @@ def vista_registrarpedido(request, pedido_id=None):
         'apellido_empleado': request.user.apellido,
         'inventario_json': json.dumps(inventario_actual),
         'recetas_json': json.dumps(recetas),
+        'platillos_previos': platillos_previos,
     }
     # ------------------ FIN: CAMBIO 2 -------------------------------------------------
     return render(request, 'He_Sai_Mali/registrarpedido.html', context)
@@ -1684,10 +1726,24 @@ def eliminar_mesa(request, mesa_id):
     return redirect('admin_mesas')
 
 # Vista del dashboard para el administrador
+from django.db import connection
+from django.http import JsonResponse
+import json
+from datetime import datetime
+
+from django.shortcuts import render
+from django.utils import timezone
+from django.db import connection, transaction # <-- Importante importar transaction
+from django.contrib.auth.decorators import user_passes_test
+from django.views.decorators.cache import never_cache
+from datetime import datetime
+import json
+# Asegúrate de tener importados tus modelos: Mesa, ProductoMenu, es_rol...
+
 @never_cache
 @user_passes_test(es_rol("Administrador"), login_url='login')
 def admin_dashboard(request):
-    # Obtener parámetros de fecha
+    # Obtener parámetros de fecha y búsqueda
     start_date_str = request.GET.get('start_date')
     end_date_str = request.GET.get('end_date')
     search_query = request.GET.get('search', '').strip()
@@ -1695,7 +1751,7 @@ def admin_dashboard(request):
     today_dt = timezone.now()
     today_date = today_dt.date()
 
-    # 2. Procesar Fecha de Inicio
+    # Procesar Fechas
     try:
         if start_date_str:
             start_date = timezone.make_aware(datetime.strptime(start_date_str, '%Y-%m-%d'))
@@ -1704,7 +1760,6 @@ def admin_dashboard(request):
     except (ValueError, TypeError):
         start_date = timezone.make_aware(datetime.combine(today_date, datetime.min.time()))
 
-    # 3. Procesar Fecha de Fin
     try:
         if end_date_str:
             end_date = timezone.make_aware(datetime.strptime(end_date_str, '%Y-%m-%d'))
@@ -1713,86 +1768,92 @@ def admin_dashboard(request):
     except (ValueError, TypeError):
         end_date = timezone.make_aware(datetime.combine(today_date, datetime.max.time()))
 
-    # Ajustar horas exactas para el filtro de base de datos
     start_date = start_date.replace(hour=0, minute=0, second=0, microsecond=0)
     end_date = end_date.replace(hour=23, minute=59, second=59, microsecond=999999)
 
-    # 4. Lógica de "Auto-corrección" (Sustituye a las alertas)
     if end_date > today_dt:
         end_date = today_dt.replace(hour=23, minute=59, second=59, microsecond=999999)
     
     if start_date > end_date:
         start_date = end_date.replace(hour=0, minute=0, second=0, microsecond=0)
 
-    # 5. Generar STRINGS para los inputs HTML (Siempre YYYY-MM-DD)
-    # Esto evita el AttributeError y mantiene el calendario funcionando
     start_date_input = start_date.strftime('%Y-%m-%d')
     end_date_input = end_date.strftime('%Y-%m-%d')
 
-    # Filtro base por rango de fechas y estado facturado
-    date_filter = {
-        'fecha__gte': start_date,
-        'fecha__lte': end_date,
-        'estadoDePago': True
-    }
-
-    # Lógica de búsqueda SOLO por nombre de cliente
+    # Valores por defecto
+    total_sales = 0.00
+    total_orders = 0
+    top_products_labels, top_products_data = [], []
+    top_tables_labels, top_tables_data = [], []
+    total_mesas = Mesa.objects.count()
+    platillos_en_menu = ProductoMenu.objects.filter(disponible=True).count()
     search_results = []
     search_results_count = 0
 
-    if search_query:
-        pedidos_periodo = Pedido.objects.filter(**date_filter)
-        search_results = pedidos_periodo.filter(
-            idCliente__nombre__icontains=search_query
-        ).select_related('idCliente', 'idMesa').order_by('-fecha')
-        search_results_count = search_results.count()
-
-        if search_results_count > 0:
-            pedidos_encontrados_ids = list(search_results.values_list('idPedido', flat=True))
-            date_filter = {'idPedido__in': pedidos_encontrados_ids}
-        else:
-            date_filter = {'idPedido__in': []}
-
-    # Cálculo de totales
-    TASA_IMPUESTO_FACTOR = 1.15
-
-    if date_filter.get('idPedido__in') == []:
-        total_sales = 0.00
-        total_orders = 0
-    else:
-        total_sales_agg = Pedido.objects.filter(**date_filter).aggregate(
-            total=Sum(F('montoTotal') * TASA_IMPUESTO_FACTOR, output_field=FloatField())
-        )
-        total_sales = total_sales_agg['total'] or 0.00
-        total_orders = Pedido.objects.filter(**date_filter).count()
-
-    # Gráficos
-    if date_filter.get('idPedido__in') == []:
-        top_products_labels = []
-        top_products_data = []
-        top_tables_labels = []
-        top_tables_data = []
-    else:
-        pedidos_del_periodo_ids = Pedido.objects.filter(**date_filter).values_list('idPedido', flat=True)
-        top_products_query = Pedido_ProductoMenu.objects.filter(
-            idPedido__in=pedidos_del_periodo_ids
-        ).values(
-            nombre=F('idProductoMenu__nombre')
-        ).annotate(
-            total_quantity=Sum('cantidad')
-        ).filter(total_quantity__gt=0).order_by('-total_quantity')[:5]
-
-        top_products_labels = [p['nombre'] for p in top_products_query]
-        top_products_data = [float(p['total_quantity']) for p in top_products_query]
-
-        top_tables_query = Pedido.objects.filter(**date_filter).exclude(idMesa__isnull=True).values('idMesa').annotate(
-            total_orders=Count('idMesa')
-        ).order_by('-total_orders')
-        top_tables_labels = [f"Mesa {t['idMesa']}" for t in top_tables_query]
-        top_tables_data = [t['total_orders'] for t in top_tables_query]
-
-    total_mesas = Mesa.objects.count()
-    platillos_en_menu = ProductoMenu.objects.filter(disponible=True).count()
+    # =============================================
+    # USO DEL PROCEDIMIENTO ALMACENADO
+    # =============================================
+    try:
+        # ATENCIÓN: Usar transaction.atomic() es vital para que las tablas
+        # temporales ON COMMIT DROP sobrevivan durante todo este bloque.
+        with transaction.atomic():
+            with connection.cursor() as cursor:
+                # 1. Ejecutar procedimiento principal
+                cursor.execute("""
+                    CALL sp_resumen_dashboard(
+                        %s::TIMESTAMPTZ, 
+                        %s::TIMESTAMPTZ, 
+                        %s::VARCHAR, 
+                        %s::INTEGER[]
+                    )
+                """, [start_date, end_date, search_query, None])
+                
+                # 2. Obtener métricas principales
+                cursor.execute("SELECT * FROM temp_metricas_dashboard")
+                metricas = cursor.fetchone()
+                
+                if metricas:
+                    total_sales = float(metricas[0])  # ventas_totales
+                    total_orders = metricas[1]          # total_pedidos
+                    # Los índices 3 y 4 corresponden a mesas y platillos, si hubieras sobreescrito los de la BD
+                    if metricas[3]: total_mesas = metricas[3]
+                    if metricas[4]: platillos_en_menu = metricas[4]
+                
+                # 3. Obtener top productos
+                cursor.execute("SELECT nombre_producto, cantidad_total FROM temp_top_productos")
+                productos = cursor.fetchall()
+                top_products_labels = [p[0] for p in productos]
+                top_products_data = [float(p[1]) for p in productos]
+                
+                # 4. Obtener top mesas
+                cursor.execute("SELECT numero_mesa, total_pedidos FROM temp_top_mesas")
+                mesas = cursor.fetchall()
+                top_tables_labels = [f"Mesa {m[0]}" for m in mesas]
+                top_tables_data = [m[1] for m in mesas]
+                
+                # 5. Obtener resultados de búsqueda (solo si se buscó algo)
+                if search_query:
+                    cursor.execute("SELECT * FROM temp_busqueda_clientes")
+                    columnas = [col[0] for col in cursor.description]
+                    resultados = [dict(zip(columnas, fila)) for fila in cursor.fetchall()]
+                    
+                    if resultados:
+                        search_results_count = resultados[0].get('total_encontrados', 0)
+                        
+                        for r in resultados:
+                            search_results.append({
+                                'idPedido': r['id_pedido'],
+                                'idCliente': {'nombre': r.get('nombre_cliente', '')},
+                                'fecha': r.get('fecha_pedido'),
+                                'idMesa': {'idMesa': r['mesa_numero']} if r.get('mesa_numero') else None,
+                                'montoTotal': float(r.get('monto_total', 0)),
+                                'metodoPago': r.get('metodo_pago', 'N/A'),
+                                'estadoDePago': r.get('estado_pago', True)
+                            })
+                            
+    except Exception as e:
+        print(f"Error en procedimiento almacenado: {e}")
+        # En caso de error, el bloque mantendrá los valores por defecto definidos arriba
 
     context = {
         'total_sales': total_sales,
