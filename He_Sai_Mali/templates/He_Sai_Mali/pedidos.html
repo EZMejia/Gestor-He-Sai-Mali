@@ -134,14 +134,14 @@
         }
         .action-buttons .btn-facturar { background-color: #38761d; }
         .action-buttons .btn-facturar:not(:disabled):hover { background-color: #2d5e17; text-decoration: none; color: white;}
-        .action-buttons .btn-agregar { background-color: #3c78d8; }
+        .action-buttons .btn-agregar { background-color: #3c78d8; text-decoration: none; }
         .action-buttons .btn-agregar:hover { background-color: #3060ad; text-decoration: none; color: white;}
         .action-buttons .btn-eliminar { background-color: #cc0000; }
         .action-buttons .btn-eliminar:not(:disabled):hover { background-color: #a30000; text-decoration: none; color: white;}
         
         .action-buttons button:disabled { background-color: #ccc; cursor: not-allowed; opacity: 0.6; }
 
-        .main-content { display: flex; flex-direction: column; height: calc(100vh - 60px); overflow: hidden; }
+        .main-content { display: flex; flex-direction: column; height: calc(100dvh - 60px); overflow: hidden; }
         .contenido { width: 100%; padding:0 20px; flex-grow: 1; overflow-y: auto; }
 
         /* Modales */
@@ -163,15 +163,19 @@
     <div id="app">
         <main class="main-content" id="main-content">
             <div class="contenido">
-                {% if messages %}
-                    <div style="width: 90%; margin: 10px auto;">
-                    {% for message in messages %}
-                        <div class="alert-{{ message.tags }}" style="padding: 10px; margin-bottom: 10px; border-radius: 5px; background-color: {% if message.tags == 'error' %}#f44336{% else %}#4CAF50{% endif %}; color: white;">
-                            {{ message }}
-                        </div>
-                    {% endfor %}
-                    </div>
-                {% endif %}
+                <div id="contenedor-mensajes" class="toast-container position-fixed top-0 end-0 p-4" style="z-index: 1080;">
+                    {% if messages %}
+                        {% for message in messages %}
+                            <div class="alert alert-{% if message.tags == 'error' %}danger{% else %}{{ message.tags }}{% endif %} alert-dismissible fade show shadow-lg pe-auto" role="alert">
+                                <div class="d-flex align-items-center">
+                                    <i class="fa {% if message.tags == 'error' %}fa-exclamation-circle{% else %}fa-check-circle{% endif %} me-2"></i>
+                                    <span>{{ message }}</span>
+                                </div>
+                                <button type="button" class="btn-close shadow-none" data-bs-dismiss="alert" aria-label="Close"></button>
+                            </div>
+                        {% endfor %}
+                    {% endif %}
+                </div>
 
                 <div class="mb-4">
                     <a href="{% url 'registrarpedido' %}" class="btn-nuevo" style="border: none;">
@@ -179,6 +183,7 @@
                     </a>
                 </div>
 
+                <div id="lista-pedidos">
                 {% if cola_pedidos %}
                     {% for pedido in cola_pedidos %}
                         {% with estado_general=estado_botones|get_item:pedido.idPedido %}
@@ -201,11 +206,11 @@
                                             
                                             <div class="progress-container" title="Estado: {{ platillo.Estado }}">
                                                 <div class="progress-bar" 
-                                                     style="width: {% if platillo.Estado == 'Registrado' %}33%{% elif platillo.Estado == 'Listo' %}66%{% else %}100%{% endif %};">
+                                                    style="width: {% if platillo.Estado == 'Registrado' %}33%{% elif platillo.Estado == 'Listo' %}66%{% else %}100%{% endif %};">
                                                 </div>
                                             </div>
 
-                                            <form method="POST" action="{% url 'cambiar_estado_platillo' platillo.IdPedido_Platillo %}" style="display:inline; width: 100%;">
+                                            <form method="POST" action="{% url 'cambiar_estado_platillo' platillo.IdPedido_Platillo %}" style="display:inline; width: 100%;" class="ajax-form">
                                                 {% csrf_token %}
                                                 <button type="submit" 
                                                     class="platillo_estado" 
@@ -239,7 +244,7 @@
                                 <a href="{% url 'registrarpedido_agregar' pedido.idPedido %}" class="btn-agregar">
                                     <i class="fas fa-plus"></i> Agregar
                                 </a>
-                                <form method="POST" action="{% url 'eliminar_pedido' pedido.idPedido %}" style="display:inline;">
+                                <form method="POST" action="{% url 'eliminar_pedido' pedido.idPedido %}" style="display:inline;" class="ajax-form">
                                     {% csrf_token %}
                                     <button type="submit" class="btn-eliminar" {% if not estado_general.puede_eliminar %}disabled{% endif %}>
                                         <i class="fas fa-trash-alt"></i> Eliminar
@@ -250,6 +255,7 @@
                         {% endwith %}
                     {% endfor %}
                 {% endif %}
+                </div>
             </div>
 
             {# MODAL PAGO #}
@@ -287,5 +293,69 @@
             document.getElementById('formOverlayPago').style.display = 'none';
             document.getElementById('modalFormularioPago').style.display = 'none';
         }
+    </script>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            
+            // 1. Función para obtener y renderizar los nuevos datos
+            function actualizarVista() {
+                fetch(window.location.href, {
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest'
+                    }
+                })
+                .then(response => response.text())
+                .then(html => {
+                    // Parsea el HTML recibido
+                    const parser = new DOMParser();
+                    const doc = parser.parseFromString(html, 'text/html');
+
+                    // Actualiza la lista de pedidos
+                    const nuevoContenido = doc.getElementById('lista-pedidos');
+                    const actualContenido = document.getElementById('lista-pedidos');
+                    if (nuevoContenido && actualContenido) {
+                        actualContenido.innerHTML = nuevoContenido.innerHTML;
+                    }
+
+                    // Actualiza las alertas/mensajes de Django
+                    const nuevosMensajes = doc.getElementById('contenedor-mensajes');
+                    const actualesMensajes = document.getElementById('contenedor-mensajes');
+                    if (nuevosMensajes && actualesMensajes) {
+                        actualesMensajes.innerHTML = nuevosMensajes.innerHTML;
+                    }
+                })
+                .catch(error => console.error('Error de sincronización:', error));
+            }
+
+            // 2. Interceptar el envío normal de los formularios con la clase 'ajax-form'
+            document.body.addEventListener('submit', function(e) {
+                if (e.target.classList.contains('ajax-form')) {
+                    e.preventDefault(); // Evita la recarga
+                    
+                    const form = e.target;
+                    const submitBtn = form.querySelector('button[type="submit"]');
+                    if (submitBtn) submitBtn.disabled = true; // Previene doble clic
+
+                    fetch(form.action, {
+                        method: 'POST',
+                        body: new FormData(form),
+                        headers: {
+                            'X-Requested-With': 'XMLHttpRequest'
+                        }
+                    })
+                    .then(response => {
+                        // Forzamos una actualización inmediata al recibir respuesta
+                        actualizarVista(); 
+                    })
+                    .finally(() => {
+                        if (submitBtn) submitBtn.disabled = false;
+                    });
+                }
+            });
+
+            // 3. Ejecutar el Polling cada 5 segundos (5000 milisegundos)
+            setInterval(actualizarVista, 5000);
+        });
     </script>
 {% endblock %}

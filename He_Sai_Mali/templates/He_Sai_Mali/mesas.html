@@ -25,7 +25,7 @@
         body { height: 100%; overflow: hidden; }
 
         /* MAIN CONTENT */
-        .main-content { height: calc(100vh - 60px); display: flex; flex-direction: column; overflow: hidden; transition: margin-left 0.3s ease;}
+        .main-content { height: calc(100dvh - 60px); display: flex; flex-direction: column; overflow: hidden; transition: margin-left 0.3s ease;}
         
         .contenido { flex-grow: 1; padding: 20px 20px; overflow-y: auto;}
 
@@ -97,12 +97,6 @@
         .status-badge { padding: 4px 8px; border-radius: 5px; font-weight: bold; color: white; }
         .status-libre { background-color: var(--mesa-libre); }
         .status-ocupada { background-color: var(--mesa-ocupada); }
-        
-        /* Messages */
-        .alert-custom { padding: 10px; margin-bottom: 15px; border-radius: 5px; color: white; font-weight: bold; }
-        .alert-error { background-color: #f44336; }
-        .alert-success { background-color: #4CAF50; }
-        .alert-info { background-color: #ff9800; color: black; }
     </style>
 {% endblock %}
 
@@ -116,47 +110,55 @@
                     {% if user.rol != "Mesero" %}
                         <h1 style="color: #981a28; margin-bottom: 20px;">Administración de Mesas</h1>
 
-                        {% if messages %}
-                            {% for message in messages %}
-                                <div class="alert-custom alert-{{ message.tags }}" role="alert">
-                                    {{ message }}
-                                </div>
-                            {% endfor %}
-                        {% endif %}
+                        <div class="toast-container position-fixed top-0 end-0 p-4" style="z-index: 1080;">
+                            {% if messages %}
+                                {% for message in messages %}
+                                    <div class="alert alert-{% if message.tags == 'error' %}danger{% else %}{{ message.tags }}{% endif %} alert-dismissible fade show shadow-lg pe-auto" role="alert">
+                                        <div class="d-flex align-items-center">
+                                            <i class="fa {% if message.tags == 'error' %}fa-exclamation-circle{% else %}fa-check-circle{% endif %} me-2"></i>
+                                            <span>{{ message }}</span>
+                                        </div>
+                                        <button type="button" class="btn-close shadow-none" data-bs-dismiss="alert" aria-label="Close"></button>
+                                    </div>
+                                {% endfor %}
+                            {% endif %}
+                        </div>
                         
                         <div class="card-custom">
                             <div class="card-header-custom" id="form-header">
                                 {% if mesa_a_editar %}Editar Mesa: {{ mesa_a_editar.idMesa }}{% else %}Agregar Nueva Mesa{% endif %}
                             </div>
                             <div class="card-body-custom">
-                                <form method="post" action="{% url 'admin_mesas' %}" id="mesa-form" onsubmit="return validateForm()">
+                                <form method="post"
+                                    action="{% if mesa_a_editar %}{% url 'editar_mesa' mesa_a_editar.idMesa %}{% else %}{% url 'admin_mesas' %}{% endif %}" 
+                                    id="mesa-form" onsubmit="return validateForm()">
                                     {% csrf_token %}
                                     <input type="hidden" name="action" id="action-field" value="add"> 
 
                                     <div style="display: flex; gap: 15px; flex-wrap: wrap; align-items: flex-start;">
-                                        
-                                        <div style="flex-grow: 1; min-width: 300px;">
+    
+                                        <div style="flex: 1 1 25%; min-width: 150px;">
                                             <label for="idMesa" class="form-label-custom">ID Mesa</label>
                                             <input type="number" class="form-control-custom" id="idMesa" name="idMesa" placeholder="Nuevo ID"
                                             value="{% if mesa_a_editar %}{{ mesa_a_editar.idMesa }}{% endif %}"
                                             {% if mesa_a_editar %}disabled{% endif %}>
                                         </div>
 
-                                        <div style="flex-grow: 1; min-width: 300px;">
+                                        <div style="flex: 1 1 35%; min-width: 180px;">
                                             <label for="capacidad" class="form-label-custom">Capacidad (Asientos)</label>
                                             <input type="number" class="form-control-custom" id="capacidad" name="capacidad" min="1" 
                                                 value="{% if mesa_seleccionada %}{{ mesa_seleccionada.capacidad }}{% endif %}" required>
                                         </div>
                                         
-                                        <div style="flex-grow: 1; min-width: 400px; display: flex; align-items: center; gap: 5px; margin-top: 29px;">
-                                            <button type="submit" class="btn-custom-action" style="flex-grow: 1;">
-                                            {% if mesa_a_editar %}Actualizar Mesa{% else %}Agregar Mesa{% endif %}
-                                        </button>
-                                        {% if mesa_a_editar %}
-                                        <a href="{% url 'admin_mesas' %}" class="btn-custom-delete" style="text-align: center; text-decoration: none; padding: 9px 20px; font-weight: normal;">
-                                            Cancelar Edición
-                                        </a>
-                                        {% endif %}
+                                        <div class="mt-md-3" style="flex: 1 1 30%; min-width: 200px; display: flex; align-items: flex-end; height: 62px;">
+                                            <button type="submit" class="btn-custom-action" style="flex-grow: 1; margin-bottom: 10px;">
+                                                {% if mesa_a_editar %}Actualizar Mesa{% else %}Agregar Mesa{% endif %}
+                                            </button>
+                                            {% if mesa_a_editar %}
+                                            <a href="{% url 'admin_mesas' %}" class="btn-custom-delete" style="text-align: center; text-decoration: none; padding: 9px 20px; font-weight: normal; margin-bottom: 10px; margin-left: 5px;">
+                                                Cancelar
+                                            </a>
+                                            {% endif %}
                                         </div>
                                     </div>
                                 </form>
@@ -208,7 +210,7 @@
                                             <span class="status-badge status-libre">Libre</span>
                                         {% endif %}
                                     </td>
-                                    <td>
+                                    <td style="white-space: nowrap;">
                                         <form action="{% url 'qr_mesas' mesa.idMesa %}" method="POST" style="display: inline;" >
                                             {% csrf_token %}
                                             <button type="submit" class="btn-custom-action" style="font-weight: bold; padding: 5px 10px;">
@@ -216,7 +218,7 @@
                                         </form>
                                     </td>
                                     {% if user.rol != "Mesero" %}
-                                        <td>
+                                        <td style="white-space: nowrap;">
                                             <a href="{% url 'editar_mesa' mesa.idMesa %}" class='btn-custom-edit' style="color: white; padding: 5px 10px; border-radius: 5px; text-decoration: none; font-weight: bold; display: inline-block; margin-right: 5px;">
                                                 <i class="fas fa-edit"></i> Editar
                                             </a>

@@ -31,7 +31,7 @@
         body { height: 100%; overflow: hidden; }
 
         .main-content {
-            height: calc(100vh - 60px);
+            height: calc(100dvh - 60px);
             display: flex;
             flex-direction: column; 
             overflow: hidden; 
@@ -296,24 +296,73 @@
     <div id="app">
         <main class="main-content" id="main-content">         
             <div class="contenido">
-                {% if messages %}
-                <ul class="messages">
-                    {% for message in messages %}
-                        <li class="{{ message.tags }}">{{ message }}</li>
-                    {% endfor %}
-                </ul>
+                {% if ingredientes_insuficientes %}
+                    <div class="accordion mb-4 shadow-sm" id="acordeonInventario">
+                        <div class="accordion-item bg-warning border-warning-subtle border-2">
+                            
+                            <h2 class="accordion-header" id="headingStock">
+                                <button class="accordion-button d-flex align-items-center bg-light text-dark shadow-none" 
+                                        type="button" 
+                                        data-bs-toggle="collapse" 
+                                        data-bs-target="#collapseStock" 
+                                        aria-expanded="true" 
+                                        aria-controls="collapseStock">
+                                    
+                                    <i class="fa-solid fa-triangle-exclamation fs-4 me-3 text-warning"></i>
+                                    <div>
+                                        <h5 class="fw-bold mb-0">Alerta de stock insuficiente</h5>
+                                    </div>
+                                    
+                                </button>
+                            </h2>
+
+                            <div id="collapseStock" class="accordion-collapse collapse show" aria-labelledby="headingStock" data-bs-parent="#acordeonInventario">
+                                <div class="accordion-body bg-white">
+                                    
+                                    <ul class="mb-0 row row-cols-1 row-cols-md-2 g-2 ps-3">
+                                        {% for item in ingredientes_insuficientes %}
+                                            <ul class="col text-dark">
+                                                <strong>{{ item.nombre }}</strong> 
+                                                <span class="badge bg-warning-subtle text-secondary ms-0">
+                                                    {{ item.cantidad_actual }} {{ item.unidad_medida }} en existencia
+                                                </span>
+                                            </ul>
+                                        {% endfor %}
+                                    </ul>
+
+                                </div>
+                            </div>
+
+                        </div>
+                    </div>
                 {% endif %}
+
+                <div class="toast-container position-fixed top-0 end-0 p-4" style="z-index: 1080;">
+                    {% if messages %}
+                        {% for message in messages %}
+                            <div class="alert alert-{% if message.tags == 'error' %}danger{% else %}{{ message.tags }}{% endif %} alert-dismissible fade show shadow-lg pe-auto" role="alert">
+                                <div class="d-flex align-items-center">
+                                    <i class="fa {% if message.tags == 'error' %}fa-exclamation-circle{% else %}fa-check-circle{% endif %} me-2"></i>
+                                    <span>{{ message }}</span>
+                                </div>
+                                <button type="button" class="btn-close shadow-none" data-bs-dismiss="alert" aria-label="Close"></button>
+                            </div>
+                        {% endfor %}
+                    {% endif %}
+                </div>
                 
                 <!-- 1. FILTRO DE FECHAS (INICIO - FIN) -->
                 <div class="date-filter-section">
                     <form id="dateFilterForm" method="GET" action="{% url 'admin_dashboard' %}" style="display: contents;" onsubmit="return validarFechas()">
                         <div class="date-input-group">
-                            <label for="start_date">Fecha Inicio:</label>
-                            <input type="date" id="start_date" name="start_date" value="{{ start_date_str|default:'' }}" onchange="validarYEnviar()" required>
-                            
+                            <div>
+                                <label for="start_date">Fecha Inicio:</label>
+                                <input type="date" id="start_date" name="start_date" value="{{ start_date_str|default:'' }}" onchange="validarYEnviar()" required>
+                            </div>
+                            <div>
                             <label for="end_date">Fecha Fin:</label>
                             <input type="date" id="end_date" name="end_date" value="{{ end_date_str|default:'' }}" onchange="validarYEnviar()" required>
-                            
+                            </div>
                             <button type="submit" class="btn-aplicar-filtro">
                                 <i class="fas fa-filter"></i> Aplicar Filtro
                             </button>
@@ -325,9 +374,9 @@
                     </form>
                     <div>
                         <a id="generatePdfButton" 
-                           href="{% url 'generate_dashboard_pdf' %}?start_date={{ start_date_str|default:'' }}&end_date={{ end_date_str|default:'' }}{% if search_query %}&search={{ search_query }}{% endif %}" 
-                           target="_blank"
-                           style="background-color: var(--primary-color); color: white; padding: 8px 15px; border-radius: 5px; text-decoration: none; font-weight: bold;">
+                            href="{% url 'generate_dashboard_pdf' %}?start_date={{ start_date_str|default:'' }}&end_date={{ end_date_str|default:'' }}{% if search_query %}&search={{ search_query }}{% endif %}" 
+                            target="_blank"
+                            style="background-color: var(--primary-color); color: white; padding: 8px 15px; border-radius: 5px; text-decoration: none; font-weight: bold;">
                             <i class="fas fa-file-pdf"></i> Generar PDF
                         </a>
                     </div>
@@ -457,15 +506,6 @@
                                         </td>
                                     </tr>
                                     {% endfor %}
-                                {% else %}
-                                    <tr id="empty-results-row">
-                                        <td colspan="7">
-                                            <div class="empty-results">
-                                                <i class="fas fa-user-slash"></i>
-                                                <p>No se encontraron pedidos para "<span id="empty-search-term">{{ search_query }}</span>"</p>
-                                            </div>
-                                        </td>
-                                    </tr>
                                 {% endif %}
                             </tbody>
                         </table>

@@ -22,7 +22,7 @@
         /* ---------------------------------------------------- */
         /* --- Contenido Principal (MAIN CONTENT) --- */
         /* ---------------------------------------------------- */
-        .main-content { height: calc(100vh - 60px); display: flex; flex-direction: column; overflow: hidden; transition: margin-left 0.3s ease;}
+        .main-content { height: calc(100dvh - 60px); display: flex; flex-direction: column; overflow: hidden; transition: margin-left 0.3s ease;}
 
         /* Estilos del Contenido de Registro (Adaptados) */
         .contenido { flex-grow: 1; padding: 20px 20px; overflow-y: auto; }
@@ -137,18 +137,19 @@
         <main class="main-content" id="main-content">
             <div class="contenido">
                 
-                {% if messages %}
-                    <div style="width: 90%; margin: 10px auto;">
-                    {% for message in messages %}
-                        <div style="padding: 10px; margin-bottom: 10px; border-radius: 5px; 
-                            {% if message.tags == 'error' %}background-color: #f44336; color: white;
-                            {% elif message.tags == 'success' %}background-color: #4CAF50; color: white;
-                            {% else %}background-color: #ff9800; color: black;{% endif %}">
-                            {{ message }}
-                        </div>
-                    {% endfor %}
-                    </div>
-                {% endif %}
+                <div class="toast-container position-fixed top-0 end-0 p-4" style="z-index: 1080;">
+                    {% if messages %}
+                        {% for message in messages %}
+                            <div class="alert alert-{% if message.tags == 'error' %}danger{% else %}{{ message.tags }}{% endif %} alert-dismissible fade show shadow-lg pe-auto" role="alert">
+                                <div class="d-flex align-items-center">
+                                    <i class="fa {% if message.tags == 'error' %}fa-exclamation-circle{% else %}fa-check-circle{% endif %} me-2"></i>
+                                    <span>{{ message }}</span>
+                                </div>
+                                <button type="button" class="btn-close shadow-none" data-bs-dismiss="alert" aria-label="Close"></button>
+                            </div>
+                        {% endfor %}
+                    {% endif %}
+                </div>
                 
                 <h2 style="color: #dacfb7; text-align: center; padding: 20px 0;">Productos Pendientes por Elaborar</h2>
 
@@ -171,7 +172,7 @@
                                             <div style="font-weight: bold;">
                                                 {{ platillo.cantidad }}x {{ platillo.nombre }}
                                             </div>
-                                            <form method="post" action="{% url 'platillo_listo' platillo.id_pp %}" style="display:inline;">
+                                            <form method="post" action="{% url 'platillo_listo' platillo.id_pp %}" style="display:inline;" class="ajax-form">
                                                 {% csrf_token %}
                                                 <button type="submit" class="btn-listo" title="Marcar como listo para servir">
                                                     Marcar como listo
@@ -194,20 +195,84 @@
 {% endblock %}
 
 {% block extra_js %}
-<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
-<script>
-    document.addEventListener('DOMContentLoaded', function() {
-        var el = document.getElementById('lista-pedidos');
-        var sortable = Sortable.create(el, {
-            animation: 150,      // Velocidad de la animación en ms
-            ghostClass: 'sortable-ghost', // Clase para el elemento fantasma
-            handle: '.card-header',       // El arrastre se inicia solo desde el header
-            onEnd: function (evt) {
-                console.log('Nuevo orden establecido');
-                // Aquí podrías realizar una petición AJAX (fetch) a Django 
-                // si necesitas guardar el orden en la base de datos de PostgreSQL.
-            },
+    <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            var el = document.getElementById('lista-pedidos');
+            var sortable = Sortable.create(el, {
+                animation: 150,      // Velocidad de la animación en ms
+                ghostClass: 'sortable-ghost', // Clase para el elemento fantasma
+                handle: '.card-header',       // El arrastre se inicia solo desde el header
+                onEnd: function (evt) {
+                    console.log('Nuevo orden establecido');
+                    // Aquí podrías realizar una petición AJAX (fetch) a Django 
+                    // si necesitas guardar el orden en la base de datos de PostgreSQL.
+                },
+            });
         });
-    });
-</script>
+    </script>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            
+            // 1. Función para obtener y renderizar los nuevos datos
+            function actualizarVista() {
+                fetch(window.location.href, {
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest'
+                    }
+                })
+                .then(response => response.text())
+                .then(html => {
+                    // Parsea el HTML recibido
+                    const parser = new DOMParser();
+                    const doc = parser.parseFromString(html, 'text/html');
+
+                    // Actualiza la lista de pedidos
+                    const nuevoContenido = doc.getElementById('lista-pedidos');
+                    const actualContenido = document.getElementById('lista-pedidos');
+                    if (nuevoContenido && actualContenido) {
+                        actualContenido.innerHTML = nuevoContenido.innerHTML;
+                    }
+
+                    // Actualiza las alertas/mensajes de Django
+                    const nuevosMensajes = doc.getElementById('contenedor-mensajes');
+                    const actualesMensajes = document.getElementById('contenedor-mensajes');
+                    if (nuevosMensajes && actualesMensajes) {
+                        actualesMensajes.innerHTML = nuevosMensajes.innerHTML;
+                    }
+                })
+                .catch(error => console.error('Error de sincronización:', error));
+            }
+
+            // 2. Interceptar el envío normal de los formularios con la clase 'ajax-form'
+            document.body.addEventListener('submit', function(e) {
+                if (e.target.classList.contains('ajax-form')) {
+                    e.preventDefault(); // Evita la recarga
+                    
+                    const form = e.target;
+                    const submitBtn = form.querySelector('button[type="submit"]');
+                    if (submitBtn) submitBtn.disabled = true; // Previene doble clic
+
+                    fetch(form.action, {
+                        method: 'POST',
+                        body: new FormData(form),
+                        headers: {
+                            'X-Requested-With': 'XMLHttpRequest'
+                        }
+                    })
+                    .then(response => {
+                        // Forzamos una actualización inmediata al recibir respuesta
+                        actualizarVista(); 
+                    })
+                    .finally(() => {
+                        if (submitBtn) submitBtn.disabled = false;
+                    });
+                }
+            });
+
+            // 3. Ejecutar el Polling cada 5 segundos (5000 milisegundos)
+            setInterval(actualizarVista, 5000);
+        });
+    </script>
 {% endblock %}

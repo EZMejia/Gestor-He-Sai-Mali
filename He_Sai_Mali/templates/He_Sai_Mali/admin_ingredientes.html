@@ -21,7 +21,7 @@
         /* ---------------------------------------------------- */
         /* --- Contenido Principal (MAIN CONTENT) --- */
         /* ---------------------------------------------------- */
-        .main-content { height: calc(100vh - 60px); display: flex; flex-direction: column; overflow: hidden; transition: margin-left 0.3s ease;}
+        .main-content { height: calc(100dvh - 60px); display: flex; flex-direction: column; overflow: hidden; transition: margin-left 0.3s ease;}
 
         .contenido { flex-grow: 1; padding: 20px 20px; overflow-y: auto;}
 
@@ -32,6 +32,7 @@
             width: 100%;
             border-radius: 5px;
             padding: 20px;
+            margin-bottom: 25px;
         }
 
         .card-custom {
@@ -132,18 +133,6 @@
         .table-custom tbody tr:hover {
             background-color: #e0e0e0;
         }
-        
-        /* Estilos de mensajes (adaptados) */
-        .alert-custom {
-            padding: 10px;
-            margin-bottom: 15px;
-            border-radius: 5px;
-            color: white;
-            font-weight: bold;
-        }
-        .alert-error { background-color: #f44336; }
-        .alert-success { background-color: #4CAF50; }
-        .alert-info { background-color: #ff9800; color: black; }
 
         .form-text-custom {
             color: #6c757d;
@@ -211,14 +200,19 @@
                 <div class="container_admin">
                     <h1 style="color: #981a28; margin-bottom: 20px;">Administración de Inventario</h1>
 
-                    {# Mensajes de Django adaptados al nuevo estilo #}
-                    {% if messages %}
-                        {% for message in messages %}
-                            <div class="alert-custom alert-{{ message.tags }}" role="alert">
-                                {{ message }}
-                            </div>
-                        {% endfor %}
-                    {% endif %}
+                    <div class="toast-container position-fixed top-0 end-0 p-4" style="z-index: 1080;">
+                        {% if messages %}
+                            {% for message in messages %}
+                                <div class="alert alert-{% if message.tags == 'error' %}danger{% else %}{{ message.tags }}{% endif %} alert-dismissible fade show shadow-lg pe-auto" role="alert">
+                                    <div class="d-flex align-items-center">
+                                        <i class="fa {% if message.tags == 'error' %}fa-exclamation-circle{% else %}fa-check-circle{% endif %} me-2"></i>
+                                        <span>{{ message }}</span>
+                                    </div>
+                                    <button type="button" class="btn-close shadow-none" data-bs-dismiss="alert" aria-label="Close"></button>
+                                </div>
+                            {% endfor %}
+                        {% endif %}
+                    </div>
                     
                     {# MODAL / FORMULARIO FLOTANTE DE COMPRA #}
                     <div id="formOverlay" class="overlay-custom"></div>

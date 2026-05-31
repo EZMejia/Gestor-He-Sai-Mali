@@ -1743,6 +1743,33 @@ import json
 @never_cache
 @user_passes_test(es_rol("Administrador"), login_url='login')
 def admin_dashboard(request):
+    # --- LÓGICA DE ALERTA DE STOCK PARA 4 PLATILLOS ---
+    ingredientes_procesados = {}
+
+    # Consultamos todas las relaciones de recetas (ingredientes usados en platos)
+    recetas = ProductoMenu_ArticuloInventario.objects.select_related('idArticuloInventario', 'idProductoMenu').all()
+
+    for receta in recetas:
+        ingrediente = receta.idArticuloInventario
+        producto = receta.idProductoMenu
+        
+        # Cantidad mínima para poder hacer al menos 4 porciones
+        cantidad_minima_para_4 = receta.cantidad_usada * 4
+        
+        # Comparamos si el stock actual no cubre la demanda de 4 unidades
+        if ingrediente.stock < cantidad_minima_para_4:
+            # Agrupamos por ingrediente para no duplicarlo si falta en varias recetas
+            if ingrediente.idArticuloInventario not in ingredientes_procesados:
+                ingredientes_procesados[ingrediente.idArticuloInventario] = {
+                    'nombre': ingrediente.nombre,
+                    'cantidad_actual': ingrediente.stock,
+                    'unidad_medida': ingrediente.unidad_de_medida,
+                }
+            
+
+    # Convertimos el diccionario a una lista para enviarla al HTML
+    ingredientes_insuficientes = list(ingredientes_procesados.values())
+
     # Obtener parámetros de fecha y búsqueda
     start_date_str = request.GET.get('start_date')
     end_date_str = request.GET.get('end_date')
@@ -1871,6 +1898,7 @@ def admin_dashboard(request):
         'search_query': search_query,
         'search_results': search_results,
         'search_results_count': search_results_count,
+        'ingredientes_insuficientes': ingredientes_insuficientes,
     }
 
     if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
