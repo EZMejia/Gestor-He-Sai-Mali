@@ -215,42 +215,54 @@
                     </div>
                     
                     {# MODAL / FORMULARIO FLOTANTE DE COMPRA #}
-                    <div id="formOverlay" class="overlay-custom"></div>
+                    <div class="modal fade" id="modalComprarIngrediente" tabindex="-1" aria-labelledby="modalComprarIngredienteLabel" aria-hidden="true">
+                        <div class="modal-dialog modal-dialog-centered">
+                            <div class="modal-content">
+                                <div class="modal-header" style="background-color: var(--primary-color); color: white;">
+                                    <h5 class="modal-title" id="modalComprarIngredienteLabel">
+                                        <i class="fas fa-shopping-cart"></i> Registrar Compra para: <span id="nombreIngredienteTexto" style="font-weight: normal;"></span>
+                                    </h5>
+                                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                                </div>
+                                <form method="POST" action="{% url 'comprar_ingrediente' %}">
+                                    {% csrf_token %}
+                                    <div class="modal-body" style="color: #333;">
+                                        <input type="hidden" id="idIngredienteInput" name="id_ingrediente" required>
 
-                    <div id="compraFormContainer" class="modal-card-custom">
-                        <div class="modal-header-custom">
-                            Registrar Compra para: <span id="nombreIngrediente" style="font-weight: normal;"></span>
-                        </div>
-                        <div class="modal-body-custom">
-                            <form method="POST" action="{% url 'comprar_ingrediente' %}">
-                                {% csrf_token %}
-                                <input type="hidden" name="id_ingrediente" id="idIngredienteInput" required>
+                                        <div class="mb-3">
+                                            <label for="idProveedorInput" class="form-label" style="font-weight: bold;">Proveedor:</label>
+                                            <select class="form-select" id="idProveedorInput" name="id_proveedor_fk" required>
+                                                <option value="" disabled selected>Seleccione un proveedor...</option>
+                                                {% for proveedor in proveedores %}
+                                                    <option value="{{ proveedor.idProveedor }}">{{ proveedor.nombre }}</option>
+                                                {% endfor %}
+                                            </select>
+                                        </div>
 
-                                <div class="modal-input-group">
-                                    <label for="proveedorInput" class="form-label-custom">Proveedor:</label>
-                                    <input type="text" list="proveedores-list" id="proveedorInput" class="form-control-custom" placeholder="Seleccione un proveedor" required>
-                                    <input type="hidden" name="id_proveedor_fk" id="idProveedorInput" required>
-                                </div>
-                                
-                                <div class="modal-input-group">
-                                    <label for="precioCompra" class="form-label-custom">Precio de Compra (C$):</label>
-                                    <input type="number" step="0.01" min="0.01" name="precio_compra" id="precioCompra" class="form-control-custom" required>
-                                </div>
-                                
-                                <div class="modal-input-group">
-                                    <label for="cantidadComprada" class="form-label-custom">Cantidad Comprada:</label>
-                                    <input type="number" step="0.01" min="0.01" name="cantidad_comprada" id="cantidadComprada" class="form-control-custom" required>
-                                    <small id="unidadMedida" class="form-text-custom"></small>
-                                </div>
-                                
-                                <div class="modal-input-group">
-                                    <label for="fechaCompra" class="form-label-custom">Fecha de la Compra:</label>
-                                    <input type="date" name="fecha_compra" id="fechaCompra" class="form-control-custom" required>
-                                </div>
-                                
-                                <button type="submit" class="btn-custom-success">Registrar Compra</button>
-                                <button type="button" class="btn-custom-danger" onclick="ocultarFormularioCompra()">Cancelar</button>
-                            </form>
+                                        <div class="mb-3">
+                                            <label for="precioCompra" class="form-label" style="font-weight: bold;">Precio de Compra (C$):</label>
+                                            <input type="number" step="0.01" min="0.01" class="form-control" id="precioCompra" name="precio_compra" required
+                                                onkeydown="if(event.key === '-') event.preventDefault();" oninput="if(this.value < 0) this.value = '';">
+                                        </div>
+
+                                        <div class="mb-3">
+                                            <label for="cantidadComprada" class="form-label" style="font-weight: bold;">Cantidad Comprada:</label>
+                                            <input type="number" step="0.01" min="0.01" class="form-control" id="cantidadComprada" name="cantidad_comprada" required
+                                                onkeydown="if(event.key === '-') event.preventDefault();" oninput="if(this.value < 0) this.value = '';">
+                                            <small id="unidadMedidaTexto" class="form-text-custom" style="margin-top: 5px; color: #6c757d; font-weight: bold;"></small>
+                                        </div>
+
+                                        <div class="mb-3">
+                                            <label for="fechaCompra" class="form-label" style="font-weight: bold;">Fecha de la Compra:</label>
+                                            <input type="date" class="form-control" id="fechaCompra" name="fecha_compra" required>
+                                        </div>
+                                    </div>
+                                    <div class="modal-footer">
+                                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                                        <button type="submit" class="btn" style="background-color: var(--primary-color); color: white; font-weight: bold;">Registrar Compra</button>
+                                    </div>
+                                </form>
+                            </div>
                         </div>
                     </div>
                     {# FIN DE MODAL / FORMULARIO FLOTANTE DE COMPRA #}
@@ -281,7 +293,7 @@
                                 
                                 <div style="flex-grow: 0; min-width: 100px;">
                                     <label for="stock" class="form-label-custom">Stock Inicial:</label>
-                                    <input type="number" step="0.01" min="0" name="stock" id="stock" class="form-control-custom" value="0" required>
+                                    <input type="number" step="0.01" min="0" name="stock" id="stock" class="form-control-custom" {% if articulo_a_editar %}disabled{% else %}required{% endif %}>
                                 </div>
                                 
                                 <div style="flex-grow: 0; min-width: 150px;">
@@ -361,8 +373,9 @@
                                         <td>{{ articulo.unidad_de_medida }}</td>
                                         <td>{{ articulo.ubicacion|default:"-" }}</td> 
                                         <td>
-                                            <button type="button" style="font-weight: bold; padding: 5px 10px;" class="btn-custom-success" onclick="event.stopPropagation(); mostrarFormularioCompra({{ articulo.idArticuloInventario }}, '{{ articulo.nombre }}', '{{ articulo.unidad_de_medida }}')">
-                                                Comprar
+                                            <button type="button" style="font-weight: bold; padding: 5px 10px;" class="btn-custom-success" 
+                                                onclick="abrirFormularioComprar('{{ articulo.idArticuloInventario }}')">
+                                                <i class="fas fa-shopping-cart"></i> Comprar
                                             </button>
                                         </td>
                                         <td style="white-space: nowrap;">
@@ -370,14 +383,10 @@
                                             style="color: white; padding: 5px 10px; border-radius: 5px; text-decoration: none; font-weight: bold; display: inline-block; margin-right: 5px;">
                                                 <i class="fas fa-edit"></i> Editar
                                             </a>
-                                            
-                                            <form action="{% url 'eliminar_ingrediente' articulo.idArticuloInventario %}" method="POST" style="display: inline;" 
-                                                onsubmit="return confirm('¿Está seguro de que desea eliminar el ingrediente {{ articulo.nombre }}? Esta acción fallará si existen recetas o compras asociadas.');">
-                                                {% csrf_token %}
-                                                <button type="submit" class="btn-custom-danger" style="padding: 5px 10px; font-weight: bold;">
-                                                    <i class="fas fa-trash-alt"></i> Eliminar
-                                                </button>
-                                            </form>
+                                            <button type="button" class="btn-custom-danger" style="padding: 5px 10px;" 
+                                                onclick="prepararModalEliminarIngrediente('{{ articulo.idArticuloInventario }}', '{{ articulo.nombre|escapejs }}', '{% url 'eliminar_ingrediente' articulo.idArticuloInventario %}')">
+                                                <i class="fas fa-trash-alt"></i> Eliminar
+                                            </button>
                                         </td>
                                     </tr>
                                 {% empty %}
@@ -389,6 +398,32 @@
                         </table>
                     </div>
                     {# Fin de Listado de Ingredientes / Tabla #}
+                </div>
+            </div>
+            <div class="modal fade" id="modalEliminarIngrediente" tabindex="-1" aria-labelledby="modalEliminarIngredienteLabel" aria-hidden="true">
+                <div class="modal-dialog modal-dialog-centered">
+                    <div class="modal-content">
+                        <div class="modal-header" style="background-color: var(--primary-color); color: white;">
+                            <h5 class="modal-title" id="modalEliminarIngredienteLabel">
+                                <i class="fas fa-exclamation-triangle"></i> Confirmar Eliminación
+                            </h5>
+                            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                        </div>
+                        <div class="modal-body">
+                            <p>¿Está seguro de que desea eliminar el ingrediente <strong><span id="modal-nombre-ingrediente-texto"></span></strong> (ID: <span id="modal-id-ingrediente-texto"></span>)?</p>
+                            <p class="text-muted" style="font-size: 0.9em;">
+                                Esta acción no se puede deshacer y fallará si el ingrediente forma parte de la receta de algún platillo activo.
+                            </p>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                            <form id="form-eliminar-ingrediente" method="POST" action="">
+                                {% csrf_token %}
+                                <button type="submit" class="btn"
+                                style="background-color: var(--primary-color); color: white;">Sí, Eliminar</button>
+                            </form>
+                        </div>
+                    </div>
                 </div>
             </div>
         </main>
@@ -426,44 +461,32 @@
             input.focus(); // Devolver el foco al buscador
         }
 
-        // --- Funciones para el formulario de Compra (Modal) ---
-        function mostrarFormularioCompra(id, nombre, unidad) {
-            document.getElementById('idIngredienteInput').value = id;
-            document.getElementById('nombreIngrediente').textContent = nombre;
-            // Corregido: asumí que el nombre del campo en el JS es 'unidadDeMedida'
-            // Si el nombre del campo en tu modelo/contexto es 'unidad_de_medida', el HTML debe ser ajustado en el bucle 'for'
-            document.getElementById('unidadMedida').textContent = `Unidad: ${unidad}`; 
-            document.getElementById('compraFormContainer').style.display = 'block';
-            document.getElementById('formOverlay').style.display = 'block';
+        // ==========================================
+        // FUNCIONALIDAD: MODAL ELIMINAR INGREDIENTE
+        // ==========================================
+        function prepararModalEliminarIngrediente(idIngrediente, nombreIngrediente, urlEliminar) {
+            document.getElementById('modal-id-ingrediente-texto').textContent = idIngrediente;
+            document.getElementById('modal-nombre-ingrediente-texto').textContent = nombreIngrediente;
+            document.getElementById('form-eliminar-ingrediente').action = urlEliminar;
+            
+            var modalEliminar = new bootstrap.Modal(document.getElementById('modalEliminarIngrediente'));
+            modalEliminar.show();
         }
 
-        function ocultarFormularioCompra() {
-            document.getElementById('compraFormContainer').style.display = 'none';
-            document.getElementById('formOverlay').style.display = 'none';
-            
-            // Limpiar campos del formulario
-            document.getElementById('idIngredienteInput').value = '';
-            document.getElementById('proveedorInput').value = '';
-            document.getElementById('idProveedorInput').value = '';
-            document.getElementById('precioCompra').value = '';
-            document.getElementById('cantidadComprada').value = '';
-            // La fecha se podría dejar, o limpiar si se desea.
+        // ==========================================
+        // FUNCIONALIDAD: MODAL COMPRAR INGREDIENTE
+        // ==========================================
+        function abrirFormularioComprar(idIngrediente) {
+            // 1. Resetear/Limpiar campos del formulario antes de mostrarlo
+            document.getElementById('idIngredienteInput').value = idIngrediente;
+            document.getElementById('idProveedorInput').value = ""; // Resetea el combobox
+            document.getElementById('precioCompra').value = "";
+            document.getElementById('cantidadComprada').value = "";
+
+            // 2. Desplegar el modal con Bootstrap 5
+            var modalComprar = new bootstrap.Modal(document.getElementById('modalComprarIngrediente'));
+            modalComprar.show();
         }
-
-        // Lógica para el datalist de Proveedores
-        const proveedorInput = document.getElementById('proveedorInput');
-        const idProveedorInput = document.getElementById('idProveedorInput');
-
-        proveedorInput.addEventListener('input', function() {
-            const datalist = document.getElementById('proveedores-list');
-            const selectedOption = Array.from(datalist.options).find(option => option.value === this.value);
-            
-            if (selectedOption) {
-                idProveedorInput.value = selectedOption.getAttribute('data-id');
-            } else {
-                idProveedorInput.value = '';
-            }
-        });
     </script>
 
     <datalist id="proveedores-list">

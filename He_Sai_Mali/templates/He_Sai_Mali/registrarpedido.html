@@ -301,9 +301,12 @@
 {% endblock %}
 
 {% block extra_js %}
+{{ inventario_json|json_script:"inventario-data-json" }}
+{{ recetas_json|json_script:"recetas-data-json" }}
+
 <script>
-    const inventarioOriginal = JSON.parse('{{ inventario_json|safe }}');
-    const recetas = JSON.parse('{{ recetas_json|safe }}');
+    const inventarioOriginal = JSON.parse(document.getElementById('inventario-data-json').textContent);
+    const recetas = JSON.parse(document.getElementById('recetas-data-json').textContent);
 
     calcularTotal();
 

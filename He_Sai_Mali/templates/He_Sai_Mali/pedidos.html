@@ -298,7 +298,38 @@
     <script>
         document.addEventListener('DOMContentLoaded', function() {
             
-            // 1. Función para obtener y renderizar los nuevos datos
+            // NUEVA FUNCIÓN: Procesa el HTML recibido e inyecta los cambios en el DOM
+            function procesarHTML(html) {
+                // Parsea el HTML recibido
+                const parser = new DOMParser();
+                const doc = parser.parseFromString(html, 'text/html');
+
+                // 1. Actualiza la lista de pedidos siempre (polling y formularios)
+                const nuevoContenido = doc.getElementById('lista-pedidos');
+                const actualContenido = document.getElementById('lista-pedidos');
+                if (nuevoContenido && actualContenido) {
+                    actualContenido.innerHTML = nuevoContenido.innerHTML;
+                }
+
+                // 2. CORRECCIÓN CRÍTICA PARA EL POLLING:
+                const nuevosMensajes = doc.getElementById('contenedor-mensajes');
+                const actualesMensajes = document.getElementById('contenedor-mensajes');
+                
+                if (nuevosMensajes && actualesMensajes) {
+                    // Evaluamos si el HTML recibido contiene al menos una alerta (.alert)
+                    if (nuevosMensajes.querySelector('.alert')) {
+                        // Si trae un mensaje nuevo (ej. de la eliminación), reemplazamos el contenedor
+                        actualesMensajes.innerHTML = nuevosMensajes.innerHTML;
+                        
+                        // Opcional: Si manejas cierre automático por JS (como un setTimeout de 4s),
+                        // puedes invocar aquí tu función para programar el cierre de esta nueva alerta.
+                    } 
+                    // SI NO TRAE ALERTAS (caso del polling constante): 
+                    // No hacemos nada. Ignoramos nuevosMensajes para que la alerta actual no se borre.
+                }
+            }
+
+            // 1. Función para obtener y renderizar los nuevos datos (Polling cada 5s)
             function actualizarVista() {
                 fetch(window.location.href, {
                     headers: {
@@ -307,23 +338,7 @@
                 })
                 .then(response => response.text())
                 .then(html => {
-                    // Parsea el HTML recibido
-                    const parser = new DOMParser();
-                    const doc = parser.parseFromString(html, 'text/html');
-
-                    // Actualiza la lista de pedidos
-                    const nuevoContenido = doc.getElementById('lista-pedidos');
-                    const actualContenido = document.getElementById('lista-pedidos');
-                    if (nuevoContenido && actualContenido) {
-                        actualContenido.innerHTML = nuevoContenido.innerHTML;
-                    }
-
-                    // Actualiza las alertas/mensajes de Django
-                    const nuevosMensajes = doc.getElementById('contenedor-mensajes');
-                    const actualesMensajes = document.getElementById('contenedor-mensajes');
-                    if (nuevosMensajes && actualesMensajes) {
-                        actualesMensajes.innerHTML = nuevosMensajes.innerHTML;
-                    }
+                    procesarHTML(html);
                 })
                 .catch(error => console.error('Error de sincronización:', error));
             }
@@ -331,7 +346,7 @@
             // 2. Interceptar el envío normal de los formularios con la clase 'ajax-form'
             document.body.addEventListener('submit', function(e) {
                 if (e.target.classList.contains('ajax-form')) {
-                    e.preventDefault(); // Evita la recarga
+                    e.preventDefault(); // Evita la recarga de página completa
                     
                     const form = e.target;
                     const submitBtn = form.querySelector('button[type="submit"]');
@@ -344,10 +359,11 @@
                             'X-Requested-With': 'XMLHttpRequest'
                         }
                     })
-                    .then(response => {
-                        // Forzamos una actualización inmediata al recibir respuesta
-                        actualizarVista(); 
+                    .then(response => response.text()) // <-- CORRECCIÓN: Leemos el HTML resultante de la redirección
+                    .then(html => {
+                        procesarHTML(html); // <-- CORRECCIÓN: Inyectamos directamente este HTML que ya contiene el mensaje
                     })
+                    .catch(error => console.error('Error al procesar el formulario:', error))
                     .finally(() => {
                         if (submitBtn) submitBtn.disabled = false;
                     });

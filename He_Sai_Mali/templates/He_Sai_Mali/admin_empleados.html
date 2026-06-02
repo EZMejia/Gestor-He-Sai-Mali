@@ -176,13 +176,17 @@
                                     <div style="flex: 1 1 30%; min-width: 200px;">
                                         <label for="nombre" class="form-label-custom">Nombre</label>
                                         <input type="text" class="form-control-custom" id="nombre" name="nombre" required
-                                        value="{{ empleado_a_editar.nombre|default:'' }}">
+                                        pattern="[A-Za-zÁéíóúÁÉÍÓÚñÑüÜ\s]+"
+                                        oninput="this.value = this.value.replace(/[^A-Za-zÁéíóúÁÉÍÓÚñÑüÜ\s]/g, '');"
+                                        value="{{ empleado_a_editar.nombre|default:'' }}" autocomplete="off">
                                     </div>
                                     
                                     <div style="flex: 1 1 30%; min-width: 200px;">
                                         <label for="apellido" class="form-label-custom">Apellido</label>
                                         <input type="text" class="form-control-custom" id="apellido" name="apellido" required
-                                        value="{{ empleado_a_editar.apellido|default:'' }}">
+                                        pattern="[A-Za-zÁéíóúÁÉÍÓÚñÑüÜ\s]+"
+                                        oninput="this.value = this.value.replace(/[^A-Za-zÁéíóúÁÉÍÓÚñÑüÜ\s]/g, '');"
+                                        value="{{ empleado_a_editar.apellido|default:'' }}" autocomplete="off">
                                     </div>
                                     
                                     <div style="flex: 1 1 30%; min-width: 200px;">
@@ -199,7 +203,9 @@
                                     <div style="flex: 1 1 30%; min-width: 200px;">
                                         <label for="telefono" class="form-label-custom">Teléfono</label>
                                         <input type="text" class="form-control-custom" id="telefono" name="telefono"
-                                        value="{{ empleado_a_editar.telefono|default:'' }}">
+                                        pattern="[0-9]{8}" title="El teléfono debe contener exactamente 8 dígitos numéricos."
+                                        oninput="this.value = this.value.replace(/[^0-9]/g, '').slice(0, 8);"
+                                        value="{{ empleado_a_editar.telefono|default:'' }}" autocomplete="off">
                                     </div>
 
                                     <div style="flex: 1 1 30%; min-width: 200px;">
@@ -283,14 +289,10 @@
                                             <i class="fas fa-edit"></i> Editar
                                         </a>
                                         
-                                        <form action="{% url 'eliminar_empleado' empleado.idEmpleado %}" method="POST" style="display: inline;" 
-                                            onsubmit="return confirm('¿Está seguro de que desea eliminar el empleado {{ empleado.nombre }} {{ empleado.apellido }}?');">
-                                            {% csrf_token %}
-                                            <button type="submit" class="btn-custom-danger" style="padding: 5px 10px;"
-                                                {% if empleado.idEmpleado == request.user.idEmpleado %}disabled{% endif %}>
-                                                <i class="fas fa-trash-alt"></i> Eliminar
-                                            </button>
-                                        </form>
+                                        <button type="button" class="btn-custom-danger" style="padding: 5px 10px;" 
+                                            onclick="prepararModalEliminarEmpleado('{{ empleado.idEmpleado }}', '{{ empleado.nombre|escapejs }}', '{% url 'eliminar_empleado' empleado.idEmpleado %}')">
+                                            <i class="fas fa-trash-alt"></i> Eliminar
+                                        </button>
                                     </td>
                                 </tr>
                                 {% empty %}
@@ -300,6 +302,32 @@
                                 {% endfor %}
                             </tbody>
                         </table>
+                    </div>
+                </div>
+            </div>
+            <div class="modal fade" id="modalEliminarEmpleado" tabindex="-1" aria-labelledby="modalEliminarEmpleadoLabel" aria-hidden="true">
+                <div class="modal-dialog modal-dialog-centered">
+                    <div class="modal-content">
+                        <div class="modal-header" style="background-color: var(--primary-color); color: white;">
+                            <h5 class="modal-title" id="modalEliminarEmpleadoLabel">
+                                <i class="fas fa-exclamation-triangle"></i> Confirmar Eliminación
+                            </h5>
+                            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                        </div>
+                        <div class="modal-body">
+                            <p>¿Está seguro de que desea eliminar al empleado <strong><span id="modal-nombre-empleado-texto"></span></strong> (ID: <span id="modal-id-empleado-texto"></span>)?</p>
+                            <p class="text-muted" style="font-size: 0.9em;">
+                                Esta acción no se puede deshacer y podría fallar si el empleado tiene registros operativos o de facturación asociados en el sistema.
+                            </p>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                            <form id="form-eliminar-empleado" method="POST" action="">
+                                {% csrf_token %}
+                                <button type="submit" class="btn"
+                                style="background-color: var(--primary-color); color: white;">Sí, Eliminar Empleado</button>
+                            </form>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -336,6 +364,20 @@
             input.value = ""; // Vaciar input
             filtrarProveedor(); // Resetear el filtrado para mostrar todo
             input.focus(); // Devolver el foco al buscador
+        }
+    </script>
+    <script>
+        function prepararModalEliminarEmpleado(idEmpleado, nombreEmpleado, urlEliminar) {
+            // 1. Actualizar los textos internos del modal
+            document.getElementById('modal-id-empleado-texto').textContent = idEmpleado;
+            document.getElementById('modal-nombre-empleado-texto').textContent = nombreEmpleado;
+            
+            // 2. Actualizar el atributo action del formulario del modal
+            document.getElementById('form-eliminar-empleado').action = urlEliminar;
+            
+            // 3. Inicializar y desplegar el modal de Bootstrap 5
+            var modalEliminar = new bootstrap.Modal(document.getElementById('modalEliminarEmpleado'));
+            modalEliminar.show();
         }
     </script>
 {% endblock %}
