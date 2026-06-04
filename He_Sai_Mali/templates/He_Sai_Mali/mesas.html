@@ -177,6 +177,7 @@
                             <input type="text" id="buscador" class="form-control" 
                                 placeholder="Escribe el numero de mesa..." 
                                 style="padding-left: 35px; padding-right: 35px; margin-bottom: 0;" 
+                                autocomplete="off"
                                 onkeyup="filtrarMesas()">
                             <span id="btn-limpiar" onclick="limpiarBusqueda()" 
                                 style="position: absolute; right: 10px; color: #888; cursor: pointer; display: none;">
@@ -222,13 +223,10 @@
                                             <a href="{% url 'editar_mesa' mesa.idMesa %}" class='btn-custom-edit' style="color: white; padding: 5px 10px; border-radius: 5px; text-decoration: none; font-weight: bold; display: inline-block; margin-right: 5px;">
                                                 <i class="fas fa-edit"></i> Editar
                                             </a>
-                                            <form action="{% url 'eliminar_mesa' mesa.idMesa %}" method="POST" style="display: inline;" 
-                                                onsubmit="return confirm('¿Está seguro de que desea eliminar el platillo {{ platillo.nombre }} (ID: {{ platillo.idProductoMenu }})? Esta acción no se puede deshacer y fallará si existen pedidos asociados.');">
-                                                {% csrf_token %}
-                                                <button type="submit" class="btn-custom-delete" style="padding: 5px 10px; font-weight: bold;">
-                                                    <i class="fas fa-trash-alt"></i> Eliminar
-                                                </button>
-                                            </form>
+                                            <button type="button" class="btn-custom-delete" style="padding: 5px 10px; font-weight: bold;" 
+                                                onclick="prepararModalEliminar('{{ mesa.idMesa }}', '{% url 'eliminar_mesa' mesa.idMesa %}')">
+                                                <i class="fas fa-trash-alt"></i> Eliminar
+                                            </button>
                                         </td>
                                     {% endif %}
                                 </tr>
@@ -242,6 +240,32 @@
                     </div>
                 </div>
             </div>
+            <div class="modal fade" id="modalEliminarMesa" tabindex="-1" aria-labelledby="modalEliminarMesaLabel" aria-hidden="true">
+                <div class="modal-dialog modal-dialog-centered">
+                    <div class="modal-content">
+                        <div class="modal-header" style="background-color: var(--primary-color); color: white;">
+                            <h5 class="modal-title" id="modalEliminarMesaLabel">
+                                <i class="fas fa-exclamation-triangle"></i> Confirmar Eliminación
+                            </h5>
+                            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                        </div>
+                        <div class="modal-body">
+                            <p>¿Está seguro de que desea eliminar la <strong>Mesa <span id="modal-id-mesa-texto"></span></strong>?</p>
+                            <p class="text-muted" style="font-size: 0.9em;">
+                                Esta acción no se puede deshacer y fallará si existen pedidos asociados a esta mesa.
+                            </p>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                            <form id="form-eliminar-mesa" method="POST" action="">
+                                {% csrf_token %}
+                                <button type="submit" class="btn" 
+                                style="background-color: var(--primary-color); color: white;">Sí, Eliminar Mesa</button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </main>
     </div>
 {% endblock %}
@@ -251,23 +275,43 @@
         function filtrarMesas() {
             const input = document.getElementById('buscador');
             const btnLimpiar = document.getElementById('btn-limpiar');
+            const tbody = document.querySelector('tbody');
             const filtro = input.value.toLowerCase();
             const filas = document.querySelectorAll('.fila-mesa');
-
-            // Mostrar u ocultar el botón de limpiar (X)
+            
             btnLimpiar.style.display = filtro.length > 0 ? "block" : "none";
 
+            let coincidencias = 0;
+
+            // Filtrar filas
             filas.forEach(fila => {
-                // Obtenemos el texto de la celda que contiene el ID de la mesa
                 const idMesa = fila.querySelector('.id-mesa').textContent.toLowerCase();
                 
-                // Si el ID incluye lo que el usuario escribe, se muestra la fila
                 if (idMesa.includes(filtro)) {
                     fila.style.display = "";
+                    coincidencias++;
                 } else {
                     fila.style.display = "none";
                 }
             });
+
+            // Manejar el caso de "No hay resultados"
+            const filaVaciaPrevia = document.getElementById('empty-results-row');
+            if (filaVaciaPrevia) filaVaciaPrevia.remove();
+
+            if (coincidencias === 0) {
+                const emptyRow = document.createElement('tr');
+                emptyRow.id = 'empty-results-row';
+                // Ajustar el colspan según el número de columnas de la tabla
+                emptyRow.innerHTML = `
+                    <td colspan="5">
+                        <div class="empty-results" style="padding: 20px; text-align: center; color: #666;">
+                            <i class="fas fa-ban fa-2x"></i>
+                            <p>No se encontraron mesas que coincidan con "<span>${input.value}</span>"</p>
+                        </div>
+                    </td>`;
+                tbody.appendChild(emptyRow);
+            }
         }
 
         function limpiarBusqueda() {
@@ -334,6 +378,19 @@
             
             // Mueve el scroll al formulario
             document.getElementById('form-header').scrollIntoView({ behavior: 'smooth' });
+        }
+    </script>
+    <script>
+        function prepararModalEliminar(idMesa, urlEliminar) {
+            // 1. Actualizar el texto dentro del modal
+            document.getElementById('modal-id-mesa-texto').textContent = idMesa;
+            
+            // 2. Actualizar la acción (action) del formulario dentro del modal
+            document.getElementById('form-eliminar-mesa').action = urlEliminar;
+            
+            // 3. Mostrar el modal usando la API de Bootstrap 5
+            var modalEliminar = new bootstrap.Modal(document.getElementById('modalEliminarMesa'));
+            modalEliminar.show();
         }
     </script>
 {% endblock %}

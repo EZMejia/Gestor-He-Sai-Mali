@@ -186,6 +186,7 @@
                                     <div style="flex: 1 1 10%; min-width: 200px;">
                                         <label for="telefono" class="form-label-custom">Teléfono</label>
                                         <input type="text" class="form-control-custom" id="telefono" name="telefono" autocomplete="off" inputmode="numeric" pattern="[0-9]{8}" title="El teléfono debe contener exactamente 8 dígitos numéricos."
+                                        oninput="this.value = this.value.replace(/[^0-9]/g, '').slice(0, 8);"
                                         value="{{ proveedor_a_editar.telefono|default:'' }}">
                                     </div>
                                     <div style="flex: 1 1 20%; min-width: 200px;">
@@ -223,6 +224,7 @@
                             <input type="text" id="buscador" class="form-control" 
                                 placeholder="Escribe el nombre del proveedor..." 
                                 style="padding-left: 35px; padding-right: 35px; margin-bottom: 0;" 
+                                autocomplete="off"
                                 onkeyup="filtrarProveedor()">
                             <span id="btn-limpiar" onclick="limpiarBusqueda()" 
                                 style="position: absolute; right: 10px; color: #888; cursor: pointer; display: none;">
@@ -254,14 +256,10 @@
                                             style="color: white; padding: 5px 10px; border-radius: 5px; text-decoration: none; font-weight: bold; display: inline-block; margin-right: 5px;">
                                             <i class="fas fa-edit"></i> Editar
                                         </a>
-                                        
-                                        <form action="{% url 'eliminar_proveedor' prov.idProveedor %}" method="POST" style="display: inline;" 
-                                            onsubmit="return confirm('¿Está seguro de que desea eliminar el proveedor {{ prov.nombre }}? Esta acción fallará si existen ingredientes o compras asociados.');">
-                                            {% csrf_token %}
-                                            <button type="submit" class="btn-custom-danger" style="padding: 5px 10px;">
-                                                <i class="fas fa-trash-alt"></i> Eliminar
-                                            </button>
-                                        </form>
+                                        <button type="button" class="btn-custom-danger" style="padding: 5px 10px;" 
+                                            onclick="prepararModalEliminarProveedor('{{ prov.idProveedor }}', '{{ prov.nombre|escapejs }}', '{% url 'eliminar_proveedor' prov.idProveedor %}')">
+                                            <i class="fas fa-trash-alt"></i> Eliminar
+                                        </button>
                                     </td>
                                 </tr>
                                 {% empty %}
@@ -274,6 +272,29 @@
                     </div>
                 </div>
             </div>
+            <div class="modal fade" id="modalEliminarProveedor" tabindex="-1" aria-labelledby="modalEliminarProveedorLabel" aria-hidden="true">
+                <div class="modal-dialog modal-dialog-centered">
+                    <div class="modal-content">
+                        <div class="modal-header" style="background-color: var(--primary-color); color: white;">
+                            <h5 class="modal-title" id="modalEliminarProveedorLabel">
+                                <i class="fas fa-exclamation-triangle"></i> Confirmar Eliminación
+                            </h5>
+                            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                        </div>
+                        <div class="modal-body">
+                            <p>¿Está seguro de que desea eliminar el proveedor <strong><span id="modal-nombre-proveedor-texto"></span></strong> (ID: <span id="modal-id-proveedor-texto"></span>)?</p>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                            <form id="form-eliminar-proveedor" method="POST" action="">
+                                {% csrf_token %}
+                                <button type="submit" class="btn"
+                                style="background-color: var(--primary-color); color: white;">Sí, Eliminar Proveedor</button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </main>
     </div>
 {% endblock %}
@@ -283,23 +304,40 @@
         function filtrarProveedor() {
             const input = document.getElementById('buscador');
             const btnLimpiar = document.getElementById('btn-limpiar');
+            const tbody = document.querySelector('.table-custom tbody');
             const filtro = input.value.toLowerCase();
             const filas = document.querySelectorAll('.fila-proveedor');
 
-            // Mostrar u ocultar el botón de limpiar (X)
             btnLimpiar.style.display = filtro.length > 0 ? "block" : "none";
 
+            let coincidencias = 0;
+
             filas.forEach(fila => {
-                // Obtenemos el texto de la celda que contiene el ID de la mesa
-                const nombreProveedor = fila.querySelector('.nombre-proveedor').textContent.toLowerCase();
+                const nombreEmpleado = fila.querySelector('.nombre-proveedor').textContent.toLowerCase();
                 
-                // Si el ID incluye lo que el usuario escribe, se muestra la fila
-                if (nombreProveedor.includes(filtro)) {
+                if (nombreEmpleado.includes(filtro)) {
                     fila.style.display = "";
+                    coincidencias++;
                 } else {
                     fila.style.display = "none";
                 }
             });
+
+            const filaVaciaPrevia = document.getElementById('empty-results-row');
+            if (filaVaciaPrevia) filaVaciaPrevia.remove();
+
+            if (coincidencias === 0) {
+                const emptyRow = document.createElement('tr');
+                emptyRow.id = 'empty-results-row';
+                emptyRow.innerHTML = `
+                    <td colspan="5">
+                        <div class="empty-results" style="padding: 20px; text-align: center; color: #666;">
+                            <i class="fas fa-ban fa-2x"></i>
+                            <p class="mb-0">No se encontraron proveedores que coincidan con "<span>${input.value}</span>"</p>
+                        </div>
+                    </td>`;
+                tbody.appendChild(emptyRow);
+            }
         }
 
         function limpiarBusqueda() {
@@ -307,6 +345,20 @@
             input.value = ""; // Vaciar input
             filtrarProveedor(); // Resetear el filtrado para mostrar todo
             input.focus(); // Devolver el foco al buscador
+        }
+    </script>
+    <script>
+        function prepararModalEliminarProveedor(idProveedor, nombreProveedor, urlEliminar) {
+            // 1. Actualizar los textos dentro del modal
+            document.getElementById('modal-id-proveedor-texto').textContent = idProveedor;
+            document.getElementById('modal-nombre-proveedor-texto').textContent = nombreProveedor;
+            
+            // 2. Actualizar la acción (action) del formulario dentro del modal
+            document.getElementById('form-eliminar-proveedor').action = urlEliminar;
+            
+            // 3. Mostrar el modal usando la API de Bootstrap 5
+            var modalEliminar = new bootstrap.Modal(document.getElementById('modalEliminarProveedor'));
+            modalEliminar.show();
         }
     </script>
 {% endblock %}

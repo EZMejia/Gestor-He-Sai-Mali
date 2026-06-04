@@ -16,6 +16,7 @@
             align-items: flex-start;
             min-height: 100dvh;
             margin: 0;
+            user-select: none;
         }
 
         form {
@@ -178,6 +179,14 @@
         .Registrarse:active {
             background-color: black;
             transform: scale(97%);
+        }
+
+        a, img, i {
+            -webkit-user-drag: none;
+            -webkit-user-select: none;
+            -moz-user-select: none;
+            -ms-user-select: none;
+            user-select: none;
         }
     </style>
 </head>

@@ -10,8 +10,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Panel de Control</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-    <!-- Chart.js CDN para gráficos -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js"></script>
 {% block extra_style %}
     <style>
         :root {
@@ -440,11 +438,11 @@
                             <i class="fas fa-search"></i>
                         </span>
                         <input type="text" 
-                               id="clienteBuscador" 
-                               name="search" 
-                               placeholder="Escribe el nombre del cliente..." 
-                               value="{{ search_query }}"
-                               autocomplete="off">
+                                id="clienteBuscador" 
+                                name="search" 
+                                placeholder="Escribe el nombre del cliente..." 
+                                value="{{ search_query }}"
+                                autocomplete="off">
                         {% if search_query %}
                         <span id="btn-limpiar" class="clear-icon" onclick="limpiarBusqueda()">
                             <i class="fas fa-times-circle"></i>
@@ -535,12 +533,18 @@
 
 {% block extra_js %}
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js"></script>
+
+    {{ top_products_labels|json_script:"top-products-labels" }}
+    {{ top_products_data|json_script:"top-products-data" }}
+    {{ top_tables_labels|json_script:"top-tables-labels" }}
+    {{ top_tables_data|json_script:"top-tables-data" }}
+
     <script>
         // Datos para gráficos
-        const topProductsLabels = JSON.parse('{{ top_products_labels|safe }}');
-        const topProductsData = JSON.parse('{{ top_products_data|safe }}');
-        const topTablesLabels = JSON.parse('{{ top_tables_labels|safe }}');
-        const topTablesData = JSON.parse('{{ top_tables_data|safe }}');
+        const topProductsLabels = JSON.parse(document.getElementById('top-products-labels').textContent);
+        const topProductsData = JSON.parse(document.getElementById('top-products-data').textContent);
+        const topTablesLabels = JSON.parse(document.getElementById('top-tables-labels').textContent);
+        const topTablesData = JSON.parse(document.getElementById('top-tables-data').textContent);
         
         const primaryColor = getComputedStyle(document.documentElement).getPropertyValue('--primary-color').trim();
         const secondaryColor = getComputedStyle(document.documentElement).getPropertyValue('--secondary-color').trim();

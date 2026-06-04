@@ -11,7 +11,6 @@ from django.db.models import F, Sum, Count, ProtectedError, FloatField
 from itertools import groupby
 from operator import attrgetter
 from datetime import timedelta
-import json
 from django.utils import timezone
 from django.urls import reverse
 import qrcode
@@ -226,13 +225,6 @@ def facturar_pedido(request, pedido_id):
             except Exception as e:
                 messages.error(request, f"Error al registrar el método de pago: {e}")
                 return redirect('pedidos')
-        
-        # 2. Manejo del GET (Mostrar Formulario de Selección de Pago)
-        return render(request, 'He_Sai_Mali/solicitar_pago.html', {
-            'pedido': pedido, 
-            'monto_total': calcular_monto_total(pedido_id),
-            'metodos': ['Efectivo', 'Tarjeta', 'Transferencia']
-        })
 
 def calcular_monto_total(pedido_id):
     pedido = Pedido.objects.filter(pk=pedido_id).first()
@@ -1015,8 +1007,8 @@ def vista_registrarpedido(request, pedido_id=None):
         'rol_empleado': request.user.rol,
         'nombre_empleado': request.user.nombre,
         'apellido_empleado': request.user.apellido,
-        'inventario_json': json.dumps(inventario_actual),
-        'recetas_json': json.dumps(recetas),
+        'inventario_json': inventario_actual,
+        'recetas_json': recetas,
         'platillos_previos': platillos_previos,
     }
     # ------------------ FIN: CAMBIO 2 -------------------------------------------------
@@ -1367,7 +1359,7 @@ def admin_platillos(request):
             except Exception as e:
                 # Si el error es de unicidad (nombre ya existe)
                 if 'unique' in str(e).lower() and 'nombre' in str(e):
-                     messages.error(request, f'Error: Ya existe un platillo con el nombre "{nombre}".')
+                    messages.error(request, f'Error: Ya existe un platillo con el nombre "{nombre}".')
                 else:
                     messages.error(request, f'Error al guardar el platillo: {e}')
 
@@ -1706,8 +1698,8 @@ def eliminar_mesa(request, mesa_id):
 
     try:
         # Elimina la mesa usando delete()
-        mesa.delete()
         messages.success(request, f"Mesa '{mesa.idMesa}' eliminada exitosamente.")
+        mesa.delete()
     except ProtectedError:
         messages.error(request, f"No se puede eliminar la Mesa '{mesa.idMesa}' porque está relacionada con pedidos existentes.")
     except Exception as e:
@@ -1717,8 +1709,6 @@ def eliminar_mesa(request, mesa_id):
 
 # Vista del dashboard para el administrador
 from django.db import connection
-from django.http import JsonResponse
-import json
 from datetime import datetime
 
 from django.shortcuts import render
@@ -1727,7 +1717,6 @@ from django.db import connection, transaction # <-- Importante importar transact
 from django.contrib.auth.decorators import user_passes_test
 from django.views.decorators.cache import never_cache
 from datetime import datetime
-import json
 # Asegúrate de tener importados tus modelos: Mesa, ProductoMenu, es_rol...
 
 @never_cache
@@ -1881,10 +1870,10 @@ def admin_dashboard(request):
         'end_date_obj': end_date,
         'start_date_str': start_date_input,
         'end_date_str': end_date_input,
-        'top_products_labels': json.dumps(top_products_labels),
-        'top_products_data': json.dumps(top_products_data),
-        'top_tables_labels': json.dumps(top_tables_labels),
-        'top_tables_data': json.dumps(top_tables_data),
+        'top_products_labels': list(top_products_labels),
+        'top_products_data': list(top_products_data),
+        'top_tables_labels': list(top_tables_labels),
+        'top_tables_data': list(top_tables_data),
         'search_query': search_query,
         'search_results': search_results,
         'search_results_count': search_results_count,

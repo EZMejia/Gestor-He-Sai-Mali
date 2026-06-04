@@ -298,6 +298,7 @@
                             <input type="text" id="buscador" class="form-control" 
                                 placeholder="Escribe el nombre del producto..." 
                                 style="padding-left: 35px; padding-right: 35px; margin-bottom: 0;" 
+                                autocomplete="off"
                                 onkeyup="filtrarProductos()">
                             <span id="btn-limpiar" onclick="limpiarBusqueda()" 
                                 style="position: absolute; right: 10px; color: #888; cursor: pointer; display: none;">
@@ -340,13 +341,10 @@
                                         <a href="{% url 'editar_platillo' platillo.idProductoMenu %}" class='btn-custom-edit' style="color: white; padding: 5px 10px; border-radius: 5px; text-decoration: none; font-weight: bold; display: inline-block; margin-right: 5px;">
                                             <i class="fas fa-edit"></i> Editar
                                         </a>
-                                        <form action="{% url 'eliminar_platillo' platillo.idProductoMenu %}" method="POST" style="display: inline;" 
-                                            onsubmit="return confirm('¿Está seguro de que desea eliminar el platillo {{ platillo.nombre }} (ID: {{ platillo.idProductoMenu }})? Esta acción no se puede deshacer y fallará si existen pedidos asociados.');">
-                                            {% csrf_token %}
-                                            <button type="submit" class="btn-custom-danger" style="padding: 5px 10px;">
-                                                <i class="fas fa-trash-alt"></i> Eliminar
-                                            </button>
-                                        </form>
+                                        <button type="button" class="btn-custom-danger" style="padding: 5px 10px;" 
+                                            onclick="prepararModalEliminarPlatillo('{{ platillo.idProductoMenu }}', '{{ platillo.nombre|escapejs }}', '{% url 'eliminar_platillo' platillo.idProductoMenu %}')">
+                                            <i class="fas fa-trash-alt"></i> Eliminar
+                                        </button>
                                     </td>
                                 </tr>
                                 {% empty %}
@@ -359,6 +357,32 @@
                     </div>
                 </div>
             </div>
+            <div class="modal fade" id="modalEliminarPlatillo" tabindex="-1" aria-labelledby="modalEliminarPlatilloLabel" aria-hidden="true">
+                <div class="modal-dialog modal-dialog-centered">
+                    <div class="modal-content">
+                        <div class="modal-header" style="background-color: var(--primary-color); color: white;">
+                            <h5 class="modal-title" id="modalEliminarPlatilloLabel">
+                                <i class="fas fa-exclamation-triangle"></i> Confirmar Eliminación
+                            </h5>
+                            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                        </div>
+                        <div class="modal-body">
+                            <p>¿Está seguro de que desea eliminar el producto <strong><span id="modal-nombre-platillo-texto"></span></strong> (ID: <span id="modal-id-platillo-texto"></span>)?</p>
+                            <p class="text-muted" style="font-size: 0.9em;">
+                                Esta acción no se puede deshacer y fallará si existen pedidos asociados a este producto.
+                            </p>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                            <form id="form-eliminar-platillo" method="POST" action="">
+                                {% csrf_token %}
+                                <button type="submit" class="btn"
+                                style="background-color: var(--primary-color); color: white;">Sí, Eliminar Producto</button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </main>
     </div>
 {% endblock %}
@@ -368,23 +392,40 @@
         function filtrarProductos() {
             const input = document.getElementById('buscador');
             const btnLimpiar = document.getElementById('btn-limpiar');
+            const tbody = document.querySelector('.table-custom tbody');
             const filtro = input.value.toLowerCase();
             const filas = document.querySelectorAll('.fila-producto');
 
-            // Mostrar u ocultar el botón de limpiar (X)
             btnLimpiar.style.display = filtro.length > 0 ? "block" : "none";
 
+            let coincidencias = 0;
+
             filas.forEach(fila => {
-                // Obtenemos el texto de la celda que contiene el ID de la mesa
-                const nombreProducto = fila.querySelector('.nombre-producto').textContent.toLowerCase();
+                const nombreEmpleado = fila.querySelector('.nombre-producto').textContent.toLowerCase();
                 
-                // Si el ID incluye lo que el usuario escribe, se muestra la fila
-                if (nombreProducto.includes(filtro)) {
+                if (nombreEmpleado.includes(filtro)) {
                     fila.style.display = "";
+                    coincidencias++;
                 } else {
                     fila.style.display = "none";
                 }
             });
+
+            const filaVaciaPrevia = document.getElementById('empty-results-row');
+            if (filaVaciaPrevia) filaVaciaPrevia.remove();
+
+            if (coincidencias === 0) {
+                const emptyRow = document.createElement('tr');
+                emptyRow.id = 'empty-results-row';
+                emptyRow.innerHTML = `
+                    <td colspan="7">
+                        <div class="empty-results" style="padding: 20px; text-align: center; color: #666;">
+                            <i class="fas fa-ban fa-2x"></i>
+                            <p class="mb-0">No se encontraron productos que coincidan con "<span>${input.value}</span>"</p>
+                        </div>
+                    </td>`;
+                tbody.appendChild(emptyRow);
+            }
         }
 
         function limpiarBusqueda() {
@@ -531,4 +572,19 @@
             <option value="{{ articulo.nombre }} ({{ articulo.unidad_de_medida }})" data-id="{{ articulo.idArticuloInventario }}">
         {% endfor %}
     </datalist>
+
+    <script>
+        function prepararModalEliminarPlatillo(idPlatillo, nombrePlatillo, urlEliminar) {
+            // 1. Actualizar los textos dentro del modal
+            document.getElementById('modal-id-platillo-texto').textContent = idPlatillo;
+            document.getElementById('modal-nombre-platillo-texto').textContent = nombrePlatillo;
+            
+            // 2. Actualizar la acción (action) del formulario dentro del modal
+            document.getElementById('form-eliminar-platillo').action = urlEliminar;
+            
+            // 3. Mostrar el modal usando la API de Bootstrap 5
+            var modalEliminar = new bootstrap.Modal(document.getElementById('modalEliminarPlatillo'));
+            modalEliminar.show();
+        }
+    </script>
 {% endblock %}
