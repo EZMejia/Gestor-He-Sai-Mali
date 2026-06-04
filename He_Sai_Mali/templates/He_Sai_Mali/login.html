@@ -16,6 +16,7 @@
             align-items: flex-start;
             min-height: 100vh;
             margin: 0;
+            user-select: none;
         }
 
         form {
@@ -144,6 +145,14 @@
 
         .Blank {
             color: white;
+            user-select: none;
+        }
+
+        a, img, i {
+            -webkit-user-drag: none;
+            -webkit-user-select: none;
+            -moz-user-select: none;
+            -ms-user-select: none;
             user-select: none;
         }
     </style>

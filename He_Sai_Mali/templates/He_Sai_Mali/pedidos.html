@@ -154,6 +154,80 @@
         .modal-header-custom { background-color: var(--primary-color); color: white; padding: 15px; text-align: center; }
         .modal-content-custom { padding: 20px; }
         .form-control-custom { width: 100%; padding: 8px; margin-bottom: 10px; border: 1px solid #ccc; border-radius: 4px; }
+
+        @media (max-width: 768px) {
+            /* 1. Botón "Nuevo Pedido" a ancho completo */
+            .btn-nuevo {
+                max-width: 100%;
+                justify-content: center;
+                margin: 10px 0;
+            }
+
+            /* 2. Encabezado del pedido (Mesa y Cliente) apilado */
+            .pedido_head {
+                flex-direction: column;
+                align-items: flex-start;
+                padding: 10px;
+            }
+            .pedido_head .numero {
+                margin-left: 0;
+                margin-bottom: 5px;
+            }
+            .pedido_head .cliente {
+                margin: 0;
+                padding: 0;
+            }
+
+            /* 3. Info del pedido (Total y Fecha) apilada */
+            .info {
+                flex-direction: column;
+                align-items: flex-start;
+                padding: 10px 15px;
+            }
+            .total {
+                margin-left: 0;
+                margin-bottom: 5px;
+            }
+            .fecha {
+                margin: 0;
+                padding: 0;
+            }
+
+            /* 4. Título y lista de platillos */
+            h3 {
+                margin-left: 15px;
+            }
+            .lista_platillos {
+                margin: 10px 15px;
+            }
+            
+            /* CLAVE: Cambiar el Grid de 3 columnas a 1 sola columna */
+            .lista_platillos li.platillos {
+                grid-template-columns: 1fr;
+                gap: 12px;
+                padding: 15px;
+            }
+
+            /* 5. Barra de progreso a ancho completo */
+            .progress-container {
+                width: 100%;
+                margin: 0;
+            }
+
+            /* 6. Botones de acción inferiores estirados al 100% */
+            .action-buttons {
+                flex-direction: column;
+                margin-left: 0;
+                padding: 0 15px 15px 15px;
+                gap: 8px;
+            }
+            .action-buttons button, 
+            .action-buttons a {
+                width: 100%;
+                text-align: center;
+            }
+        }
+        /* TODO: agregar cambio de ordenes para los meseros */
     </style>
 {% endblock %}
 
@@ -244,12 +318,10 @@
                                 <a href="{% url 'registrarpedido_agregar' pedido.idPedido %}" class="btn-agregar">
                                     <i class="fas fa-plus"></i> Agregar
                                 </a>
-                                <form method="POST" action="{% url 'eliminar_pedido' pedido.idPedido %}" style="display:inline;" class="ajax-form">
-                                    {% csrf_token %}
-                                    <button type="submit" class="btn-eliminar" {% if not estado_general.puede_eliminar %}disabled{% endif %}>
-                                        <i class="fas fa-trash-alt"></i> Eliminar
-                                    </button>
-                                </form>
+                                <button type="submit" class="btn-eliminar" {% if not estado_general.puede_eliminar %}disabled{% endif %}
+                                onclick="prepararModalEliminar('{{ pedido.idPedido }}', '{% url 'eliminar_pedido' pedido.idPedido %}')">
+                                    <i class="fas fa-trash-alt"></i> Eliminar
+                                </button>
                             </div>
                         </div>
                         {% endwith %}
@@ -259,22 +331,75 @@
             </div>
 
             {# MODAL PAGO #}
-            <div class="overlay-custom" id="formOverlayPago" onclick="ocultarFormularioPago()"></div>
-            <div class="modal-card-custom" id="modalFormularioPago">
-                <div class="modal-header-custom"><h2>Método de Pago</h2></div>
-                <div class="modal-content-custom">
-                    <h3 id="montoTotalDisplay">Monto Total: </h3>
-                    <form method="POST" action="" id="formularioPago"> 
-                        {% csrf_token %}
-                        <select id="metodo_pago" name="metodo_pago" required class="form-control-custom">
-                            <option value="">-- Seleccione --</option>
-                            {% for metodo in metodos %}<option value="{{ metodo }}">{{ metodo }}</option>{% endfor %}
-                        </select>
-                        <div class="action-buttons" style="margin-top:10px;">
-                            <button type="submit" class="btn-facturar" style="flex:1;">Confirmar</button> 
-                            <button type="button" class="btn-eliminar" style="flex:1;" onclick="ocultarFormularioPago()">Cancelar</button>
+            <div class="modal fade" id="modalFormularioPago" tabindex="-1" aria-labelledby="modalFormularioPagoLabel"
+            aria-hidden="true">
+                <div class="modal-dialog modal-dialog-centered">
+                    <div class="modal-content">
+                        <div class="modal-header" style="background-color: var(--primary-color); color: white;">
+                            <h5 class="modal-title" id="modalFormularioPagoLabel">
+                                <i class="fas fa-receipt"></i> Método de Pago
+                            </h5>
+                            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"
+                                aria-label="Close"></button>
                         </div>
-                    </form>
+                        <form method="POST" action="" id="formularioPago">
+                            {% csrf_token %}
+                            <div class="modal-body">
+                                <h4 id="montoTotalDisplay" class="mb-3" style="color: #444; font-weight: bold;">Monto Total:
+                                </h4>
+
+                                <label for="metodo_pago" class="form-label" style="font-weight: bold;">Seleccione el
+                                    método:</label>
+                                <select id="metodo_pago" name="metodo_pago" required
+                                    class="form-select form-control-custom">
+                                    <option value="">-- Seleccione --</option>
+                                    {% for metodo in metodos %}
+                                    <option value="{{ metodo }}">{{ metodo }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                                <button type="submit" class="btn" style="background-color: #38761d; color: white;">
+                                    Confirmar Pago
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+            {# Modal para eliminar pedido #}
+            <div class="modal fade" id="modalEliminarPedido" tabindex="-1" aria-labelledby="modalEliminarPedidoLabel"
+            aria-hidden="true">
+                <div class="modal-dialog modal-dialog-centered">
+                    <div class="modal-content">
+                        <div class="modal-header" style="background-color: var(--primary-color); color: white;">
+                            <h5 class="modal-title" id="modalEliminarPedidoLabel">
+                                <i class="fas fa-exclamation-triangle"></i> Confirmar Eliminación
+                            </h5>
+                            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"
+                                aria-label="Close"></button>
+                        </div>
+                        <div class="modal-body">
+                            <p>¿Está seguro de que desea eliminar el <strong>Pedido N° <span
+                                        id="modal-id-pedido-texto"></span></strong>?</p>
+                            <p class="text-muted" style="font-size: 0.9em;">
+                                Esta acción eliminará permanentemente la orden.
+                            </p>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                            <!-- Formulario interceptado vía la clase ajax-form compartida -->
+                            <form id="form-eliminar-pedido" method="POST" action="" class="ajax-form">
+                                {% csrf_token %}
+                                <button type="submit" class="btn" onclick="cerrarModalEliminar()"
+                                    style="background-color: var(--primary-color); color: white;">
+                                    Sí, Eliminar Pedido
+                                </button>
+                            </form>
+                        </div>
+                    </div>
                 </div>
             </div>
         </main>
@@ -283,15 +408,39 @@
     
 {% block extra_js %}
     <script>
+        // Modal formulario de pago
+        let modalPagoInstancia = null;
+
+        // Lógica para el modal de Pago
         function mostrarFormularioPago(id, total, facturarUrl) {
-            document.getElementById('formOverlayPago').style.display = 'block';
-            document.getElementById('modalFormularioPago').style.display = 'block';
-            document.getElementById('montoTotalDisplay').textContent = `Monto Total: C$${parseFloat(total).toFixed(2)}`;
+            document.getElementById('montoTotalDisplay').textContent = `Monto Total: C$${ parseFloat(total).toFixed(2) }`;
             document.getElementById('formularioPago').action = facturarUrl;
+
+            modalPagoInstancia = new bootstrap.Modal(document.getElementById('modalFormularioPago'));
+            modalPagoInstancia.show();
         }
-        function ocultarFormularioPago() {
-            document.getElementById('formOverlayPago').style.display = 'none';
-            document.getElementById('modalFormularioPago').style.display = 'none';
+
+        function cerrarModalPago() {
+            if (modalPagoInstancia) { 
+                modalPagoInstancia.hide(); 
+            }
+        }
+
+        // Modal eliminar pedido
+        let modalEliminarInstancia = null;
+
+        function prepararModalEliminar(idPedido, urlEliminar) {
+            document.getElementById('modal-id-pedido-texto').textContent = idPedido;
+            document.getElementById('form-eliminar-pedido').action = urlEliminar;
+
+            modalEliminarInstancia = new bootstrap.Modal(document.getElementById('modalEliminarPedido'));
+            modalEliminarInstancia.show();
+        }
+
+        function cerrarModalEliminar() {
+            if (modalEliminarInstancia) {
+            modalEliminarInstancia.hide();
+            }
         }
     </script>
 
@@ -349,6 +498,12 @@
                     e.preventDefault(); // Evita la recarga de página completa
                     
                     const form = e.target;
+
+                    // Si es el formulario de pago, cerramos el modal aquí ya que pasó la validación nativa
+                    if (form.id === 'formularioPago') {
+                        cerrarModalPago();
+                    }
+
                     const submitBtn = form.querySelector('button[type="submit"]');
                     if (submitBtn) submitBtn.disabled = true; // Previene doble clic
 

@@ -13,7 +13,7 @@
 
     {% block extra_style %}{% endblock %}
     <style>
-        body { background-color: #2c3038; min-height: 100dvh; }
+        body { background-color: #2c3038; min-height: 100dvh; user-select: none;}
         
         * { font-family: 'Roboto', sans-serif; user-select: none;}
         
@@ -113,35 +113,34 @@
 
         /* Comportamiento en pantallas grandes (Desktop) */
         @media (min-width: 992px) {
-    
-    #main-layout-wrapper {
-        display: flex;
-        flex-wrap: nowrap;
-        width: 100%;
-        /* CLAVE 1: Evita que el sidebar siga visible cuando se empuja hacia la izquierda */
-        overflow-x: hidden; 
-    }
+            #main-layout-wrapper {
+                display: flex;
+                flex-wrap: nowrap;
+                width: 100%;
+                /* CLAVE 1: Evita que el sidebar siga visible cuando se empuja hacia la izquierda */
+                overflow-x: hidden; 
+            }
 
-    /* CLAVE 2: Asegúrate de que este ID sea exactamente el que tiene tu aside/div del menú */
-    #sidebar-wrapper {
-        min-width: 250px;
-        max-width: 250px;
-        margin-left: 0;
-        transition: margin 0.3s ease-in-out;
-    }
+            /* CLAVE 2: Asegúrate de que este ID sea exactamente el que tiene tu aside/div del menú */
+            #sidebar-wrapper {
+                min-width: 250px;
+                max-width: 250px;
+                margin-left: 0;
+                transition: margin 0.3s ease-in-out;
+            }
 
-    /* Cuando el JS agrega la clase 'sb-sidenav-toggled' al body (Botón presionado) */
-    body.sb-sidenav-toggled #sidebar-wrapper {
-        /* Empuja el sidebar fuera de la pantalla hacia la izquierda */
-        margin-left: -250px; 
-    }
+            /* Cuando el JS agrega la clase 'sb-sidenav-toggled' al body (Botón presionado) */
+            body.sb-sidenav-toggled #sidebar-wrapper {
+                /* Empuja el sidebar fuera de la pantalla hacia la izquierda */
+                margin-left: -250px; 
+            }
 
-    /* El contenedor del contenido crecerá automáticamente gracias a la clase flex-grow-1 que ya tienes */
-    #page-content-wrapper-inner {
-        width: 100%;
-        transition: width 0.3s ease-in-out;
-    }
-}
+            /* El contenedor del contenido crecerá automáticamente gracias a la clase flex-grow-1 que ya tienes */
+            #page-content-wrapper-inner {
+                width: 100%;
+                transition: width 0.3s ease-in-out;
+            }
+        }
 
         /* Comportamiento en pantallas pequeñas (Móvil/Tablet - Offcanvas) */
         @media (max-width: 991.98px) {
@@ -154,31 +153,39 @@
                 box-shadow: none;
             }
 
-        /* Mostrar sidebar en móviles */
-        body.sb-sidenav-toggled #sidebar-wrapper {
-            margin-left: 0;
-            box-shadow: 5px 0 15px rgba(0, 0, 0, 0.4);
+            /* Mostrar sidebar en móviles */
+            body.sb-sidenav-toggled #sidebar-wrapper {
+                margin-left: 0;
+                box-shadow: 5px 0 15px rgba(0, 0, 0, 0.4);
+            }
+
+            /* Capa oscura de fondo (Overlay) ajustada a fixed */
+            .sidebar-overlay {
+                display: none;
+                position: fixed;      /* Cambiado de absolute a fixed */
+                top: 0;
+                left: 0;
+                width: 100vw;
+                height: 100vh;
+                background-color: rgba(0, 0, 0, 0.5);
+                z-index: 1020;
+                opacity: 0;
+                transition: opacity 0.25s ease-in-out;
+            }
+
+            body.sb-sidenav-toggled .sidebar-overlay {
+                display: block;
+                opacity: 1;
+            }
         }
 
-        /* Capa oscura de fondo (Overlay) ajustada a fixed */
-        .sidebar-overlay {
-            display: none;
-            position: fixed;      /* Cambiado de absolute a fixed */
-            top: 0;
-            left: 0;
-            width: 100vw;
-            height: 100vh;
-            background-color: rgba(0, 0, 0, 0.5);
-            z-index: 1020;
-            opacity: 0;
-            transition: opacity 0.25s ease-in-out;
+        a, img, i {
+            -webkit-user-drag: none;
+            -webkit-user-select: none;
+            -moz-user-select: none;
+            -ms-user-select: none;
+            user-select: none;
         }
-
-        body.sb-sidenav-toggled .sidebar-overlay {
-            display: block;
-            opacity: 1;
-        }
-    }
     </style>
 </head>
 <body>

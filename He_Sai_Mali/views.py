@@ -11,7 +11,6 @@ from django.db.models import F, Sum, Count, ProtectedError, FloatField
 from itertools import groupby
 from operator import attrgetter
 from datetime import timedelta
-import json
 from django.utils import timezone
 from django.urls import reverse
 import qrcode
@@ -226,13 +225,6 @@ def facturar_pedido(request, pedido_id):
             except Exception as e:
                 messages.error(request, f"Error al registrar el método de pago: {e}")
                 return redirect('pedidos')
-        
-        # 2. Manejo del GET (Mostrar Formulario de Selección de Pago)
-        return render(request, 'He_Sai_Mali/solicitar_pago.html', {
-            'pedido': pedido, 
-            'monto_total': calcular_monto_total(pedido_id),
-            'metodos': ['Efectivo', 'Tarjeta', 'Transferencia']
-        })
 
 def calcular_monto_total(pedido_id):
     # Función auxiliar para calcular el monto total de un pedido.
@@ -1377,7 +1369,7 @@ def admin_platillos(request):
             except Exception as e:
                 # Si el error es de unicidad (nombre ya existe)
                 if 'unique' in str(e).lower() and 'nombre' in str(e):
-                     messages.error(request, f'Error: Ya existe un platillo con el nombre "{nombre}".')
+                    messages.error(request, f'Error: Ya existe un platillo con el nombre "{nombre}".')
                 else:
                     messages.error(request, f'Error al guardar el platillo: {e}')
 
@@ -1716,8 +1708,8 @@ def eliminar_mesa(request, mesa_id):
 
     try:
         # Elimina la mesa usando delete()
-        mesa.delete()
         messages.success(request, f"Mesa '{mesa.idMesa}' eliminada exitosamente.")
+        mesa.delete()
     except ProtectedError:
         messages.error(request, f"No se puede eliminar la Mesa '{mesa.idMesa}' porque está relacionada con pedidos existentes.")
     except Exception as e:
@@ -1727,8 +1719,6 @@ def eliminar_mesa(request, mesa_id):
 
 # Vista del dashboard para el administrador
 from django.db import connection
-from django.http import JsonResponse
-import json
 from datetime import datetime
 
 from django.shortcuts import render
@@ -1737,7 +1727,6 @@ from django.db import connection, transaction # <-- Importante importar transact
 from django.contrib.auth.decorators import user_passes_test
 from django.views.decorators.cache import never_cache
 from datetime import datetime
-import json
 # Asegúrate de tener importados tus modelos: Mesa, ProductoMenu, es_rol...
 
 @never_cache
