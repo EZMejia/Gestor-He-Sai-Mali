@@ -988,7 +988,7 @@ def vista_registrarpedido(request, pedido_id=None):
                         # Retornar a la misma vista con el mensaje de error
                         return redirect('registrarpedido')
                 
-                # 4. Actualizar el MontoTotal del pedido (usando ORM y F expressions)
+                # 4. Actualizar el MontoTotal del pedido (Manejada por Trigger BD)
                 if items_registrados > 0:
                     messages.success(request, f"Pedido N°{id_pedido_a_usar} registrado/actualizado con éxito.")
                 
