@@ -177,6 +177,7 @@
                             <input type="text" id="buscador" class="form-control" 
                                 placeholder="Escribe el numero de mesa..." 
                                 style="padding-left: 35px; padding-right: 35px; margin-bottom: 0;" 
+                                autocomplete="off"
                                 onkeyup="filtrarMesas()">
                             <span id="btn-limpiar" onclick="limpiarBusqueda()" 
                                 style="position: absolute; right: 10px; color: #888; cursor: pointer; display: none;">
@@ -274,23 +275,43 @@
         function filtrarMesas() {
             const input = document.getElementById('buscador');
             const btnLimpiar = document.getElementById('btn-limpiar');
+            const tbody = document.querySelector('tbody');
             const filtro = input.value.toLowerCase();
             const filas = document.querySelectorAll('.fila-mesa');
-
-            // Mostrar u ocultar el botón de limpiar (X)
+            
             btnLimpiar.style.display = filtro.length > 0 ? "block" : "none";
 
+            let coincidencias = 0;
+
+            // Filtrar filas
             filas.forEach(fila => {
-                // Obtenemos el texto de la celda que contiene el ID de la mesa
                 const idMesa = fila.querySelector('.id-mesa').textContent.toLowerCase();
                 
-                // Si el ID incluye lo que el usuario escribe, se muestra la fila
                 if (idMesa.includes(filtro)) {
                     fila.style.display = "";
+                    coincidencias++;
                 } else {
                     fila.style.display = "none";
                 }
             });
+
+            // Manejar el caso de "No hay resultados"
+            const filaVaciaPrevia = document.getElementById('empty-results-row');
+            if (filaVaciaPrevia) filaVaciaPrevia.remove();
+
+            if (coincidencias === 0) {
+                const emptyRow = document.createElement('tr');
+                emptyRow.id = 'empty-results-row';
+                // Ajustar el colspan según el número de columnas de la tabla
+                emptyRow.innerHTML = `
+                    <td colspan="5">
+                        <div class="empty-results" style="padding: 20px; text-align: center; color: #666;">
+                            <i class="fas fa-ban fa-2x"></i>
+                            <p>No se encontraron mesas que coincidan con "<span>${input.value}</span>"</p>
+                        </div>
+                    </td>`;
+                tbody.appendChild(emptyRow);
+            }
         }
 
         function limpiarBusqueda() {
