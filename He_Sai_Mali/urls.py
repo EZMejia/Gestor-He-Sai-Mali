@@ -71,4 +71,8 @@ urlpatterns = [
 
     # --- Logout ---
     path('logout/', views.logout_view, name='logout'),
+
+    # --- Historial de facturas ---
+    path('historial-facturas/', views.historial_facturas, name='historial_facturas'),
+    path('historial-facturas/anular/<int:pedido_id>/', views.anular_factura, name='anular_factura'),
 ]

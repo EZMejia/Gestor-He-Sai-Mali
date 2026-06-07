@@ -1,0 +1,314 @@
+{% extends 'He_Sai_Mali/base.html' %}
+
+{% block extra_style %}
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+<style>
+    /* SOLUCIÓN AL SCROLL: Obligamos al contenedor a tener scroll vertical */
+    #page-content-wrapper-inner {
+        overflow-y: auto !important;
+        height: calc(100vh - 65px) !important;
+        overflow-x: hidden;
+    }
+
+    .modern-wrapper {
+        font-family: 'Inter', sans-serif;
+        color: #f8fafc;
+    }
+    
+    .modern-wrapper h2 {
+        font-family: 'Inter', sans-serif;
+        color: #f8fafc;
+        font-weight: 700;
+        letter-spacing: -0.02em;
+    }
+
+    .modern-wrapper .metric-card {
+        background-color: #1f2937;
+        border: 1px solid #374151;
+        border-radius: 16px;
+        padding: 20px;
+        transition: transform 0.2s;
+    }
+    .modern-wrapper .metric-card:hover { transform: translateY(-2px); }
+    
+    .modern-wrapper .card-filtros {
+        background-color: #1f2937;
+        border: 1px solid #374151;
+        border-radius: 16px;
+        padding: 24px;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+    }
+    
+    .modern-wrapper .table-container {
+        border-radius: 12px;
+        overflow: hidden;
+        border: 1px solid #374151;
+        background-color: #1f2937;
+    }
+    
+    .modern-wrapper .table { margin-bottom: 0; color: #f8fafc; }
+    .modern-wrapper .table thead th { 
+        background-color: #111827; 
+        color: #94a3b8; 
+        border-bottom: 1px solid #374151;
+        font-weight: 600;
+        text-transform: uppercase;
+        font-size: 0.75rem;
+        letter-spacing: 0.05em;
+        padding: 16px;
+    }
+    .modern-wrapper .table tbody td {
+        padding: 16px;
+        border-bottom: 1px solid #374151;
+        vertical-align: middle;
+        background-color: transparent;
+    }
+    .modern-wrapper .table tbody tr { transition: background-color 0.2s; }
+    .modern-wrapper .table tbody tr:hover td { background-color: #374151; } 
+    
+    .modern-wrapper .badge-modern {
+        padding: 6px 12px;
+        border-radius: 6px;
+        font-weight: 500;
+        font-size: 0.75rem;
+    }
+    .modern-wrapper .badge-vigente { background-color: rgba(16, 185, 129, 0.1); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.2); }
+    .modern-wrapper .badge-anulada { background-color: rgba(239, 68, 68, 0.1); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.2); }
+
+    .modern-wrapper .form-control, .modern-wrapper .form-select {
+        background-color: #111827;
+        border: 1px solid #374151;
+        color: #f8fafc;
+    }
+    .modern-wrapper .form-control:focus, .modern-wrapper .form-select:focus {
+        background-color: #111827;
+        color: #f8fafc;
+        border-color: #981a28; 
+        box-shadow: 0 0 0 0.25rem rgba(152, 26, 40, 0.25);
+    }
+    ::-webkit-calendar-picker-indicator { filter: invert(1); }
+    
+    .modern-wrapper .btn-icon {
+        width: 32px; height: 32px;
+        display: inline-flex; align-items: center; justify-content: center;
+        border-radius: 8px; transition: all 0.2s;
+    }
+    .modern-wrapper .btn-icon-pdf { background-color: rgba(56, 189, 248, 0.1); color: #38bdf8; }
+    .modern-wrapper .btn-icon-pdf:hover { background-color: rgba(56, 189, 248, 0.2); color: #38bdf8; }
+    
+    .modern-wrapper .btn-icon-anular { background-color: rgba(239, 68, 68, 0.1); color: #ef4444; border: none; }
+    .modern-wrapper .btn-icon-anular:hover:not(:disabled) { background-color: rgba(239, 68, 68, 0.2); color: #ef4444; }
+    .modern-wrapper .btn-icon-anular:disabled { opacity: 0.4; cursor: not-allowed; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="modern-wrapper container-fluid mt-4 px-4 pb-5">
+    
+    <div class="mb-4">
+        <h2>Historial de Facturación</h2>
+        <p style="color: #94a3b8;">Visualiza, filtra y gestiona los registros contables.</p>
+    </div>
+
+    <!-- MÉTTRICAS -->
+    <div class="row g-4 mb-4" id="metricas-contenedor">
+        <div class="col-md-4">
+            <div class="metric-card d-flex align-items-center">
+                <div class="rounded-circle d-flex align-items-center justify-content-center me-3" style="width: 48px; height: 48px; background-color: rgba(52, 211, 153, 0.1); color: #34d399;">
+                    <i class="fas fa-coins fa-lg"></i>
+                </div>
+                <div>
+                    <p class="mb-0" style="color: #94a3b8; font-size: 0.85rem; font-weight: 500;">Ventas Totales</p>
+                    <h4 class="mb-0" style="font-weight: 700;">C${{ ventas_totales|floatformat:2 }}</h4>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="metric-card d-flex align-items-center">
+                <div class="rounded-circle d-flex align-items-center justify-content-center me-3" style="width: 48px; height: 48px; background-color: rgba(96, 165, 250, 0.1); color: #60a5fa;">
+                    <i class="fas fa-file-invoice fa-lg"></i>
+                </div>
+                <div>
+                    <p class="mb-0" style="color: #94a3b8; font-size: 0.85rem; font-weight: 500;">Facturas Emitidas</p>
+                    <h4 class="mb-0" style="font-weight: 700;">{{ total_facturas }}</h4>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="metric-card d-flex align-items-center">
+                <div class="rounded-circle d-flex align-items-center justify-content-center me-3" style="width: 48px; height: 48px; background-color: rgba(167, 139, 250, 0.1); color: #a78bfa;">
+                    <i class="fas fa-users fa-lg"></i>
+                </div>
+                <div>
+                    <p class="mb-0" style="color: #94a3b8; font-size: 0.85rem; font-weight: 500;">Clientes Atendidos</p>
+                    <h4 class="mb-0" style="font-weight: 700;">{{ total_clientes }}</h4>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- FORMULARIO DE FILTROS -->
+    <div class="card-filtros mb-4">
+        <form id="filtro-facturas" method="GET" action="{% url 'historial_facturas' %}" class="row g-3 align-items-end">
+            <div class="col-md-4">
+                <label for="buscar" class="form-label" style="color: #94a3b8; font-size: 0.85rem; font-weight: 500;">Cliente o ID</label>
+                <input type="text" class="form-control" id="buscar" name="q" placeholder="Ej. Juan o 54" value="{{ request.GET.q }}">
+            </div>
+            
+            <div class="col-md-2">
+                <label for="fecha_inicio" class="form-label" style="color: #94a3b8; font-size: 0.85rem; font-weight: 500;">Desde</label>
+                <input type="date" class="form-control" id="fecha_inicio" name="fecha_inicio" value="{{ request.GET.fecha_inicio }}">
+            </div>
+            
+            <div class="col-md-2">
+                <label for="fecha_fin" class="form-label" style="color: #94a3b8; font-size: 0.85rem; font-weight: 500;">Hasta</label>
+                <input type="date" class="form-control" id="fecha_fin" name="fecha_fin" value="{{ request.GET.fecha_fin }}">
+            </div>
+
+            <div class="col-md-2">
+                <label for="estado" class="form-label" style="color: #94a3b8; font-size: 0.85rem; font-weight: 500;">Estado</label>
+                <select class="form-select" id="estado" name="estado">
+                    <option value="TODOS" {% if request.GET.estado == 'TODOS' %}selected{% endif %}>Todos</option>
+                    <option value="VIGENTE" {% if request.GET.estado == 'VIGENTE' %}selected{% endif %}>Vigentes</option>
+                    <option value="ANULADA" {% if request.GET.estado == 'ANULADA' %}selected{% endif %}>Anuladas</option>
+                </select>
+            </div>
+
+            <div class="col-md-2 d-grid gap-2 d-flex justify-content-end">
+                <button type="button" id="btn-limpiar" class="btn" style="background-color: transparent; color: #f8fafc; border: 1px solid #374151;" title="Limpiar">
+                    <i class="fas fa-undo-alt"></i>
+                </button>
+                <!-- El botón buscar sigue existiendo visualmente pero el JS hará el trabajo pesado -->
+                <button type="submit" class="btn text-white w-100" style="background-color: #981a28; font-weight: 500; pointer-events: none;">
+                    Buscar
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <!-- TABLA -->
+    <div class="table-container" id="tabla-contenedor">
+        <div class="table-responsive">
+            <table class="table table-borderless align-middle text-center">
+                <thead>
+                    <tr>
+                        <th class="text-start ps-4">ID Pedido</th>
+                        <th>Fecha</th>
+                        <th class="text-start">Cliente</th>
+                        <th class="text-end">Total</th>
+                        <th>Estado</th>
+                        <th>Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for factura in facturas %}
+                    <tr>
+                        <td class="text-start ps-4" style="color: #94a3b8; font-weight: 500;">#{{ factura.idPedido }}</td>
+                        <td style="color: #94a3b8;">{{ factura.fecha|date:"d M Y, H:i" }}</td>
+                        <!-- SOLUCIÓN DE COLOR: Forzado a blanco crudo para que resalte -->
+                        <td class="text-start fw-bold" style="color: #ffffff;">{{ factura.idCliente.nombre }}</td>
+                        <td class="text-end fw-bold" style="color: #cbd5e1;">C${{ factura.montoTotal }}</td>
+                        <td>
+                            {% if factura.estado_factura == 'VIGENTE' %}
+                                <span class="badge-modern badge-vigente">Vigente</span>
+                            {% else %}
+                                <span class="badge-modern badge-anulada">Anulada</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <div class="d-flex justify-content-center gap-2">
+                                <a href="{% url 'descargar_pdf_factura' factura.idPedido %}" class="btn-icon btn-icon-pdf text-decoration-none" target="_blank" title="Ver PDF">
+                                    <i class="fa-solid fa-file-pdf"></i>
+                                </a>
+                                
+                                <form action="{% url 'anular_factura' factura.idPedido %}" method="POST" onsubmit="return confirm('¿Anular la factura N°{{ factura.idPedido }}?');" class="m-0 p-0">
+                                    {% csrf_token %}
+                                    <button type="submit" class="btn-icon btn-icon-anular" title="Anular Factura" {% if factura.estado_factura == 'ANULADA' %}disabled{% endif %}>
+                                        <i class="fa-solid fa-ban"></i>
+                                    </button>
+                                </form>
+                            </div>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="6" class="py-5">
+                            <div class="text-center" style="color: #374151;">
+                                <i class="fas fa-inbox fa-3x mb-3"></i>
+                                <p style="color: #94a3b8;">No se encontraron facturas.</p>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        const form = document.getElementById('filtro-facturas');
+        const inputs = form.querySelectorAll('input, select');
+        const btnLimpiar = document.getElementById('btn-limpiar');
+        
+        let timeout = null;
+
+        // Función AJAX para buscar sin recargar
+        function realizarBusqueda() {
+            const url = new URL(form.action);
+            const formData = new FormData(form);
+            const searchParams = new URLSearchParams(formData);
+            url.search = searchParams.toString();
+
+            fetch(url, {
+                headers: { 'X-Requested-With': 'XMLHttpRequest' }
+            })
+            .then(response => response.text())
+            .then(html => {
+                // Parsea el nuevo HTML recibido desde Django
+                const parser = new DOMParser();
+                const doc = parser.parseFromString(html, 'text/html');
+                
+                // Extrae y reemplaza solo la tabla y las métricas
+                document.getElementById('tabla-contenedor').innerHTML = doc.getElementById('tabla-contenedor').innerHTML;
+                document.getElementById('metricas-contenedor').innerHTML = doc.getElementById('metricas-contenedor').innerHTML;
+                
+                // Actualiza la URL en el navegador (útil si copias y pegas el link)
+                window.history.replaceState({}, '', url);
+            });
+        }
+
+        // Escucha al usuario escribir (con un retraso inteligente de 400ms para no saturar la base de datos)
+        inputs.forEach(input => {
+            input.addEventListener('input', () => {
+                clearTimeout(timeout);
+                timeout = setTimeout(() => {
+                    realizarBusqueda();
+                }, 400); 
+            });
+        });
+
+        // Previene que el formulario recargue la página si el usuario presiona "Enter"
+        form.addEventListener('submit', function(e) {
+            e.preventDefault();
+            realizarBusqueda();
+        });
+
+        // Lógica del botón limpiar (Restablece los campos y dispara la búsqueda)
+        btnLimpiar.addEventListener('click', () => {
+            inputs.forEach(input => {
+                if(input.type === 'select-one') {
+                    input.value = 'TODOS';
+                } else {
+                    input.value = '';
+                }
+            });
+            realizarBusqueda();
+        });
+    });
+</script>
+{% endblock %}

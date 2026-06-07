@@ -19,6 +19,7 @@ import base64
 from decimal import Decimal
 import re
 from datetime import datetime
+from django.db.models import Sum, Q
 
 # Importaciones para generar pdf
 from django.contrib.staticfiles.finders import find
@@ -266,7 +267,7 @@ def mostrar_factura(request, pedido_id):
         'pedido': pedido,
         'cliente': cliente,
         'platillos_pedido': platillos_pedido,
-        'monto_total': monto_total + impuesto,
+        'monto_total': monto_total_decimal + impuesto,
         'subtotal': subtotal,
         'impuesto': impuesto,
         'estado_pago_texto': 'Pagada' if pedido.estadoDePago == 1 else 'Pendiente'
@@ -285,12 +286,14 @@ class Line(Flowable):
     def draw(self):
         self.canv.line(0, self.height, self.width, self.height)
 
-
+from reportlab.platypus import HRFlowable
 # Funcion para generar PDF de la factura
 def generar_pdf_factura(pedido_id):
+    print("--- [DEBUG] Entrando a generar_pdf_factura ---")
     # 1. Obtener datos
     pedido = get_object_or_404(Pedido, pk=pedido_id)
-    monto_total_sin_impuesto = calcular_monto_total(pedido_id)
+    # Asegúrate de que esta función esté disponible en tu archivo
+    monto_total_sin_impuesto = calcular_monto_total(pedido_id) 
     monto_total_decimal = Decimal(str(monto_total_sin_impuesto))
     
     TASA_IMPUESTO = Decimal('0.15')
@@ -305,7 +308,6 @@ def generar_pdf_factura(pedido_id):
     filename = f"factura_pedido_{pedido_id}.pdf"
     response['Content-Disposition'] = f'attachment; filename="{filename}"'
 
-    # Se usa el margen por defecto de SimpleDocTemplate (1 inch)
     doc = SimpleDocTemplate(response, pagesize=letter)
     story = []
     styles = getSampleStyleSheet()
@@ -313,57 +315,45 @@ def generar_pdf_factura(pedido_id):
     # Estilos Personalizados
     style_center_h1 = ParagraphStyle(name='CenterH1', alignment=1, fontSize=18)
     style_center_h2 = ParagraphStyle(name='CenterH2', alignment=1, fontSize=14)
-    style_details = styles['Normal'] # Detalles a la izquierda
+    style_details = styles['Normal'] 
 
-    # Ancho utilizable (letter width 8.5 inch - 2 inch de márgenes)
+    # Ancho utilizable
     PAGE_WIDTH = 6.5 * inch
     
-    # --- 1. ENCABEZADO: Logo y Título Principal ---
+    # --- 1. ENCABEZADO ---
     logo_path = find('He_Sai_Mali/logo.png') 
     LOGO_WIDTH = 0.8 * inch 
     LOGO_HEIGHT = 0.8 * inch
     
-    # Contenido de la tabla de encabezado
     header_data = []
-
-    # 1a Columna: Logo
     if logo_path:
         logo = Image(logo_path, width=LOGO_WIDTH, height=LOGO_HEIGHT)
         logo.hAlign = 'LEFT'
         header_data.append(logo)
     else:
-        # Columna vacía si no hay logo para mantener la estructura
         header_data.append(Paragraph("", styles['Normal'])) 
 
-    # 2a Columna: Títulos Centrados (ocupando el resto del ancho)
     titulo_bloque = [
-        Paragraph("<b>Hê Sãî Mãlî</b>", style_center_h1), # Título Principal
+        Paragraph("<b>Hê Sãî Mãlî</b>", style_center_h1),
         Spacer(1, 0.05 * inch),
-        Paragraph("Factura de Pedido", style_center_h2), # Título Secundario
+        Paragraph("Factura de Pedido", style_center_h2),
     ]
     header_data.append(titulo_bloque)
 
-    # Tabla de encabezado: Columna 1 (Logo) pequeña, Columna 2 (Título) grande.
-    header_table = Table(
-        data=[header_data], 
-        colWidths=[1.5 * inch, 5.0 * inch] # Se mantiene para que el título se pueda centrar en 5.0 inch
-    )
-
+    header_table = Table(data=[header_data], colWidths=[1.5 * inch, 5.0 * inch])
     header_table.setStyle(TableStyle([
         ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
-        ('ALIGN', (0, 0), (0, 0), 'LEFT'), # Logo alineado a la izquierda
-        ('ALIGN', (1, 0), (1, 0), 'CENTER'), # Texto alineado al centro de su columna
+        ('ALIGN', (0, 0), (0, 0), 'LEFT'),
+        ('ALIGN', (1, 0), (1, 0), 'CENTER'),
         ('BOTTOMPADDING', (0, 0), (-1, -1), 10),
     ]))
-    
     story.append(header_table)
 
-    # --- 2. LÍNEA SEPARADORA SUPERIOR ---
-    story.append(Line(PAGE_WIDTH, 1)) # Línea gruesa de 1 punto de altura
+    # --- 2. LÍNEA SEPARADORA (Corregido con HRFlowable) ---
+    story.append(HRFlowable(width=PAGE_WIDTH, thickness=1, color=colors.black))
     story.append(Spacer(1, 0.15 * inch))
 
-    # --- 3. DETALLES DEL PEDIDO ---
-    # Usamos saltos de línea (br) para la disposición
+    # --- 3. DETALLES ---
     detalle_texto = f"""
     <b>ID Pedido:</b> {pedido.idPedido}<br/>
     <b>Cliente:</b> {cliente.nombre} <br/>
@@ -378,13 +368,12 @@ def generar_pdf_factura(pedido_id):
     story.append(Paragraph(detalle_texto, style_details))
     story.append(Spacer(1, 0.15 * inch))
 
-    # --- 4. LÍNEA SEPARADORA INFERIOR DE DETALLES ---
-    story.append(Line(PAGE_WIDTH, 1))
+    # --- 4. LÍNEA SEPARADORA ---
+    story.append(HRFlowable(width=PAGE_WIDTH, thickness=1, color=colors.black))
     story.append(Spacer(1, 0.15 * inch))
 
-    # --- 5. TABLA DE PRODUCTOS (Alineación y formato fiel) ---
+    # --- 5. TABLA DE PRODUCTOS ---
     data = [['Producto', 'Cant.', 'Precio Unit.', 'Subtotal']]
-    
     for item in platillos_pedido:
         nombre = item.idProductoMenu.nombre
         cantidad = str(item.cantidad)
@@ -393,60 +382,43 @@ def generar_pdf_factura(pedido_id):
         total_item_str = f"C${total_item:.2f}"
         data.append([nombre, cantidad, precio_unit, total_item_str])
 
-    # ColWidths ajustados para el ancho de la página (6.5 in)
     table = Table(data, colWidths=[3*inch, 1*inch, 1*inch, 1.5*inch])
     table.setStyle(TableStyle([
-        # Headers: Sin color de fondo (blanco si se desea)
         ('BACKGROUND', (0, 0), (-1, 0), colors.white),
-        ('TEXTCOLOR', (0, 0), (-1, 0), colors.black),
-        # Bordes: SOLO línea inferior para la cabecera (como en el ejemplo)
         ('LINEBELOW', (0, 0), (-1, 0), 1, colors.black), 
-        # Alineación del contenido
         ('ALIGN', (0, 0), (0, -1), 'LEFT'),      
         ('ALIGN', (1, 1), (1, -1), 'CENTER'),    
         ('ALIGN', (2, 0), (2, -1), 'RIGHT'),     
         ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-        ('BOTTOMPADDING', (0, 0), (-1, 0), 6),
-        ('TOPPADDING', (0, 0), (-1, -1), 6),
-        ('GRID', (0, 0), (-1, -1), 0.1, colors.white), # Elimina todos los otros bordes
+        ('GRID', (0, 0), (-1, -1), 0.1, colors.white),
     ]))
     story.append(table)
     story.append(Spacer(1, 0.25 * inch))
 
-    # --- 6. TOTALES (Tabla para alineación a la derecha) ---
-    
-    # 7.5 inch es demasiado ancho, el ancho de los datos debe sumar el ancho utilizable (6.5 inch)
+    # --- 6. TOTALES ---
     totales_data = [
         ['Subtotal:', f"C${subtotal:.2f}"],
         [f"Impuesto (IVA {int(TASA_IMPUESTO * 100)}%):", f"C${impuesto:.2f}"],
     ]
-
-    # Tabla para subtotales e impuesto (sin línea)
     totales_table_1 = Table(totales_data, colWidths=[5*inch, 1.5*inch]) 
     totales_table_1.setStyle(TableStyle([
         ('ALIGN', (0, 0), (-1, -1), 'RIGHT'),
-        ('LEFTPADDING', (0, 0), (0, -1), 0),
-        ('RIGHTPADDING', (1, 0), (1, -1), 0),
     ]))
     story.append(totales_table_1)
     
     story.append(Spacer(1, 0.05 * inch))
     
-    # Total a Pagar (separado para controlar la línea de forma precisa)
     total_final_data = [['Total a Pagar:', f"C${total_con_impuesto:.2f}"]]
     total_final_table = Table(total_final_data, colWidths=[5*inch, 1.5*inch])
     total_final_table.setStyle(TableStyle([
         ('ALIGN', (0, 0), (-1, -1), 'RIGHT'),
         ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-        # Línea de 1pt arriba del Total a Pagar
         ('LINEABOVE', (0, 0), (-1, 0), 1, colors.black), 
-        ('BOTTOMPADDING', (0, 0), (-1, 0), 0),
-        ('TOPPADDING', (0, 0), (-1, 0), 5),
     ]))
-
     story.append(total_final_table)
     
     doc.build(story)
+    print("--- [DEBUG] PDF generado con éxito, enviando response ---")
     return response
 
 @require_POST
@@ -487,10 +459,14 @@ def pagar_factura(request, pedido_id):
     return redirect('pedidos')
 
 # Vista dedicada solo a generar y servir el archivo PDF
-@user_passes_test(es_rol("Mesero"), login_url='login')
+@user_passes_test(lambda u: u.rol == "Mesero" or u.rol == "Administrador", login_url='login')
 def descargar_pdf_factura(request, pedido_id):
-    return generar_pdf_factura(pedido_id)
-
+    try:
+        return generar_pdf_factura(pedido_id)
+    except Exception as e:
+        messages.error(request, f"Error al generar PDF: {e}")
+        return redirect(request.META.get('HTTP_REFERER', 'historial_facturas'))
+    
 @require_POST
 @user_passes_test(es_rol("Mesero"), login_url='login')
 def eliminar_pedido(request, pedido_id):
@@ -2254,3 +2230,68 @@ def eliminar_empleado(request, empleado_id):
 def logout_view(request):
     logout(request)
     return redirect('login')
+
+
+# Funcionalidad para ver el historial de facturas (pedidos) en el dashboard del administrador
+@user_passes_test(es_rol("Administrador"), login_url='login')
+def historial_facturas(request):
+    # Empezamos con todos los pedidos ordenados de más reciente a más antiguo
+    facturas = Pedido.objects.all().order_by('-fecha')
+
+    # --- 1. CAPTURAR DATOS DE LA BARRA DE BÚSQUEDA ---
+    q = request.GET.get('q', '')
+    fecha_inicio = request.GET.get('fecha_inicio', '')
+    fecha_fin = request.GET.get('fecha_fin', '')
+    estado = request.GET.get('estado', 'TODOS')
+
+    # --- 2. APLICAR FILTROS EN POSTGRESQL ---
+    if q:
+        if q.isdigit():
+            # Si escribieron un número, filtramos por el ID del pedido exactamente
+            facturas = facturas.filter(idPedido=q)
+        else:
+            # Si escribieron texto, buscamos por nombre del cliente (ignorando mayúsculas)
+            facturas = facturas.filter(idCliente__nombre__icontains=q)
+
+    if fecha_inicio:
+        facturas = facturas.filter(fecha__date__gte=fecha_inicio)
+    
+    if fecha_fin:
+        facturas = facturas.filter(fecha__date__lte=fecha_fin)
+
+    if estado != 'TODOS':
+        facturas = facturas.filter(estado_factura=estado)
+
+    # --- 3. CÁLCULO DE MÉTRICAS REALES ---
+    # Sumamos el monto solo de las facturas vigentes que coincidan con la búsqueda
+    ventas_totales = facturas.filter(estado_factura='VIGENTE').aggregate(Sum('montoTotal'))['montoTotal__sum'] or 0.00
+    
+    # Contamos cuántas facturas hay en total en esta vista
+    total_facturas = facturas.count()
+    
+    # Contamos cuántos clientes distintos hay en estas facturas
+    total_clientes = facturas.values('idCliente').distinct().count()
+
+    # --- 4. ENVIAR AL HTML ---
+    context = {
+        'facturas': facturas,
+        'ventas_totales': ventas_totales,
+        'total_facturas': total_facturas,
+        'total_clientes': total_clientes,
+    }
+    return render(request, 'He_Sai_Mali/historial_facturas.html', context)
+
+# Vista para anular una factura (pedido)
+@require_POST
+@user_passes_test(es_rol("Administrador"), login_url='login')
+def anular_factura(request, pedido_id):
+    pedido = get_object_or_404(Pedido, pk=pedido_id)
+    
+    if pedido.estado_factura == 'VIGENTE':
+        pedido.estado_factura = 'ANULADA'
+        pedido.save()
+        messages.success(request, f'La factura N°{pedido.idPedido} ha sido anulada exitosamente.')
+    else:
+        messages.warning(request, f'La factura N°{pedido.idPedido} ya se encuentra anulada.')
+        
+    return redirect('historial_facturas')

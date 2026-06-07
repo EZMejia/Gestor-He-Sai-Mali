@@ -143,6 +143,19 @@ class Pedido(models.Model):
     # Agregado
     estadoDePago = models.BooleanField(default=False, blank=True, null=True)
 
+    # --- NUEVO: Control de anulaciones de facturas ---
+    ESTADOS_FACTURA = [
+        ('VIGENTE', 'Vigente'),
+        ('ANULADA', 'Anulada'),
+    ]
+    
+    estado_factura = models.CharField(
+        max_length=10, 
+        choices=ESTADOS_FACTURA, 
+        default='VIGENTE',
+        verbose_name="Estado de la Factura"
+    )
+    
     def __str__(self):
         return f"pedido N°{self.idPedido}"
 
