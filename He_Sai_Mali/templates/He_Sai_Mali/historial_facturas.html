@@ -1,173 +1,281 @@
 {% extends 'He_Sai_Mali/base.html' %}
 
 {% block extra_style %}
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-
 <style>
-    /* SOLUCIÓN AL SCROLL: Obligamos al contenedor a tener scroll vertical */
+    /* ==== ESTILO UNIFICADO CON EL DASHBOARD ORIGINAL ==== */
+    :root {
+        --primary-color: #981a28;
+        --secondary-color: #f3bb67;
+        --text-light: #ffffff;
+        --text-dark: #333333;
+        --bg-card: #ffffff;
+        --border-color: #dee2e6;
+        --success-color: #28a745;
+        --info-color: #17a2b8;
+        --warning-color: #ffc107;
+        --danger-color: #dc3545;
+        --menu-item-hover: #b12131;
+    }
+
+    .historial-wrapper {
+        font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+        color: var(--text-dark);
+    }
+
+    /* Aseguramos el scroll igual que antes */
     #page-content-wrapper-inner {
         overflow-y: auto !important;
         height: calc(100vh - 65px) !important;
         overflow-x: hidden;
     }
 
-    .modern-wrapper {
-        font-family: 'Inter', sans-serif;
-        color: #f8fafc;
+    /* Tarjetas de métricas (estilo dashboard) */
+    .historial-wrapper .metric-card {
+        background-color: var(--bg-card);
+        padding: 20px;
+        border-radius: 8px;
+        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        border-left: 5px solid transparent;
+        transition: transform 0.2s;
+        margin-bottom: 20px;
+        height: 100%;
     }
-    
-    .modern-wrapper h2 {
-        font-family: 'Inter', sans-serif;
-        color: #f8fafc;
-        font-weight: 700;
-        letter-spacing: -0.02em;
+    .historial-wrapper .metric-card:hover {
+        transform: translateY(-2px);
+    }
+    .historial-wrapper .metric-card .card-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 15px;
+        padding-bottom: 10px;
+        background: none;
+        border: none;
+    }
+    .historial-wrapper .metric-card h3 {
+        margin: 0;
+        font-size: 1.2rem;
+        color: var(--primary-color);
+    }
+    .historial-wrapper .metric-card .card-icon {
+        font-size: 2rem;
+        color: var(--primary-color);
+    }
+    .historial-wrapper .metric-card .card-value {
+        font-size: 2.5rem;
+        font-weight: bold;
+        color: black;
+    }
+    .historial-wrapper .metric-card p {
+        color: #6c757d;
+        font-size: 0.9rem;
     }
 
-    .modern-wrapper .metric-card {
-        background-color: #1f2937;
-        border: 1px solid #374151;
-        border-radius: 16px;
-        padding: 20px;
-        transition: transform 0.2s;
-    }
-    .modern-wrapper .metric-card:hover { transform: translateY(-2px); }
-    
-    .modern-wrapper .card-filtros {
-        background-color: #1f2937;
-        border: 1px solid #374151;
-        border-radius: 16px;
+    /* Contenedor de filtros (tarjeta blanca) */
+    .historial-wrapper .card-filtros {
+        background-color: var(--bg-card);
+        border-radius: 8px;
         padding: 24px;
-        box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+        margin-bottom: 25px;
+        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
     }
-    
-    .modern-wrapper .table-container {
-        border-radius: 12px;
+    .historial-wrapper .card-filtros label {
+        font-weight: 500;
+        color: var(--primary-color);
+    }
+    .historial-wrapper .card-filtros .form-control,
+    .historial-wrapper .card-filtros .form-select {
+        background-color: white;
+        border: 2px solid var(--secondary-color);
+        color: black;
+        padding: 8px 12px;
+        border-radius: 5px;
+    }
+    .historial-wrapper .card-filtros .form-control:focus,
+    .historial-wrapper .card-filtros .form-select:focus {
+        border-color: var(--primary-color);
+        box-shadow: 0 0 0 0.2rem rgba(152, 26, 40, 0.25);
+    }
+    ::-webkit-calendar-picker-indicator {
+        filter: invert(0); /* íconos de calendario normales */
+    }
+
+    .historial-wrapper .btn-buscar {
+        background-color: var(--primary-color);
+        color: white;
+        padding: 8px 20px;
+        border-radius: 5px;
+        font-weight: 600;
+        border: none;
+        transition: background-color 0.2s;
+    }
+    .historial-wrapper .btn-buscar:hover {
+        background-color: var(--menu-item-hover);
+    }
+    .historial-wrapper .btn-limpiar {
+        background-color: transparent;
+        color: var(--primary-color);
+        border: 1px solid var(--primary-color);
+        padding: 8px 15px;
+        border-radius: 5px;
+    }
+    .historial-wrapper .btn-limpiar:hover {
+        background-color: rgba(152, 26, 40, 0.05);
+    }
+
+    /* Tabla (estilo dashboard) */
+    .historial-wrapper .table-container {
+        border-radius: 8px;
         overflow: hidden;
-        border: 1px solid #374151;
-        background-color: #1f2937;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        background-color: var(--bg-card);
     }
-    
-    .modern-wrapper .table { margin-bottom: 0; color: #f8fafc; }
-    .modern-wrapper .table thead th { 
-        background-color: #111827; 
-        color: #94a3b8; 
-        border-bottom: 1px solid #374151;
+    .historial-wrapper .table {
+        margin-bottom: 0;
+        color: var(--text-dark);
+    }
+    .historial-wrapper .table thead th {
+        background-color: #f5f5f5;
+        border-bottom: 2px solid var(--primary-color);
         font-weight: 600;
         text-transform: uppercase;
-        font-size: 0.75rem;
-        letter-spacing: 0.05em;
-        padding: 16px;
+        font-size: 0.8rem;
+        color: #333;
+        padding: 14px;
+        text-align: center;
     }
-    .modern-wrapper .table tbody td {
-        padding: 16px;
-        border-bottom: 1px solid #374151;
+    .historial-wrapper .table tbody td {
+        padding: 12px 14px;
+        border-bottom: 1px solid #eee;
         vertical-align: middle;
-        background-color: transparent;
+        text-align: center;
     }
-    .modern-wrapper .table tbody tr { transition: background-color 0.2s; }
-    .modern-wrapper .table tbody tr:hover td { background-color: #374151; } 
-    
-    .modern-wrapper .badge-modern {
-        padding: 6px 12px;
-        border-radius: 6px;
-        font-weight: 500;
-        font-size: 0.75rem;
+    .historial-wrapper .table tbody tr:hover {
+        background-color: #f9f9f9;
     }
-    .modern-wrapper .badge-vigente { background-color: rgba(16, 185, 129, 0.1); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.2); }
-    .modern-wrapper .badge-anulada { background-color: rgba(239, 68, 68, 0.1); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.2); }
 
-    .modern-wrapper .form-control, .modern-wrapper .form-select {
-        background-color: #111827;
-        border: 1px solid #374151;
-        color: #f8fafc;
+    /* Badges de estado (dashboard-like) */
+    .historial-wrapper .badge-vigente {
+        background-color: var(--success-color);
+        color: white;
+        padding: 4px 10px;
+        border-radius: 12px;
+        font-size: 0.75rem;
+        display: inline-block;
     }
-    .modern-wrapper .form-control:focus, .modern-wrapper .form-select:focus {
-        background-color: #111827;
-        color: #f8fafc;
-        border-color: #981a28; 
-        box-shadow: 0 0 0 0.25rem rgba(152, 26, 40, 0.25);
+    .historial-wrapper .badge-anulada {
+        background-color: var(--danger-color);
+        color: white;
+        padding: 4px 10px;
+        border-radius: 12px;
+        font-size: 0.75rem;
+        display: inline-block;
     }
-    ::-webkit-calendar-picker-indicator { filter: invert(1); }
-    
-    .modern-wrapper .btn-icon {
+
+    /* Botones de acción */
+    .historial-wrapper .btn-icon {
         width: 32px; height: 32px;
         display: inline-flex; align-items: center; justify-content: center;
-        border-radius: 8px; transition: all 0.2s;
+        border-radius: 8px;
+        transition: all 0.2s;
+        text-decoration: none;
     }
-    .modern-wrapper .btn-icon-pdf { background-color: rgba(56, 189, 248, 0.1); color: #38bdf8; }
-    .modern-wrapper .btn-icon-pdf:hover { background-color: rgba(56, 189, 248, 0.2); color: #38bdf8; }
-    
-    .modern-wrapper .btn-icon-anular { background-color: rgba(239, 68, 68, 0.1); color: #ef4444; border: none; }
-    .modern-wrapper .btn-icon-anular:hover:not(:disabled) { background-color: rgba(239, 68, 68, 0.2); color: #ef4444; }
-    .modern-wrapper .btn-icon-anular:disabled { opacity: 0.4; cursor: not-allowed; }
+    .historial-wrapper .btn-icon-pdf {
+        background-color: var(--primary-color);
+        color: white;
+    }
+    .historial-wrapper .btn-icon-pdf:hover {
+        background-color: var(--menu-item-hover);
+        color: white;
+    }
+    .historial-wrapper .btn-icon-anular {
+        background-color: var(--danger-color);
+        color: white;
+        border: none;
+        cursor: pointer;
+    }
+    .historial-wrapper .btn-icon-anular:hover:not(:disabled) {
+        background-color: #c82333;
+    }
+    .historial-wrapper .btn-icon-anular:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+    }
+
+    /* Textos adicionales */
+    .historial-wrapper .text-muted {
+        color: #6c757d !important;
+    }
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="modern-wrapper container-fluid mt-4 px-4 pb-5">
+<div class="historial-wrapper container-fluid mt-4 px-4 pb-5">
     
     <div class="mb-4">
-        <h2>Historial de Facturación</h2>
-        <p style="color: #94a3b8;">Visualiza, filtra y gestiona los registros contables.</p>
+        <h2 style="color: var(--primary-color); font-weight: 700; border-bottom: 2px solid var(--primary-color); padding-bottom: 10px;">
+            Historial de Facturación
+        </h2>
+        <p style="color: #6c757d;">Visualiza, filtra y gestiona los registros contables.</p>
     </div>
 
-    <!-- MÉTTRICAS -->
+    <!-- MÉTRICAS (estilo dashboard) -->
     <div class="row g-4 mb-4" id="metricas-contenedor">
+        <!-- Ventas Totales -->
         <div class="col-md-4">
-            <div class="metric-card d-flex align-items-center">
-                <div class="rounded-circle d-flex align-items-center justify-content-center me-3" style="width: 48px; height: 48px; background-color: rgba(52, 211, 153, 0.1); color: #34d399;">
-                    <i class="fas fa-coins fa-lg"></i>
+            <div class="metric-card" style="border-left-color: var(--success-color);">
+                <div class="card-header">
+                    <h3>Ventas Totales</h3>
+                    <i class="fas fa-coins card-icon" style="color: var(--success-color);"></i>
                 </div>
-                <div>
-                    <p class="mb-0" style="color: #94a3b8; font-size: 0.85rem; font-weight: 500;">Ventas Totales</p>
-                    <h4 class="mb-0" style="font-weight: 700;">C${{ ventas_totales|floatformat:2 }}</h4>
-                </div>
+                <div class="card-value">C${{ ventas_totales|floatformat:2 }}</div>
+                <p>Total facturado en el período</p>
             </div>
         </div>
+        <!-- Facturas Emitidas -->
         <div class="col-md-4">
-            <div class="metric-card d-flex align-items-center">
-                <div class="rounded-circle d-flex align-items-center justify-content-center me-3" style="width: 48px; height: 48px; background-color: rgba(96, 165, 250, 0.1); color: #60a5fa;">
-                    <i class="fas fa-file-invoice fa-lg"></i>
+            <div class="metric-card" style="border-left-color: var(--info-color);">
+                <div class="card-header">
+                    <h3>Facturas Emitidas</h3>
+                    <i class="fas fa-file-invoice card-icon" style="color: var(--info-color);"></i>
                 </div>
-                <div>
-                    <p class="mb-0" style="color: #94a3b8; font-size: 0.85rem; font-weight: 500;">Facturas Emitidas</p>
-                    <h4 class="mb-0" style="font-weight: 700;">{{ total_facturas }}</h4>
-                </div>
+                <div class="card-value">{{ total_facturas }}</div>
+                <p>Documentos generados</p>
             </div>
         </div>
+        <!-- Clientes Atendidos -->
         <div class="col-md-4">
-            <div class="metric-card d-flex align-items-center">
-                <div class="rounded-circle d-flex align-items-center justify-content-center me-3" style="width: 48px; height: 48px; background-color: rgba(167, 139, 250, 0.1); color: #a78bfa;">
-                    <i class="fas fa-users fa-lg"></i>
+            <div class="metric-card" style="border-left-color: var(--warning-color);">
+                <div class="card-header">
+                    <h3>Clientes Atendidos</h3>
+                    <i class="fas fa-users card-icon" style="color: var(--warning-color);"></i>
                 </div>
-                <div>
-                    <p class="mb-0" style="color: #94a3b8; font-size: 0.85rem; font-weight: 500;">Clientes Atendidos</p>
-                    <h4 class="mb-0" style="font-weight: 700;">{{ total_clientes }}</h4>
-                </div>
+                <div class="card-value">{{ total_clientes }}</div>
+                <p>Personas únicas</p>
             </div>
         </div>
     </div>
 
-    <!-- FORMULARIO DE FILTROS -->
-    <div class="card-filtros mb-4">
+    <!-- FILTROS (tarjeta blanca) -->
+    <div class="card-filtros">
         <form id="filtro-facturas" method="GET" action="{% url 'historial_facturas' %}" class="row g-3 align-items-end">
             <div class="col-md-4">
-                <label for="buscar" class="form-label" style="color: #94a3b8; font-size: 0.85rem; font-weight: 500;">Cliente o ID</label>
+                <label for="buscar">Cliente o ID</label>
                 <input type="text" class="form-control" id="buscar" name="q" placeholder="Ej. Juan o 54" value="{{ request.GET.q }}">
             </div>
             
             <div class="col-md-2">
-                <label for="fecha_inicio" class="form-label" style="color: #94a3b8; font-size: 0.85rem; font-weight: 500;">Desde</label>
+                <label for="fecha_inicio">Desde</label>
                 <input type="date" class="form-control" id="fecha_inicio" name="fecha_inicio" value="{{ request.GET.fecha_inicio }}">
             </div>
             
             <div class="col-md-2">
-                <label for="fecha_fin" class="form-label" style="color: #94a3b8; font-size: 0.85rem; font-weight: 500;">Hasta</label>
+                <label for="fecha_fin">Hasta</label>
                 <input type="date" class="form-control" id="fecha_fin" name="fecha_fin" value="{{ request.GET.fecha_fin }}">
             </div>
 
             <div class="col-md-2">
-                <label for="estado" class="form-label" style="color: #94a3b8; font-size: 0.85rem; font-weight: 500;">Estado</label>
+                <label for="estado">Estado</label>
                 <select class="form-select" id="estado" name="estado">
                     <option value="TODOS" {% if request.GET.estado == 'TODOS' %}selected{% endif %}>Todos</option>
                     <option value="VIGENTE" {% if request.GET.estado == 'VIGENTE' %}selected{% endif %}>Vigentes</option>
@@ -176,18 +284,17 @@
             </div>
 
             <div class="col-md-2 d-grid gap-2 d-flex justify-content-end">
-                <button type="button" id="btn-limpiar" class="btn" style="background-color: transparent; color: #f8fafc; border: 1px solid #374151;" title="Limpiar">
+                <button type="button" id="btn-limpiar" class="btn-limpiar" title="Limpiar">
                     <i class="fas fa-undo-alt"></i>
                 </button>
-                <!-- El botón buscar sigue existiendo visualmente pero el JS hará el trabajo pesado -->
-                <button type="submit" class="btn text-white w-100" style="background-color: #981a28; font-weight: 500; pointer-events: none;">
-                    Buscar
+                <button type="submit" class="btn-buscar w-100">
+                    <i class="fas fa-search me-1"></i> Buscar
                 </button>
             </div>
         </form>
     </div>
 
-    <!-- TABLA -->
+    <!-- TABLA DE FACTURAS -->
     <div class="table-container" id="tabla-contenedor">
         <div class="table-responsive">
             <table class="table table-borderless align-middle text-center">
@@ -204,21 +311,20 @@
                 <tbody>
                     {% for factura in facturas %}
                     <tr>
-                        <td class="text-start ps-4" style="color: #94a3b8; font-weight: 500;">#{{ factura.idPedido }}</td>
-                        <td style="color: #94a3b8;">{{ factura.fecha|date:"d M Y, H:i" }}</td>
-                        <!-- SOLUCIÓN DE COLOR: Forzado a blanco crudo para que resalte -->
-                        <td class="text-start fw-bold" style="color: #ffffff;">{{ factura.idCliente.nombre }}</td>
-                        <td class="text-end fw-bold" style="color: #cbd5e1;">C${{ factura.montoTotal }}</td>
+                        <td class="text-start ps-4" style="font-weight: 500;">#{{ factura.idPedido }}</td>
+                        <td class="fecha-factura">{{ factura.fecha|date:"d \d\e F \d\e Y" }}</td>
+                        <td class="text-start fw-bold">{{ factura.idCliente.nombre }}</td>
+                        <td class="text-end fw-bold">C${{ factura.montoTotal }}</td>
                         <td>
                             {% if factura.estado_factura == 'VIGENTE' %}
-                                <span class="badge-modern badge-vigente">Vigente</span>
+                                <span class="badge-vigente"><i class="fas fa-check-circle me-1"></i> Vigente</span>
                             {% else %}
-                                <span class="badge-modern badge-anulada">Anulada</span>
+                                <span class="badge-anulada"><i class="fas fa-ban me-1"></i> Anulada</span>
                             {% endif %}
                         </td>
                         <td>
                             <div class="d-flex justify-content-center gap-2">
-                                <a href="{% url 'descargar_pdf_factura' factura.idPedido %}" class="btn-icon btn-icon-pdf text-decoration-none" target="_blank" title="Ver PDF">
+                                <a href="{% url 'descargar_pdf_factura' factura.idPedido %}" class="btn-icon btn-icon-pdf" target="_blank" title="Ver PDF">
                                     <i class="fa-solid fa-file-pdf"></i>
                                 </a>
                                 
@@ -234,9 +340,9 @@
                     {% empty %}
                     <tr>
                         <td colspan="6" class="py-5">
-                            <div class="text-center" style="color: #374151;">
+                            <div class="text-center text-muted">
                                 <i class="fas fa-inbox fa-3x mb-3"></i>
-                                <p style="color: #94a3b8;">No se encontraron facturas.</p>
+                                <p>No se encontraron facturas.</p>
                             </div>
                         </td>
                     </tr>
@@ -250,14 +356,40 @@
 
 {% block extra_js %}
 <script>
+    // Función para traducir los meses de inglés a español
+    function traducirFechas() {
+        const meses = {
+            'January': 'enero',
+            'February': 'febrero',
+            'March': 'marzo',
+            'April': 'abril',
+            'May': 'mayo',
+            'June': 'junio',
+            'July': 'julio',
+            'August': 'agosto',
+            'September': 'septiembre',
+            'October': 'octubre',
+            'November': 'noviembre',
+            'December': 'diciembre'
+        };
+        document.querySelectorAll('.fecha-factura').forEach(celda => {
+            let texto = celda.textContent;
+            for (let [ingles, espanol] of Object.entries(meses)) {
+                texto = texto.replace(ingles, espanol);
+            }
+            celda.textContent = texto;
+        });
+    }
+
     document.addEventListener("DOMContentLoaded", function() {
+        // Traducir fechas al cargar la página inicial
+        traducirFechas();
+
         const form = document.getElementById('filtro-facturas');
         const inputs = form.querySelectorAll('input, select');
         const btnLimpiar = document.getElementById('btn-limpiar');
-        
         let timeout = null;
 
-        // Función AJAX para buscar sin recargar
         function realizarBusqueda() {
             const url = new URL(form.action);
             const formData = new FormData(form);
@@ -269,39 +401,31 @@
             })
             .then(response => response.text())
             .then(html => {
-                // Parsea el nuevo HTML recibido desde Django
                 const parser = new DOMParser();
                 const doc = parser.parseFromString(html, 'text/html');
-                
-                // Extrae y reemplaza solo la tabla y las métricas
                 document.getElementById('tabla-contenedor').innerHTML = doc.getElementById('tabla-contenedor').innerHTML;
                 document.getElementById('metricas-contenedor').innerHTML = doc.getElementById('metricas-contenedor').innerHTML;
-                
-                // Actualiza la URL en el navegador (útil si copias y pegas el link)
                 window.history.replaceState({}, '', url);
+                // Traducir fechas después de actualizar la tabla
+                traducirFechas();
             });
         }
 
-        // Escucha al usuario escribir (con un retraso inteligente de 400ms para no saturar la base de datos)
         inputs.forEach(input => {
             input.addEventListener('input', () => {
                 clearTimeout(timeout);
-                timeout = setTimeout(() => {
-                    realizarBusqueda();
-                }, 400); 
+                timeout = setTimeout(realizarBusqueda, 400);
             });
         });
 
-        // Previene que el formulario recargue la página si el usuario presiona "Enter"
         form.addEventListener('submit', function(e) {
             e.preventDefault();
             realizarBusqueda();
         });
 
-        // Lógica del botón limpiar (Restablece los campos y dispara la búsqueda)
         btnLimpiar.addEventListener('click', () => {
             inputs.forEach(input => {
-                if(input.type === 'select-one') {
+                if (input.type === 'select-one') {
                     input.value = 'TODOS';
                 } else {
                     input.value = '';

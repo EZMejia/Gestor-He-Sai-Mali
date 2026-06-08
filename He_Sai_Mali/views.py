@@ -201,31 +201,15 @@ def cambiar_estado_platillo(request, pedido_platillo_id):
 @require_POST
 @user_passes_test(es_rol("Mesero"), login_url='login')
 def facturar_pedido(request, pedido_id):
-    #Cambia el estado de todos los ProductoMenu de un pedido a 'Facturado' si todos estan en 'Servido'
-    # Libera la mesa si el pedido tiene una asignada
-
     pedido = get_object_or_404(Pedido, pk=pedido_id)
+    if request.method == 'POST':
+        metodo_pago = request.POST.get('metodo_pago') # Este es el que viene del modal
+        
+        with transaction.atomic():
+            pedido.metodoPago = metodo_pago
+            pedido.save() # Guardamos el método real aquí
     
-    # 1. Contar ProductoMenu pendientes de facturar y sus estados
-    items_pendientes = Pedido_ProductoMenu.objects.filter(idPedido=pedido).exclude(estado='Facturado')
-    items_facturables = items_pendientes.count()
-    items_servidos = items_pendientes.filter(estado='Servido').count()
-
-    if items_facturables > 0 and items_facturables == items_servidos:
-        if request.method == 'POST':
-            metodo_pago = request.POST.get('metodo_pago')
-
-            try:
-                with transaction.atomic():
-                    pedido.metodoPago = metodo_pago
-                    pedido.estadoDePago = 0 # Asegurar que esté pendiente
-                    pedido.save()
-                
-                return redirect('mostrar_factura', pedido_id=pedido.idPedido)
-
-            except Exception as e:
-                messages.error(request, f"Error al registrar el método de pago: {e}")
-                return redirect('pedidos')
+    return redirect('mostrar_factura', pedido_id=pedido.idPedido)
 
 def calcular_monto_total(pedido_id):
     pedido = Pedido.objects.filter(pk=pedido_id).first()
@@ -289,7 +273,6 @@ class Line(Flowable):
 from reportlab.platypus import HRFlowable
 # Funcion para generar PDF de la factura
 def generar_pdf_factura(pedido_id):
-    print("--- [DEBUG] Entrando a generar_pdf_factura ---")
     # 1. Obtener datos
     pedido = get_object_or_404(Pedido, pk=pedido_id)
     # Asegúrate de que esta función esté disponible en tu archivo
@@ -418,7 +401,6 @@ def generar_pdf_factura(pedido_id):
     story.append(total_final_table)
     
     doc.build(story)
-    print("--- [DEBUG] PDF generado con éxito, enviando response ---")
     return response
 
 @require_POST
@@ -431,6 +413,9 @@ def pagar_factura(request, pedido_id):
         with transaction.atomic():
             # 1. Actualizar el estado de pago del Pedido
             pedido.estadoDePago = 1 # Marcar como pagada
+            
+            # SOLO AQUÍ se cambia a VIGENTE, para que el Historial la detecte como válida
+            pedido.estado_factura = 'VIGENTE' 
             pedido.save()
             
             # 2. Actualizar el estado de *todos* los Pedido_ProductoMenu a 'Facturado'
@@ -823,15 +808,15 @@ def vista_registrarpedido(request, pedido_id=None):
                         
                         mesa_id_para_sql = mesa_asignada_obj.idMesa
                         
-                    # C. Crear nuevo Pedido (incluyendo IdMesa_id)
+                    # C. Crear nuevo Pedido
                     with connection.cursor() as cursor:
                         sql_insert_pedido = """
-                            INSERT INTO "Pedido" ("idCliente_id", "idMesa_id", "montoTotal", "fecha", "metodoPago","estadoDePago")
-                            VALUES (%s, %s, %s, NOW() AT TIME ZONE 'CST', %s, False)
+                            INSERT INTO "Pedido" ("idCliente_id", "idMesa_id", "montoTotal", "fecha", "metodoPago", "estadoDePago", "estado_factura")
+                            VALUES (%s, %s, %s, NOW() AT TIME ZONE 'CST', NULL, False, 'VIGENTE')
                             RETURNING "idPedido";
                         """
-                        
-                        cursor.execute(sql_insert_pedido, [cliente_a_usar_id, mesa_id_para_sql, 0.00, 'Pendiente'])
+                        # Enviamos NULL para metodoPago, Django/Postgres lo manejará vacío
+                        cursor.execute(sql_insert_pedido, [cliente_a_usar_id, mesa_id_para_sql, 0.00])
                         id_pedido_a_usar = cursor.fetchone()[0]
                         
                         # D. Asignar el nuevo pedido al Mesero (USO DE CURSOR)
@@ -987,7 +972,6 @@ def vista_registrarpedido(request, pedido_id=None):
         'recetas_json': recetas,
         'platillos_previos': platillos_previos,
     }
-    # ------------------ FIN: CAMBIO 2 -------------------------------------------------
     return render(request, 'He_Sai_Mali/registrarpedido.html', context)
 
 # Vista de la cocina
@@ -2295,3 +2279,4 @@ def anular_factura(request, pedido_id):
         messages.warning(request, f'La factura N°{pedido.idPedido} ya se encuentra anulada.')
         
     return redirect('historial_facturas')
+
