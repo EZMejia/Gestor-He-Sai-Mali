@@ -24,6 +24,7 @@ urlpatterns = [
     path('pedidos/pagar/<int:pedido_id>/', views.pagar_factura, name='pagar_factura'),
     path('factura/descargar/<int:pedido_id>/', views.descargar_pdf_factura, name='descargar_pdf_factura'),
     path('pedidos/eliminar/<int:pedido_id>/', views.eliminar_pedido, name='eliminar_pedido'),
+    path('registrar_merma/<int:pedido_platillo_id>/', views.registrar_merma_platillo, name='registrar_merma_platillo'),
     # ------------------------------------------
     
     # --- Vista para pedidos en la cocina ---

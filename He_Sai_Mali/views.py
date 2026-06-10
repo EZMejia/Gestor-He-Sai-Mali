@@ -230,7 +230,7 @@ def mostrar_factura(request, pedido_id):
     # 2. Obtener el detalle de los platillos del pedido
     platillos_pedido = Pedido_ProductoMenu.objects.filter(
         idPedido=pedido
-    ).select_related('idProductoMenu')
+    ).exclude(estado__in=['Merma', 'Anulado']).select_related('idProductoMenu')
     
     TASA_IMPUESTO = Decimal('0.15') # 15% de impuesto (1 + 0.15)
     monto_total_decimal = Decimal(str(monto_total)) # Asegurar que sea Decimal
@@ -284,7 +284,7 @@ def generar_pdf_factura(pedido_id):
     impuesto = monto_total_decimal * TASA_IMPUESTO
     total_con_impuesto = subtotal + impuesto
     cliente = pedido.idCliente 
-    platillos_pedido = Pedido_ProductoMenu.objects.filter(idPedido=pedido).select_related('idProductoMenu')
+    platillos_pedido = Pedido_ProductoMenu.objects.filter(idPedido=pedido).exclude(estado__in=['Merma', 'Anulado']).select_related('idProductoMenu')
     
     # --- Configuración del PDF ---
     response = HttpResponse(content_type='application/pdf')
@@ -560,7 +560,7 @@ def vista_mesero(request):
 
     # 2. Obtener el detalle de platillos para los pedidos
     pedidos_ids = [p.idPedido for p in cola_pedidos]
-    ProductoMenu_query = Pedido_ProductoMenu.objects.filter(idPedido__in=pedidos_ids).select_related('idProductoMenu').order_by('idPedido_id')
+    ProductoMenu_query = Pedido_ProductoMenu.objects.filter(idPedido__in=pedidos_ids).exclude(estado__in=['Merma', 'Anulado']).select_related('idProductoMenu').order_by('idPedido_id')
     
     # Pre-procesar platillos en un diccionario para acceso rápido en la plantilla
     ProductoMenu_por_pedido = {}
@@ -973,6 +973,53 @@ def vista_registrarpedido(request, pedido_id=None):
         'platillos_previos': platillos_previos,
     }
     return render(request, 'He_Sai_Mali/registrarpedido.html', context)
+
+@require_POST
+@user_passes_test(es_rol("Mesero"), login_url='login')
+def registrar_merma_platillo(request, pedido_platillo_id):
+    pedido_platillo = get_object_or_404(Pedido_ProductoMenu, pk=pedido_platillo_id)
+    estado_actual = pedido_platillo.estado  # <-- Detectamos el estado antes del cambio
+    nombre_platillo = pedido_platillo.idProductoMenu.nombre
+    producto = pedido_platillo.idProductoMenu
+    cantidad_pedida = pedido_platillo.cantidad
+
+    try:
+        with transaction.atomic():
+            with connection.cursor() as cursor:
+                
+                # --- CONTROL DE INVENTARIO INTELIGENTE ---
+                if estado_actual == 'Registrado':
+                    nuevo_estado = 'Anulado'
+                    # Aún no se cocina: Buscamos su receta y DEVOLVEMOS el stock al inventario
+                    sql_receta = 'SELECT "idArticuloInventario_id", "cantidad_usada" FROM "ProductoMenu_ArticuloInventario" WHERE "idProductoMenu_id" = %s;'
+                    cursor.execute(sql_receta, [producto.idProductoMenu])
+                    ingredientes = cursor.fetchall()
+
+                    for id_ingrediente, cant_unitaria_usada in ingredientes:
+                        cantidad_a_devolver = Decimal(str(cant_unitaria_usada)) * Decimal(str(cantidad_pedida))
+                        sql_update_stock = 'UPDATE "ArticuloInventario" SET "stock" = "stock" + %s WHERE "idArticuloInventario" = %s;'
+                        cursor.execute(sql_update_stock, [cantidad_a_devolver, id_ingrediente])
+                else:
+                    nuevo_estado = 'Merma'
+
+                # --- REGISTRO DE LA MERMA ---
+                # En ambos casos el platillo pasa a 'Merma' para que no se cobre en la factura
+                sql_update = """
+                    UPDATE "Pedido_ProductoMenu"
+                    SET "estado" = %s
+                    WHERE "idPedido_ProductoMenu" = %s;
+                """
+                cursor.execute(sql_update, [nuevo_estado, pedido_platillo_id])
+
+        if estado_actual == 'Registrado':
+            messages.success(request, f"'{nombre_platillo}' cancelado antes de prepararse.")
+        else:
+            messages.warning(request, f"'{nombre_platillo}' enviado a Mermas.")
+            
+    except Exception as e:
+        messages.error(request, f"Error al registrar la merma: {e}")
+
+    return redirect('pedidos')
 
 # Vista de la cocina
 @never_cache

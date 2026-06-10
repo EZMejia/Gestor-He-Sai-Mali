@@ -284,26 +284,32 @@
                                                 </div>
                                             </div>
 
-                                            <form method="POST" action="{% url 'cambiar_estado_platillo' platillo.IdPedido_Platillo %}" style="display:inline; width: 100%;" class="ajax-form">
-                                                {% csrf_token %}
-                                                <button type="submit" 
-                                                    class="platillo_estado" 
-                                                    {% if platillo.Estado == 'Servido' %} disabled {% endif %}
-                                                    style="background-color: 
-                                                        {% if platillo.Estado == 'Registrado' %}#981a28;
-                                                        {% elif platillo.Estado == 'Listo' %}#981a28;
-                                                        {% elif platillo.Estado == 'Servido' %}#981a28; /* Mantiene tu color rojo oscuro original */
-                                                        {% endif %};">
-                                                    
-                                                    {% if platillo.Estado == "Registrado" %}
-                                                        <i class="fas fa-fire"></i> Preparar
-                                                    {% elif platillo.Estado == "Listo" %}
-                                                        <i class="fas fa-check"></i> Servir
-                                                    {% else %}
-                                                        <i class="fas fa-concierge-bell"></i> Servido
-                                                    {% endif %}
-                                                </button>
-                                            </form>
+                                            <div class="d-flex align-items-center justify-content-end gap-2" style="width: 100%;">
+                                                <form method="POST" action="{% url 'cambiar_estado_platillo' platillo.IdPedido_Platillo %}" style="display:inline; width: 100%;" class="ajax-form">
+                                                    {% csrf_token %}
+                                                    <button type="submit" class="platillo_estado" {% if platillo.Estado == 'Servido' %} disabled {% endif %} style="background-color: #981a28;">
+                                                        {% if platillo.Estado == "Registrado" %}
+                                                            <i class="fas fa-fire"></i> Preparar
+                                                        {% elif platillo.Estado == "Listo" %}
+                                                            <i class="fas fa-check"></i> Servir
+                                                        {% else %}
+                                                            <i class="fas fa-concierge-bell"></i> Servido
+                                                        {% endif %}
+                                                    </button>
+                                                </form>
+
+                                                {% if platillo.Estado == 'Registrado' %}
+                                                    <button type="button" class="btn btn-secondary btn-sm" style="height: 100%;" title="Anular Platillo"
+                                                        onclick="abrirModalBaja('{% url 'registrar_merma_platillo' platillo.IdPedido_Platillo %}', '{{ platillo.Nombre }}', 'Anular')">
+                                                        <i class="fas fa-minus-circle"></i>
+                                                    </button>
+                                                {% else %}
+                                                    <button type="button" class="btn btn-warning btn-sm text-dark" style="height: 100%;" title="Registrar Merma"
+                                                        onclick="abrirModalBaja('{% url 'registrar_merma_platillo' platillo.IdPedido_Platillo %}', '{{ platillo.Nombre }}', 'Merma')">
+                                                        <i class="fas fa-exclamation-triangle"></i>
+                                                    </button>
+                                                {% endif %}
+                                            </div>
                                         </li>
                                     {% endfor %}
                                 </ul>
@@ -402,11 +408,77 @@
                     </div>
                 </div>
             </div>
+
+            {# Modal dinámico para Anulaciones o Mermas #}
+            <div class="modal fade" id="modalBajaPlatillo" tabindex="-1" aria-hidden="true">
+                <div class="modal-dialog modal-dialog-centered">
+                    <div class="modal-content">
+                        <div class="modal-header" id="modal-baja-header">
+                            <h5 class="modal-title" id="modal-baja-titulo"></h5>
+                            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                        </div>
+                        <form id="form-baja-platillo" method="POST" action="" class="ajax-form">
+                            {% csrf_token %}
+                            <div class="modal-body">
+                                <p id="modal-baja-alerta" class="alert py-2 small"></p>
+                                <p>Platillo: <strong id="modal-baja-nombre"></strong></p>
+                            </div>
+                            <div class="modal-footer border-secondary">
+                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                                <button type="submit" class="btn" id="modal-baja-btn-submit"></button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
         </main>
     </div>
 {% endblock %}
     
 {% block extra_js %}
+    <script>
+        let modalBajaInstancia = null;
+
+        function abrirModalBaja(urlAccion, nombrePlatillo, tipoBaja) {
+            // Configurar elementos básicos
+            document.getElementById('form-baja-platillo').action = urlAction = urlAccion;
+            document.getElementById('modal-baja-nombre').textContent = nombrePlatillo;
+
+            const header = document.getElementById('modal-baja-header');
+            const titulo = document.getElementById('modal-baja-titulo');
+            const alerta = document.getElementById('modal-baja-alerta');
+            const txtArea = document.getElementById('justificacion');
+            const btnSubmit = document.getElementById('modal-baja-btn-submit');
+
+            if (tipoBaja === 'Anular') {
+                // Estilo Gris/Info para Anulaciones (sin pérdida física de stock)
+                header.className = "modal-header bg-secondary text-white";
+                titulo.innerHTML = '<i class="fas fa-minus-circle"></i> Anular Platillo';
+                alerta.className = "alert alert-info py-2 small";
+                alerta.textContent = "El platillo no se ha cocinado. Al anularlo, los insumos regresarán al almacén digital automáticamente.";
+                btnSubmit.className = "btn btn-info";
+                btnSubmit.textContent = "Confirmar Anulación";
+            } else {
+                // Estilo Amarillo/Peligro para Mermas (pérdida física de stock)
+                header.className = "modal-header bg-warning text-dark";
+                titulo.innerHTML = '<i class="fas fa-exclamation-triangle"></i> Registrar Merma';
+                alerta.className = "alert alert-warning py-2 text-dark small";
+                alerta.textContent = "¡Cuidado! Este platillo ya se preparó. Al marcarlo como merma saldrá de la cuenta, pero el stock físico ya se consumió.";
+                btnSubmit.className = "btn btn-danger";
+                btnSubmit.textContent = "Confirmar Merma";
+            }
+
+            modalBajaInstancia = new bootstrap.Modal(document.getElementById('modalBajaPlatillo'));
+            modalBajaInstancia.show();
+        }
+
+        function cerrarModalBaja() {
+            if (modalBajaInstancia) {
+                modalBajaInstancia.hide();
+            }
+        }
+    </script>
+
     <script>
         // Modal formulario de pago
         let modalPagoInstancia = null;

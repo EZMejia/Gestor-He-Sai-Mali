@@ -177,6 +177,8 @@ class Pedido_ProductoMenu(models.Model):
         ('Listo', 'Listo'),
         ('Servido', 'Servido'),
         ('Facturado', 'Facturado'),
+        ('Merma', 'Merma'),
+        ('Anulado', 'Anulado'),
     ]
     estado = models.CharField(max_length=20, choices=ESTADOS, default='Registrado')
     cantidad = models.IntegerField(default=1)
