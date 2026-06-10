@@ -70,6 +70,11 @@
             min-width: 0;
         }
 
+        .card canvas {
+            width: 100% !important;
+            height: 300px !important;
+        }
+
         .card-header {
             display: flex;
             justify-content: space-between;
@@ -510,6 +515,95 @@
                     </div>
                 </div>
 
+                <div style="margin-top: 40px;">
+                    
+                    <h3 style="color: var(--secondary-color); margin-bottom: 12px; font-size: 1.1rem; font-weight: 500;">
+                        Filtrar compras por ingredientes o proveedores:
+                    </h3>
+
+                    <div style="display: flex; gap: 15px; margin-bottom: 20px; flex-wrap: wrap;">
+                        
+                        <div class="client-search-section" style="flex: 1; min-width: 220px; margin-bottom: 0;">
+                            <div class="client-search-box" style="width: 100%;">
+                                <span class="search-icon"><i class="fas fa-search"></i></span>
+                                <input type="text" id="fx-ingrediente" placeholder="Escribe el ingrediente..." autocomplete="off">
+                                <span id="btn-limpiar-ingrediente" class="clear-icon" style="display: none;">
+                                    <i class="fas fa-times-circle"></i>
+                                </span>
+                            </div>
+                        </div>
+
+                        <div class="client-search-section" style="flex: 1; min-width: 220px; margin-bottom: 0;">
+                            <div class="client-search-box" style="width: 100%;">
+                                <span class="search-icon"><i class="fas fa-truck"></i></span>
+                                <input type="text" id="fx-proveedor" placeholder="Escribe el proveedor..." autocomplete="off">
+                                <span id="btn-limpiar-proveedor" class="clear-icon" style="display: none;">
+                                    <i class="fas fa-times-circle"></i>
+                                </span>
+                            </div>
+                        </div>
+
+                        <div class="client-search-section" style="flex: 1; min-width: 220px; margin-bottom: 0;">
+                            <div class="client-search-box" style="width: 100%;">
+                                <input type="date" id="fx-fecha-local" 
+                                    style="padding: 14px 40px 14px 12px;
+                                        border-radius: 8px;
+                                        border: 2px solid var(--secondary-color);
+                                        background-color: white;
+                                        color: #888888;
+                                        font-size: 1rem;"
+                                    title="Filtrar por un día específico">
+                                <span id="btn-limpiar-fecha" class="clear-icon" style="display: none;">
+                                    <i class="fas fa-times-circle"></i>
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <h3 id="compras-titulo-resultados" class="results-header" style="display: none;">
+                        <i class="fas fa-boxes" style="margin-right: 2px;"></i> Historial de compras <span style="font-size: 0.9rem; margin-left: 10px; color: #666;">(<span id="compras-contador">0</span> <span id="compras-texto-plural">resultados</span>)</span>
+                    </h3>
+
+                    <div id="compras-tabla-container" class="results-table-container" style="display: none;">
+                        <table class="results-table">
+                            <thead>
+                                <tr>
+                                    <th>Fecha de Compra</th>
+                                    <th>Ingrediente</th>
+                                    <th>Proveedor</th>
+                                    <th>Cantidad</th>
+                                    <th>Total Pagado</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tabla-compras-body">
+                                {% if historial_compras %}
+                                    {% for compra in historial_compras %}
+                                    <tr class="compra-row" 
+                                        data-ingrediente="{{ compra.ingrediente|lower }}" 
+                                        data-proveedor="{{ compra.proveedor|lower }}"
+                                        data-fecha="{{ compra.fecha|date:'Y-m-d' }}">
+                                        <td>{{ compra.fecha|date:"d/m/Y" }}</td>
+                                        <td><strong>{{ compra.ingrediente }}</strong></td>
+                                        <td>{{ compra.proveedor }}</td>
+                                        <td>{{ compra.cantidad|floatformat:2 }} {{ compra.unidad }}</td>
+                                        <td><strong style="color: var(--primary-color);">C${{ compra.total|floatformat:2 }}</strong></td>
+                                    </tr>
+                                    {% endfor %}
+                                {% endif %}
+                                
+                                <tr id="compras-vacio" style="display: none;">
+                                    <td colspan="6">
+                                        <div class="empty-results">
+                                            <i class="fas fa-box-open"></i>
+                                            <p>No se encontraron compras que coincidan con los filtros aplicados.</p>
+                                        </div>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
                 <!-- 4 y 5. GRÁFICOS -->
                 <div class="chart-grid">
                     <div class="card">
@@ -534,6 +628,112 @@
 {% block extra_js %}
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js"></script>
 
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const inputIngrediente = document.getElementById('fx-ingrediente');
+            const inputProveedor = document.getElementById('fx-proveedor');
+            const inputFechaLocal = document.getElementById('fx-fecha-local');
+            
+            // Referencias a los nuevos botones de limpiar
+            const btnLimpiarIngrediente = document.getElementById('btn-limpiar-ingrediente');
+            const btnLimpiarProveedor = document.getElementById('btn-limpiar-proveedor');
+            const btnLimpiarFecha = document.getElementById('btn-limpiar-fecha');
+            
+            const tituloResultados = document.getElementById('compras-titulo-resultados');
+            const tablaContainer = document.getElementById('compras-tabla-container');
+            const contador = document.getElementById('compras-contador');
+            const textoPlural = document.getElementById('compras-texto-plural'); 
+            const filaVacio = document.getElementById('compras-vacio');
+            const filasCompras = document.querySelectorAll('.compra-row');
+
+            function filtrarCompras() {
+                const qIngrediente = inputIngrediente.value.toLowerCase().trim();
+                const qProveedor = inputProveedor.value.toLowerCase().trim();
+                const qFecha = inputFechaLocal.value;
+
+                // Mostrar u ocultar botones de limpiar dinámicamente
+                if (btnLimpiarIngrediente) btnLimpiarIngrediente.style.display = qIngrediente !== '' ? 'block' : 'none';
+                if (btnLimpiarProveedor) btnLimpiarProveedor.style.display = qProveedor !== '' ? 'block' : 'none';
+                if (btnLimpiarFecha) btnLimpiarFecha.style.display = qFecha !== '' ? 'block' : 'none';
+
+                // Verificar si hay interacción
+                const tieneFiltroActivo = qIngrediente !== '' || qProveedor !== '' || qFecha !== '';
+
+                if (!tieneFiltroActivo) {
+                    tituloResultados.style.display = 'none';
+                    tablaContainer.style.display = 'none';
+                    return;
+                }
+
+                tituloResultados.style.display = 'block';
+                tablaContainer.style.display = 'block';
+
+                let coincidencias = 0;
+
+                filasCompras.forEach(row => {
+                    const dIngrediente = row.getAttribute('data-ingrediente');
+                    const dProveedor = row.getAttribute('data-proveedor');
+                    const dFecha = row.getAttribute('data-fecha');
+
+                    const matchIngrediente = dIngrediente.includes(qIngrediente);
+                    const matchProveedor = dProveedor.includes(qProveedor);
+                    const matchFecha = (qFecha === '') || (dFecha === qFecha);
+
+                    if (matchIngrediente && matchProveedor && matchFecha) {
+                        row.style.display = '';
+                        coincidencias++;
+                    } else {
+                        row.style.display = 'none';
+                    }
+                });
+
+                // Actualizar el número del contador
+                contador.textContent = coincidencias;
+
+                // Manejo de la pluralización dinámica
+                if (coincidencias === 1) {
+                    textoPlural.textContent = 'resultado';
+                } else {
+                    textoPlural.textContent = 'resultados';
+                }
+
+                // Mostrar u ocultar mensaje vacío
+                if (coincidencias === 0) {
+                    filaVacio.style.display = 'table-row';
+                } else {
+                    filaVacio.style.display = 'none';
+                }
+            }
+
+            // Eventos para detectar la escritura/cambios
+            if (inputIngrediente && inputProveedor && inputFechaLocal) {
+                inputIngrediente.addEventListener('input', filtrarCompras);
+                inputProveedor.addEventListener('input', filtrarCompras);
+                inputFechaLocal.addEventListener('change', filtrarCompras);
+            }
+
+            // Funcionalidad de los botones de limpiar (Vaciar input y re-filtrar)
+            if (btnLimpiarIngrediente) {
+                btnLimpiarIngrediente.addEventListener('click', function() {
+                    inputIngrediente.value = '';
+                    filtrarCompras();
+                });
+            }
+            if (btnLimpiarProveedor) {
+                btnLimpiarProveedor.addEventListener('click', function() {
+                    inputProveedor.value = '';
+                    filtrarCompras();
+                });
+            }
+            if (btnLimpiarFecha) {
+                btnLimpiarFecha.addEventListener('click', function() {
+                    inputFechaLocal.value = '';
+                    filtrarCompras();
+                });
+            }
+        });
+    </script>
+
     {{ top_products_labels|json_script:"top-products-labels" }}
     {{ top_products_data|json_script:"top-products-data" }}
     {{ top_tables_labels|json_script:"top-tables-labels" }}
@@ -556,7 +756,8 @@
         new Chart(ctxProducts, {
             type: 'bar',
             data: {
-                labels: topProductsLabels,
+                // TRUCO: .map(label => label.split(' ')) rompe el texto por palabras creando saltos de línea
+                labels: topProductsLabels.map(label => label.split(' ')), 
                 datasets: [{
                     label: 'Cantidad Vendida',
                     data: topProductsData,
@@ -567,15 +768,20 @@
             },
             options: {
                 responsive: true,
-                aspectRatio: 4,
-                maintainAspectRatio: true,
+                maintainAspectRatio: false, // Mantiene la mejora para móvil del paso anterior
                 scales: {
                     y: {
                         beginAtZero: true,
                         title: { display: true, text: 'Unidades Vendidas', color: secondaryColor },
                         ticks: { color: secondaryColor }
                     },
-                    x: { ticks: { color: secondaryColor } }
+                    x: { 
+                        ticks: { 
+                            color: secondaryColor,
+                            maxRotation: 0, // Forzar a que NUNCA se ponga en diagonal
+                            minRotation: 0  // Garantiza que permanezca completamente horizontal
+                        } 
+                    }
                 },
                 plugins: { legend: { display: false } }
             }
@@ -598,8 +804,8 @@
             options: {
                 indexAxis: 'y',
                 responsive: true,
-                aspectRatio: 4,
-                maintainAspectRatio: true,
+                maintainAspectRatio: false, // <-- CAMBIAR A FALSE
+                // aspectRatio: 4,           // <-- ELIMINAR O COMENTAR ESTA LÍNEA
                 scales: {
                     x: {
                         beginAtZero: true,

@@ -256,44 +256,35 @@
                                 <i class="fas fa-user-plus me-2"></i> Registrar usuario
                             </a>
 
-                            <div class="menu-title border-top border-secondary mt-2">Sistema</div>
-                            <a href="{% url 'logout' %}" class="nav-link p-2 text-danger">
-                                <i class="fas fa-sign-out-alt me-2"></i> Cerrar sesión
-                            </a>
-
-                        {% else %}
-                            <a href="{% url 'logout' %}" class="nav-link p-2">
-                                <i class="fas fa-sign-out-alt me-2"></i> Cerrar sesión
-                            </a>
-                            
+                        {% else %}                            
                             {% if user.rol == "Mesero" %}
-                                <div class="menu-title border-top border-secondary mt-2">PEDIDOS Y FACTURACIÓN</div>
+                                <div class="menu-title">PEDIDOS Y FACTURACIÓN</div>
                                 <a href="{% url 'pedidos' %}" class="nav-link p-2 {% if request.resolver_match.url_name == 'pedidos' %}active{% endif %}">
                                     <i class="fas fa-clipboard-list me-2"></i> Lista de pedidos
                                 </a>
                                 <a href="{% url 'registrarpedido' %}" class="nav-link p-2 {% if request.resolver_match.url_name == 'registrarpedido' %}active{% endif %}">
                                     <i class="fas fa-plus me-2"></i> Nuevo pedido
                                 </a>
-                            {% endif %}
-
-                            {% if user.rol == "Cocinero" %}
-                                <div class="menu-title border-top border-secondary mt-2">UTILIDADES DE COCINA</div>
-                                <a href="{% url 'cocina' %}" class="nav-link p-2 {% if request.resolver_match.url_name == 'cocina' %}active{% endif %}">
-                                    <i class="fas fa-utensils me-2"></i> Monitor cocina
-                                </a>
-                            {% endif %}
-
-                            {% if user.rol == "Mesero" %}
                                 <div class="menu-title border-top border-secondary mt-2">ADMINISTRACIÓN DE LOCAL</div>
                                 <a href="{% url 'admin_mesas' %}" class="nav-link p-2 {% if request.resolver_match.url_name == 'admin_mesas' %}active{% endif %}">
                                     <i class="fas fa-chair me-2"></i> Mesas
                                 </a>
                             {% endif %}
-                            
+
+                            {% if user.rol == "Cocinero" %}
+                                <div class="menu-title">UTILIDADES DE COCINA</div>
+                                <a href="{% url 'cocina' %}" class="nav-link p-2 {% if request.resolver_match.url_name == 'cocina' %}active{% endif %}">
+                                    <i class="fas fa-utensils me-2"></i> Monitor cocina
+                                </a>
+                            {% endif %}                            
                         {% endif %}
 
                     </div>
                     
+                    <a href="{% url 'logout' %}" class="nav-link p-2 text-danger">
+                        <i class="fas fa-sign-out-alt me-2"></i> Cerrar sesión
+                    </a>
+
                     <footer class="sidebar-footer text-center text-secondary border-top border-secondary">
                         <small>2026 He Sai Mali</small>
                     </footer>

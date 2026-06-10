@@ -1868,6 +1868,28 @@ def admin_dashboard(request):
         print(f"Error en procedimiento almacenado: {e}")
         # En caso de error, el bloque mantendrá los valores por defecto definidos arriba
 
+    # =============================================
+    # HISTORIAL DE COMPRAS DE INVENTARIO
+    # =============================================
+    search_compras = request.GET.get('search_compras', '').strip()
+    
+    # Filtrar por el rango de fechas actual del dashboard
+    compras_query = ArticuloInventario_Proveedor.objects.select_related(
+        'idArticuloInventario', 'idProveedor'
+    )
+
+    # Preparar los datos calculando el total por registro
+    historial_compras = []
+    for compra in compras_query:
+        historial_compras.append({
+            'fecha': compra.fechaCompra,
+            'ingrediente': compra.idArticuloInventario.nombre,
+            'proveedor': compra.idProveedor.nombre,
+            'cantidad': compra.cantidadCompra,
+            'unidad': compra.idArticuloInventario.unidad_de_medida,
+            'total': compra.precioCompra,
+        })
+
     context = {
         'total_sales': total_sales,
         'total_orders': total_orders,
@@ -1885,6 +1907,8 @@ def admin_dashboard(request):
         'search_results': search_results,
         'search_results_count': search_results_count,
         'ingredientes_insuficientes': ingredientes_insuficientes,
+        'search_compras': search_compras,
+        'historial_compras': historial_compras,
     }
 
     if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
