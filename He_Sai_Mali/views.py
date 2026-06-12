@@ -227,17 +227,10 @@ def facturar_pedido(request, pedido_id):
                 return redirect('pedidos')
 
 def calcular_monto_total(pedido_id):
-    # Función auxiliar para calcular el monto total de un pedido.
-    with connection.cursor() as cursor:
-        sql_total = """
-            SELECT SUM(pp."cantidad" * pl."precio") AS "montoTotal"
-            FROM "Pedido" p
-            JOIN "Pedido_ProductoMenu" pp ON pp."idPedido_id" = p."idPedido"
-            JOIN "ProductoMenu" pl ON pl."idProductoMenu" = pp."idProductoMenu_id"
-            WHERE p."idPedido" = %s;
-        """
-        cursor.execute(sql_total, [pedido_id])
-        return cursor.fetchone()[0] or 0.0
+    pedido = Pedido.objects.filter(pk=pedido_id).first()
+    if pedido and pedido.montoTotal:
+        return float(pedido.montoTotal)
+    return 0.0
     
 @never_cache
 @user_passes_test(es_rol("Mesero"), login_url='login')
@@ -591,18 +584,16 @@ def vista_mesero(request):
     
     # 1. Obtener los pedidos que tienen ProductoMenu no facturado
     cola_pedidos = Pedido.objects.raw("""
-        SELECT p."idPedido", p."fecha", p."metodoPago", c."nombre", p."idMesa_id",
-        SUM(pp."cantidad" * pl."precio") AS "montoTotal"
+        SELECT p."idPedido", p."fecha", p."metodoPago", c."nombre", p."idMesa_id", p."montoTotal"
         FROM "Pedido" p
         JOIN "Cliente" c ON c."idCliente" = p."idCliente_id"
-        JOIN "Pedido_ProductoMenu" pp ON pp."idPedido_id" = p."idPedido"
-        JOIN "ProductoMenu" pl ON pl."idProductoMenu" = pp."idProductoMenu_id"
         JOIN "Empleado_Pedido" ep ON ep."idPedido_id" = p."idPedido"
-        WHERE p."idPedido" IN (SELECT pp."idPedido_id" FROM "Pedido_ProductoMenu" pp 
-                        WHERE pp."estado" IN ('Registrado', 'Listo', 'Servido')
-                        GROUP BY pp."idPedido_id"
-                        ) AND ep."idEmpleado_id" = %s
-        GROUP BY p."idPedido", p."fecha", p."metodoPago", c."nombre", p."idMesa_id"
+        WHERE p."idPedido" IN (
+            SELECT pp."idPedido_id" FROM "Pedido_ProductoMenu" pp 
+            WHERE pp."estado" IN ('Registrado', 'Listo', 'Servido')
+            GROUP BY pp."idPedido_id"
+        ) AND ep."idEmpleado_id" = %s
+        GROUP BY p."idPedido", p."fecha", p."metodoPago", c."nombre", p."idMesa_id", p."montoTotal"
         ORDER BY p."fecha" ASC;
     """, [request.user.idEmpleado])
 
@@ -989,9 +980,8 @@ def vista_registrarpedido(request, pedido_id=None):
                         # Retornar a la misma vista con el mensaje de error
                         return redirect('registrarpedido')
                 
-                # 4. Actualizar el MontoTotal del pedido (usando ORM y F expressions)
+                # 4. Actualizar el MontoTotal del pedido (Manejada por Trigger BD)
                 if items_registrados > 0:
-                    Pedido.objects.filter(idPedido=id_pedido_a_usar).update(montoTotal=F('montoTotal') + total_a_sumar)
                     messages.success(request, f"Pedido N°{id_pedido_a_usar} registrado/actualizado con éxito.")
                 
                 return redirect('pedidos')
