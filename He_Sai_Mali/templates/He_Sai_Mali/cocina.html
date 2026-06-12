@@ -152,11 +152,11 @@
                 </div>
                 
                 <h2 style="color: #dacfb7; text-align: center; padding: 20px 0;">Productos Pendientes por Elaborar</h2>
-
-                {% if pedidos_en_cola %}
-                    <div id="lista-pedidos" class="cola-cocina">
+                
+                <div id="lista-pedidos" class="cola-cocina">
+                    {% if pedidos_en_cola %}
                         {% for pedido in pedidos_en_cola %}
-                            <div class="pedido-card {% if forloop.first %}pedido-mas-antiguo{% endif %}">
+                            <div class="pedido-card {% if forloop.first %}pedido-mas-antiguo{% endif %}" data-id="{{ pedido.id }}">
                                 <div class="card-header">
                                     <span style="font-size: 18px;"><b>Pedido N° {{ pedido.id }}</b></span>
                                     <span style="font-size: 14px;">{{ pedido.mesa }}</span>
@@ -183,13 +183,14 @@
                                 </div>
                             </div>
                         {% endfor %}
-                    </div>
-                {% else %}
-                    <div class="alert-info-custom">
-                        ¡No hay productos pendientes!
-                    </div>
-                {% endif %}
-            </div>
+                        
+                    {% else %}
+                        <div class="alert-info-custom" style="width: 100%;">
+                            ¡No hay productos pendientes!
+                        </div>
+                    {% endif %}
+                    
+                </div>
         </main>
     </div>
 {% endblock %}
@@ -198,33 +199,75 @@
     <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
     <script>
         document.addEventListener('DOMContentLoaded', function() {
-            var el = document.getElementById('lista-pedidos');
-            var sortable = Sortable.create(el, {
-                animation: 150,      // Velocidad de la animación en ms
-                ghostClass: 'sortable-ghost', // Clase para el elemento fantasma
-                handle: '.card-header',       // El arrastre se inicia solo desde el header
-                onEnd: function (evt) {
-                    console.log('Nuevo orden establecido');
-                    // Aquí podrías realizar una petición AJAX (fetch) a Django 
-                    // si necesitas guardar el orden en la base de datos de PostgreSQL.
-                },
-            });
-        });
-    </script>
+            // 0. Variable global para pausar el AJAX
+            let estaArrastrando = false;
 
-    <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            
-            // 1. Función para obtener y renderizar los nuevos datos
-            function actualizarVista() {
-                fetch(window.location.href, {
-                    headers: {
-                        'X-Requested-With': 'XMLHttpRequest'
+            // --- 1. CONFIGURACIÓN DE SORTABLE JS ---
+            var el = document.getElementById('lista-pedidos');
+            if (el) {
+                var sortable = Sortable.create(el, {
+                    animation: 150,
+                    ghostClass: 'sortable-ghost',
+                    handle: '.card-header',
+                    // CUANDO EMPIEZA A ARRASTRAR: Pausamos el AJAX
+                    onStart: function (evt) {
+                        estaArrastrando = true;
+                    },
+                    // CUANDO SUELTA EL PEDIDO: Reactivamos el AJAX y guardamos el orden
+                    onEnd: function (evt) {
+                        estaArrastrando = false;
+                        guardarOrdenManual();
+                    },
+                });
+            }
+
+            // --- 2. FUNCIONES DE PERSISTENCIA LOCAL ---
+            function guardarOrdenManual() {
+                const contenedor = document.getElementById('lista-pedidos');
+                if (!contenedor) return;
+
+                // Capturamos todos los hijos directos (las tarjetas de pedidos)
+                const tarjetas = Array.from(contenedor.children);
+                // Extraemos el data-id de cada tarjeta
+                const ordenIds = tarjetas.map(tarjeta => tarjeta.dataset.id).filter(id => id != null);
+
+                localStorage.setItem('orden_cocina_manual', JSON.stringify(ordenIds));
+            }
+
+            function aplicarOrdenManual() {
+                const contenedor = document.getElementById('lista-pedidos');
+                const ordenGuardado = JSON.parse(localStorage.getItem('orden_cocina_manual'));
+
+                if (!contenedor || !ordenGuardado || ordenGuardado.length === 0) return;
+
+                const tarjetas = Array.from(contenedor.children);
+                // Creamos un mapa para buscar las tarjetas rápidamente por su data-id
+                const mapaTarjetas = new Map(tarjetas.map(t => [t.dataset.id, t]));
+
+                // 1. Insertamos las tarjetas en el orden que guardó el cocinero
+                ordenGuardado.forEach(id => {
+                    if (mapaTarjetas.has(id)) {
+                        contenedor.appendChild(mapaTarjetas.get(id));
+                        mapaTarjetas.delete(id); // La borramos del mapa
                     }
+                });
+
+                // 2. Si entraron pedidos nuevos de la BD, se añaden al final
+                mapaTarjetas.forEach(tarjeta => {
+                    contenedor.appendChild(tarjeta);
+                });
+            }
+
+            // --- 3. ACTUALIZACIÓN AJAX (POLLING) ---
+            function actualizarVista() {
+                // REGLA DE ORO: Si está arrastrando una tarjeta, cancelamos la actualización este turno
+                if (estaArrastrando) return;
+
+                fetch(window.location.href, {
+                    headers: { 'X-Requested-With': 'XMLHttpRequest' }
                 })
                 .then(response => response.text())
                 .then(html => {
-                    // Parsea el HTML recibido
                     const parser = new DOMParser();
                     const doc = parser.parseFromString(html, 'text/html');
 
@@ -233,6 +276,9 @@
                     const actualContenido = document.getElementById('lista-pedidos');
                     if (nuevoContenido && actualContenido) {
                         actualContenido.innerHTML = nuevoContenido.innerHTML;
+                        
+                        // INMEDIATAMENTE DESPUÉS de inyectar el HTML, reaplicamos el orden
+                        aplicarOrdenManual();
                     }
 
                     // Actualiza las alertas/mensajes de Django
@@ -245,24 +291,21 @@
                 .catch(error => console.error('Error de sincronización:', error));
             }
 
-            // 2. Interceptar el envío normal de los formularios con la clase 'ajax-form'
+            // --- 4. INTERCEPTAR FORMULARIOS AJAX ---
             document.body.addEventListener('submit', function(e) {
                 if (e.target.classList.contains('ajax-form')) {
-                    e.preventDefault(); // Evita la recarga
+                    e.preventDefault(); 
                     
                     const form = e.target;
                     const submitBtn = form.querySelector('button[type="submit"]');
-                    if (submitBtn) submitBtn.disabled = true; // Previene doble clic
+                    if (submitBtn) submitBtn.disabled = true;
 
                     fetch(form.action, {
                         method: 'POST',
                         body: new FormData(form),
-                        headers: {
-                            'X-Requested-With': 'XMLHttpRequest'
-                        }
+                        headers: { 'X-Requested-With': 'XMLHttpRequest' }
                     })
                     .then(response => {
-                        // Forzamos una actualización inmediata al recibir respuesta
                         actualizarVista(); 
                     })
                     .finally(() => {
@@ -271,8 +314,9 @@
                 }
             });
 
-            // 3. Ejecutar el Polling cada 5 segundos (5000 milisegundos)
-            setInterval(actualizarVista, 5000);
+            // --- 5. INICIAR EL SISTEMA ---
+            aplicarOrdenManual(); // Aplica el orden guardado si el usuario recarga la página con F5
+            setInterval(actualizarVista, 5000); // Polling cada 5 segundos
         });
     </script>
 {% endblock %}

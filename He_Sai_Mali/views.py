@@ -1025,51 +1025,31 @@ def registrar_merma_platillo(request, pedido_platillo_id):
 @never_cache
 @user_passes_test(es_rol("Cocinero"), login_url='login')
 def vista_cocinero(request):
-    sql_ProductoMenu_en_cola = """
-        SELECT 
-            pp."idPedido_ProductoMenu", 
-            pp."cantidad", 
-            pp."idPedido_id",
-            p."nombre" AS "nombre_platillo",
-            pd."fecha",
-            c."nombre" AS "nombre_cliente",
-            pd."idMesa_id"
-        FROM "Pedido_ProductoMenu" pp
-        JOIN "ProductoMenu" p ON p."idProductoMenu" = pp."idProductoMenu_id"
-        JOIN "Pedido" pd ON pd."idPedido" = pp."idPedido_id"
-        JOIN "Cliente" c ON c."idCliente" = pd."idCliente_id"
-        WHERE pp."estado" = 'Registrado'
-        ORDER BY pd."fecha" ASC, pp."idProductoMenu_id" ASC;
-    """
-    
-    ProductoMenu_en_cola_raw = list(Pedido_ProductoMenu.objects.raw(sql_ProductoMenu_en_cola))
+    # Reemplazamos todo el SQL raw con una consulta limpia al ORM usando la Vista
+    pedidos_pendientes = VistaPedidosCocina.objects.all().order_by('fecha', 'id')
 
-    # El platillo_en_cola más antiguo es el primero después de ordenar
-    id_mas_antiguo = ProductoMenu_en_cola_raw[0].idPedido_id if ProductoMenu_en_cola_raw else None
+    id_mas_antiguo = pedidos_pendientes.first().id_pedido if pedidos_pendientes.exists() else None
 
-    # Agrupar los platillos por pedido para la presentación en la cocina
     pedidos_activos = {}
-    for pp in ProductoMenu_en_cola_raw:
-        pedido_id = pp.idPedido.idPedido
-        mesa = pp.idPedido.idMesa
-        numero_mesa = "Mesa: "+str(mesa.idMesa) if mesa else "Sin Mesa"
+    for pp in pedidos_pendientes:
+        pedido_id = pp.id_pedido
+        numero_mesa = f"Mesa: {pp.id_mesa}" if pp.id_mesa else "Sin Mesa"
 
         if pedido_id not in pedidos_activos:
             pedidos_activos[pedido_id] = {
                 'id': pedido_id,
-                'cliente': pp.idPedido.idCliente.nombre,
+                'cliente': pp.nombre_cliente,
                 'mesa': numero_mesa,
-                'hora': pp.idPedido.fecha,
+                'hora': pp.fecha,
                 'es_mas_antiguo': pedido_id == id_mas_antiguo,
                 'platillos': []
             }
         pedidos_activos[pedido_id]['platillos'].append({
-            'id_pp': pp.idPedido_ProductoMenu,
-            'nombre': pp.idProductoMenu.nombre,
+            'id_pp': pp.id, # idPedido_ProductoMenu
+            'nombre': pp.nombre_platillo,
             'cantidad': pp.cantidad,
         })
     
-    # Convertir el diccionario a una lista de diccionarios (ya está ordenado por la consulta)
     pedidos_ordenados = list(pedidos_activos.values())
 
     context = {
@@ -1729,32 +1709,19 @@ from datetime import datetime
 @never_cache
 @user_passes_test(es_rol("Administrador"), login_url='login')
 def admin_dashboard(request):
-    # --- LÓGICA DE ALERTA DE STOCK PARA 4 PLATILLOS ---
-    ingredientes_procesados = {}
-
-    # Consultamos todas las relaciones de recetas (ingredientes usados en platos)
-    recetas = ProductoMenu_ArticuloInventario.objects.select_related('idArticuloInventario', 'idProductoMenu').all()
-
-    for receta in recetas:
-        ingrediente = receta.idArticuloInventario
-        producto = receta.idProductoMenu
-        
-        # Cantidad mínima para poder hacer al menos 4 porciones
-        cantidad_minima_para_4 = receta.cantidad_usada * 4
-        
-        # Comparamos si el stock actual no cubre la demanda de 4 unidades
-        if ingrediente.stock < cantidad_minima_para_4:
-            # Agrupamos por ingrediente para no duplicarlo si falta en varias recetas
-            if ingrediente.idArticuloInventario not in ingredientes_procesados:
-                ingredientes_procesados[ingrediente.idArticuloInventario] = {
-                    'nombre': ingrediente.nombre,
-                    'cantidad_actual': ingrediente.stock,
-                    'unidad_medida': ingrediente.unidad_de_medida,
-                }
-            
-
-    # Convertimos el diccionario a una lista para enviarla al HTML
-    ingredientes_insuficientes = list(ingredientes_procesados.values())
+    # --- LÓGICA DE ALERTA DE STOCK PARA MENOS DE 5 PLATOS ---
+    ingredientes_insuficientes = VistaAlertasStock.objects.filter(porciones_posibles__lt=5).values(
+        'ingrediente', 'stock', 'unidad_de_medida'
+    )
+    
+    # Renombramos las llaves para que coincidan con lo que espera tu HTML actualmente
+    ingredientes_formateados = [
+        {
+            'nombre': item['ingrediente'],
+            'cantidad_actual': item['stock'],
+            'unidad_medida': item['unidad_de_medida']
+        } for item in ingredientes_insuficientes
+    ]
 
     # Obtener parámetros de fecha y búsqueda
     start_date_str = request.GET.get('start_date')
@@ -1906,7 +1873,7 @@ def admin_dashboard(request):
         'search_query': search_query,
         'search_results': search_results,
         'search_results_count': search_results_count,
-        'ingredientes_insuficientes': ingredientes_insuficientes,
+        'ingredientes_insuficientes': ingredientes_formateados,
         'search_compras': search_compras,
         'historial_compras': historial_compras,
     }
