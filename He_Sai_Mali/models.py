@@ -239,3 +239,32 @@ class ArticuloInventario_Proveedor(models.Model):
     
     class Meta:
         db_table = 'ArticuloInventario_Proveedor'
+
+
+# --- VISTAS DE BASE DE DATOS (NO ADMINISTRADAS POR DJANGO) ---
+class VistaPedidosCocina(models.Model):
+    # Usamos idPedido_ProductoMenu como Primary Key para que Django funcione correctamente
+    id = models.IntegerField(primary_key=True, db_column='idPedido_ProductoMenu') 
+    cantidad = models.IntegerField()
+    id_pedido = models.IntegerField(db_column='idPedido_id')
+    nombre_platillo = models.CharField(max_length=100)
+    fecha = models.DateTimeField()
+    nombre_cliente = models.CharField(max_length=100)
+    id_mesa = models.IntegerField(db_column='idMesa_id', null=True)
+
+    class Meta:
+        managed = False
+        db_table = 'vw_pedidos_cocina'
+
+
+class VistaAlertasStock(models.Model):
+    # Usamos idArticuloInventario como Primary Key
+    id = models.IntegerField(primary_key=True, db_column='idArticuloInventario')
+    ingrediente = models.CharField(max_length=100)
+    stock = models.DecimalField(max_digits=10, decimal_places=2)
+    unidad_de_medida = models.CharField(max_length=20)
+    porciones_posibles = models.IntegerField() # Calculado por la BD
+
+    class Meta:
+        managed = False
+        db_table = 'vw_alertas_stock'
