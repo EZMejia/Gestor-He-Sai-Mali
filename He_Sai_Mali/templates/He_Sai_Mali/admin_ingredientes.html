@@ -222,7 +222,7 @@
                             <div class="modal-content">
                                 <div class="modal-header" style="background-color: var(--primary-color); color: white;">
                                     <h5 class="modal-title" id="modalComprarIngredienteLabel">
-                                        <i class="fas fa-shopping-cart"></i> Registrar Compra para: <span id="nombreIngredienteTexto" style="font-weight: normal;"></span>
+                                        <i class="fas fa-shopping-cart"></i> Registrar Compra para: <span id="nombreIngredienteTexto"></span>
                                     </h5>
                                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
                                 </div>
@@ -249,9 +249,9 @@
 
                                         <div class="mb-3">
                                             <label for="cantidadComprada" class="form-label" style="font-weight: bold;">Cantidad Comprada:</label>
-                                            <input type="number" step="0.01" min="0.01" class="form-control" id="cantidadComprada" name="cantidad_comprada" required
+                                            <input type="number" step="0.01" min="0.01" class="form-control mb-0" id="cantidadComprada" name="cantidad_comprada" required
                                                 onkeydown="if(event.key === '-') event.preventDefault();" oninput="if(this.value < 0) this.value = '';">
-                                            <small id="unidadMedidaTexto" class="form-text-custom" style="margin-top: 5px; color: #6c757d; font-weight: bold;"></small>
+                                            <small id="unidadMedidaTexto" class="text-secondary" style="margin: 0px; padding: 0;"></small>
                                         </div>
 
                                         <div class="mb-3">
@@ -377,7 +377,7 @@
                                         <td>{{ articulo.ubicacion|default:"-" }}</td> 
                                         <td>
                                             <button type="button" style="font-weight: bold; padding: 5px 10px;" class="btn-custom-success" 
-                                                onclick="abrirFormularioComprar('{{ articulo.idArticuloInventario }}')">
+                                                onclick="abrirFormularioComprar('{{ articulo.idArticuloInventario }}', '{{ articulo.unidad_de_medida }}', '{{ articulo.nombre }}')">
                                                 <i class="fas fa-shopping-cart"></i> Comprar
                                             </button>
                                         </td>
@@ -496,13 +496,14 @@
         // ==========================================
         // FUNCIONALIDAD: MODAL COMPRAR INGREDIENTE
         // ==========================================
-        function abrirFormularioComprar(idIngrediente) {
+        function abrirFormularioComprar(idIngrediente, unidadMedida, nombreIngrediente) {
             // 1. Resetear/Limpiar campos del formulario antes de mostrarlo
             document.getElementById('idIngredienteInput').value = idIngrediente;
             document.getElementById('idProveedorInput').value = ""; // Resetea el combobox
             document.getElementById('precioCompra').value = "";
             document.getElementById('cantidadComprada').value = "";
-
+            document.getElementById('nombreIngredienteTexto').textContent = nombreIngrediente;
+            document.getElementById('unidadMedidaTexto').textContent = `Medida del artículo: ${unidadMedida}`;
             // 2. Desplegar el modal con Bootstrap 5
             var modalComprar = new bootstrap.Modal(document.getElementById('modalComprarIngrediente'));
             modalComprar.show();

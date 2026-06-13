@@ -300,12 +300,14 @@
 
                                                 {% if platillo.Estado == 'Registrado' %}
                                                     <button type="button" class="btn btn-secondary btn-sm" style="height: 100%;" title="Anular Platillo"
-                                                        onclick="abrirModalBaja('{% url 'registrar_merma_platillo' platillo.IdPedido_Platillo %}', '{{ platillo.Nombre }}', 'Anular')">
+                                                        onclick="abrirModalBaja('{% url 'registrar_merma_platillo' platillo.IdPedido_Platillo %}', 
+                                                        '{{ platillo.Nombre }}', 'Anular', '{{ pedido.idPedido }}', '{{ pedido.nombre }}')">
                                                         <i class="fas fa-minus-circle"></i>
                                                     </button>
                                                 {% else %}
                                                     <button type="button" class="btn btn-warning btn-sm text-dark" style="height: 100%;" title="Registrar Merma"
-                                                        onclick="abrirModalBaja('{% url 'registrar_merma_platillo' platillo.IdPedido_Platillo %}', '{{ platillo.Nombre }}', 'Merma')">
+                                                        onclick="abrirModalBaja('{% url 'registrar_merma_platillo' platillo.IdPedido_Platillo %}', 
+                                                        '{{ platillo.Nombre }}', 'Merma', '{{ pedido.idPedido }}', '{{ pedido.nombre }}')">
                                                         <i class="fas fa-exclamation-triangle"></i>
                                                     </button>
                                                 {% endif %}
@@ -421,7 +423,8 @@
                             {% csrf_token %}
                             <div class="modal-body">
                                 <p id="modal-baja-alerta" class="alert py-2 small"></p>
-                                <p>Platillo: <strong id="modal-baja-nombre"></strong></p>
+                                <strong>Cliente: <span id="modal-baja-cliente" class="fw-normal"></span></strong><br>
+                                <strong>Platillo: <span id="modal-baja-nombre" class="fw-normal"></span></strong>
                             </div>
                             <div class="modal-footer border-secondary">
                                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
@@ -439,10 +442,11 @@
     <script>
         let modalBajaInstancia = null;
 
-        function abrirModalBaja(urlAccion, nombrePlatillo, tipoBaja) {
+        function abrirModalBaja(urlAccion, nombrePlatillo, tipoBaja, idPedido, nombreCliente) {
             // Configurar elementos básicos
             document.getElementById('form-baja-platillo').action = urlAction = urlAccion;
             document.getElementById('modal-baja-nombre').textContent = nombrePlatillo;
+            document.getElementById('modal-baja-cliente').textContent = nombreCliente;
 
             const header = document.getElementById('modal-baja-header');
             const titulo = document.getElementById('modal-baja-titulo');
@@ -453,7 +457,7 @@
             if (tipoBaja === 'Anular') {
                 // Estilo Gris/Info para Anulaciones (sin pérdida física de stock)
                 header.className = "modal-header bg-secondary text-white";
-                titulo.innerHTML = '<i class="fas fa-minus-circle"></i> Anular Platillo';
+                titulo.innerHTML = '<i class="fas fa-minus-circle"></i> Anular Platillo para pedido N° ' + idPedido;
                 alerta.className = "alert alert-info py-2 small";
                 alerta.textContent = "El platillo no se ha cocinado. Al anularlo, los insumos regresarán al almacén digital automáticamente.";
                 btnSubmit.className = "btn btn-info";
@@ -461,10 +465,10 @@
             } else {
                 // Estilo Amarillo/Peligro para Mermas (pérdida física de stock)
                 header.className = "modal-header bg-warning text-dark";
-                titulo.innerHTML = '<i class="fas fa-exclamation-triangle"></i> Registrar Merma';
+                titulo.innerHTML = '<i class="fas fa-exclamation-triangle"></i> Registrar Merma para pedido N° ' + idPedido;
                 alerta.className = "alert alert-warning py-2 text-dark small";
                 alerta.textContent = "¡Cuidado! Este platillo ya se preparó. Al marcarlo como merma saldrá de la cuenta, pero el stock físico ya se consumió.";
-                btnSubmit.className = "btn btn-danger";
+                btnSubmit.className = "btn btn-warning";
                 btnSubmit.textContent = "Confirmar Merma";
             }
 
