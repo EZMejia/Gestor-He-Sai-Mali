@@ -7,12 +7,13 @@ from django.contrib import messages
 from django.contrib.auth.hashers import make_password
 from django.views.decorators.cache import never_cache
 from django.views.decorators.http import require_POST
-from django.db.models import F, Sum, Count, ProtectedError, FloatField
+from django.db.models import F, Sum, Count, ProtectedError, FloatField, Max
 from itertools import groupby
 from operator import attrgetter
 from datetime import timedelta
 from django.utils import timezone
 from django.urls import reverse
+from django.http import JsonResponse
 import qrcode
 from io import BytesIO
 import base64
@@ -20,6 +21,7 @@ from decimal import Decimal
 import re
 from datetime import datetime
 from django.db.models import Sum, Q
+import time
 
 # Importaciones para generar pdf
 from django.contrib.staticfiles.finders import find
@@ -1003,13 +1005,25 @@ def registrar_merma_platillo(request, pedido_platillo_id):
                     nuevo_estado = 'Merma'
 
                 # --- REGISTRO DE LA MERMA ---
-                # En ambos casos el platillo pasa a 'Merma' para que no se cobre en la factura
+                # En ambos casos el platillo pasa a 'Merma' o 'Anulado'
                 sql_update = """
                     UPDATE "Pedido_ProductoMenu"
                     SET "estado" = %s
                     WHERE "idPedido_ProductoMenu" = %s;
                 """
                 cursor.execute(sql_update, [nuevo_estado, pedido_platillo_id])
+                
+            # --- NUEVO: LIBERAR MESA SI YA NO QUEDAN PLATILLOS ACTIVOS ---
+            pedido = pedido_platillo.idPedido
+            items_activos = Pedido_ProductoMenu.objects.filter(
+                idPedido=pedido
+            ).exclude(estado__in=['Anulado', 'Merma']).count()
+
+            # Si el conteo de platillos válidos llega a 0, liberamos la mesa
+            if items_activos == 0 and pedido.idMesa:
+                mesa_a_liberar = pedido.idMesa
+                mesa_a_liberar.ocupada = False
+                mesa_a_liberar.save()
 
         if estado_actual == 'Registrado':
             messages.success(request, f"'{nombre_platillo}' cancelado antes de prepararse.")
@@ -2081,57 +2095,104 @@ def vista_qr_mesas(request, mesa_id):
         'titulo': f'Código QR Mesa {mesa.idMesa}' # Título dinámico para la plantilla
     })
 
-# Temporizador para una mesa específica
 def temporizador_mesa(request, mesa_id):
-    # Calcula el tiempo restante para el último pedido de la mesa
-
-    # Se verifica que la mesa exista
     mesa = get_object_or_404(Mesa, idMesa=mesa_id)
     
-    # 1. Obtener el pedido más reciente para esta mesa
-    # Filtra por la mesa y ordena por "tiempo_inicio" de forma descendente.
     latest_pedido = Pedido.objects.filter(
         idMesa=mesa,
+        estado_factura='VIGENTE' 
     ).order_by('idPedido').last()
 
     remaining_seconds = 0
     tiempo_total_segundos = 0
+    fase = 'ANTES'  # Fases posibles: ANTES, DURANTE, SERVIDO, COMPLETADO
+    has_active_pedido = False
+    current_ts = int(time.time()) # Timestamp actual absoluto para cálculos limpios
 
     if latest_pedido:
-        total_duration_seconds = Pedido_ProductoMenu.objects.filter(
-            idPedido=latest_pedido.idPedido,
-        ).aggregate(
-        # Aplica la función Sum al campo 'tiempo'
-        suma_tiempos=Sum(F('cantidad') * F('idProductoMenu__tiempoPreparacion')),
-        total_quantity=Sum('cantidad')
-        )
+        ready_key = f"pedido_ready_{latest_pedido.idPedido}"
         
-        start_time = latest_pedido.fecha
-
-        duracion = 0
-
-        if total_duration_seconds.get('total_quantity') == 1:
-            duracion = 2
+        # REGLA 5: Solo aplicamos ventana de gracia si ya fue marcado como "Listo" (SERVIDO)
+        # Eliminamos la condición del finished_key
+        if ready_key in request.session and (current_ts - request.session[ready_key]) > 300:
+            fase = 'ANTES'
+            remaining_seconds = 0
+            tiempo_total_segundos = 0
+            has_active_pedido = False
         else:
-            duracion = total_duration_seconds.get('total_quantity')
-        
-        tiempo_total_segundos = int(total_duration_seconds.get('suma_tiempos')/(duracion - 1)) + 5*60
-        # Hora en que el temporizador debería terminar
-        end_time = start_time + timedelta(seconds=tiempo_total_segundos)
+            # Obtener solo productos válidos
+            items_validos = Pedido_ProductoMenu.objects.filter(
+                idPedido=latest_pedido.idPedido
+            ).exclude(
+                estado__in=['Anulado', 'Merma']
+            )
+            
+            agregados = items_validos.aggregate(
+                tiempo_maximo=Max('idProductoMenu__tiempoPreparacion'),
+                total_quantity=Sum('cantidad')
+            )
+            
+            tiempo_base_segundos = agregados.get('tiempo_maximo') or 0
+            total_quantity = agregados.get('total_quantity') or 0
 
-        # Cálculo del tiempo restante
-        time_difference = end_time - timezone.localtime(timezone.now()) + timedelta(hours=6)
+            if total_quantity > 0:
+                # REGLA 1: Verificar si TODOS los productos válidos pasaron a 'Listo' o 'Entregado'
+                items_no_listos = items_validos.exclude(estado__in=['Listo', 'Servido', 'Facturado'])
+                todos_listos = not items_no_listos.exists()
 
-        # Asegurar que el tiempo restante no sea negativo
-        remaining_seconds = max(0, int(time_difference.total_seconds()))
-    
+                # Tiempos de preparación teóricos
+                tiempo_logistica_segundos = total_quantity * 45
+                tiempo_servicio_segundos = 300
+                tiempo_total_segundos = tiempo_base_segundos + tiempo_logistica_segundos + tiempo_servicio_segundos
+
+                # Tiempo restante teórico original
+                end_time = latest_pedido.fecha + timedelta(seconds=tiempo_total_segundos)
+                time_difference = end_time - timezone.localtime(timezone.now()) + timedelta(hours=6)
+                remaining_seconds_teorico = int(time_difference.total_seconds())
+
+                # Evaluación de escenarios en tiempo real
+                if todos_listos:
+                    # El pedido se terminó. AQUÍ inicia la ventana de gracia.
+                    if ready_key not in request.session:
+                        request.session[ready_key] = current_ts
+                        request.session.modified = True
+                    
+                    elapsed_since_ready = current_ts - request.session[ready_key]
+                    remaining_seconds = max(0, 300 - elapsed_since_ready)
+                    tiempo_total_segundos = 300  # Redefinimos el total del ciclo a 5 min para la interfaz
+                    
+                    if remaining_seconds == 0:
+                        fase = 'ANTES'  # REGLA 4: Pasados los 5 minutos de estar SERVIDO, vuelve a ANTES
+                        has_active_pedido = False
+                    else:
+                        fase = 'SERVIDO'
+                        has_active_pedido = True
+                else:
+                    # Cuenta regresiva normal en proceso
+                    remaining_seconds = max(0, remaining_seconds_teorico)
+                    
+                    if remaining_seconds == 0:
+                        # El tiempo se agotó de forma natural pero los platillos NO están listos.
+                        # Se queda bloqueado en este estado de alerta indefinidamente.
+                        fase = 'COMPLETADO'
+                        has_active_pedido = True # Lo mantenemos activo para que UI no diga "Esperando pedido"
+                        tiempo_total_segundos = 0
+                        remaining_seconds = 0
+                    else:
+                        fase = 'DURANTE'
+                        has_active_pedido = True
+
     context = {
         'mesa_id': mesa_id,
-        'remaining_seconds': remaining_seconds, # El tiempo restante en segundos
-        'has_active_pedido': remaining_seconds > 0,
-        'tiempo_total_segundos': tiempo_total_segundos # Útil para mostrar la duración total
+        'remaining_seconds': remaining_seconds,
+        'has_active_pedido': has_active_pedido,
+        'tiempo_total_segundos': tiempo_total_segundos,
+        'fase': fase
     }
     
+    if request.GET.get('format') == 'json':
+        return JsonResponse(context)
+        
     return render(request, 'He_Sai_Mali/temporizador.html', context)
 
 # Vistas para administrar los empleados

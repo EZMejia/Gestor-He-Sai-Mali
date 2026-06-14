@@ -579,7 +579,10 @@
                     if (form.id === 'formularioPago') {
                         cerrarModalPago();
                     }
-
+                    else if (form.id === 'form-baja-platillo') {
+                        cerrarModalBaja();
+                    }
+                    
                     const submitBtn = form.querySelector('button[type="submit"]');
                     if (submitBtn) submitBtn.disabled = true; // Previene doble clic
 

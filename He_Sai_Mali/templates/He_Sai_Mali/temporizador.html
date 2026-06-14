@@ -111,6 +111,7 @@
             width: 100%;
             height: 100%;
             transform: rotate(-90deg); /* Inicia la barra desde arriba */
+            overflow: visible; /* <--- Agrega esto para evitar recortes del pulso */
         }
 
         .circle-bg {
@@ -143,6 +144,26 @@
         .message {
             margin-top: 20px;
             font-size: 1.2em;
+        }
+
+        @keyframes svg-glow-success {
+            0% { filter: drop-shadow(0 0 2px rgba(40, 167, 69, 0.4)); }
+            50% { filter: drop-shadow(0 0 18px rgba(40, 167, 69, 1)); }
+            100% { filter: drop-shadow(0 0 2px rgba(40, 167, 69, 0.4)); }
+        }
+        
+        @keyframes svg-glow-danger {
+            0% { filter: drop-shadow(0 0 2px rgba(220, 53, 69, 0.4)); }
+            50% { filter: drop-shadow(0 0 18px rgba(220, 53, 69, 1)); }
+            100% { filter: drop-shadow(0 0 2px rgba(220, 53, 69, 0.4)); }
+        }
+
+        .circle-pulse-success {
+            animation: svg-glow-success 1.5s infinite;
+        }
+
+        .circle-pulse-danger {
+            animation: svg-glow-danger 1.5s infinite;
         }
 
         a, img, i {
@@ -185,74 +206,158 @@
 
     <script>
         // --- Variables inyectadas por Django ---
-        let remainingSeconds = {{ remaining_seconds }}; // Tiempo actual restante
-        const totalSeconds = {{ tiempo_total_segundos }}; // Tiempo total del temporizador (180)
-        const progressCircle = document.getElementById('progress-circle');
+        let remainingSeconds = parseInt("{{ remaining_seconds|default:0 }}");
+        let totalSeconds = parseInt("{{ tiempo_total_segundos|default:0 }}");
+        let currentFase = "{{ fase|default:'ANTES' }}";
+
+        // --- Selectores del DOM exactos para tu HTML ---
         const timerDisplay = document.getElementById('timer-display');
+        const progressCircle = document.getElementById('progress-circle');
+        const statusMessage = document.querySelector('.message p'); 
+        const timerCard = document.querySelector('.timer-container'); 
+
+        let alertSoundPlayed = false;
 
         // Constantes para el cálculo del círculo
         const radius = 45;
         const circumference = 2 * Math.PI * radius;
-        progressCircle.style.strokeDasharray = `${circumference} ${circumference}`;
-
-        function formatTime(totalSecs) {
-            const minutes = Math.floor(totalSecs / 60);
-            const seconds = totalSecs % 60;
-            
-            const displayMinutes = String(minutes).padStart(2, '0');
-            const displaySeconds = String(seconds).padStart(2, '0');
-            
-            return `${displayMinutes}:${displaySeconds}`;
+        if (progressCircle) {
+            progressCircle.style.strokeDasharray = `${circumference} ${circumference}`;
         }
 
+        // --- Función para formatear tiempo (MM:SS) ---
+        function formatTime(seconds) {
+            if (isNaN(seconds) || seconds < 0) seconds = 0;
+            const mins = Math.floor(seconds / 60);
+            const secs = seconds % 60;
+            return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+        }
+
+        // --- Función para actualizar la barra circular ---
         function setProgress(percent) {
-            // Calcula cuánto del círculo debe estar vacío (el progreso se resta)
+            if (!progressCircle) return;
             const offset = circumference - (percent / 100) * circumference;
             progressCircle.style.strokeDashoffset = offset;
         }
 
-        function updateTimer() {
-            if (remainingSeconds <= 0) {
-                timerDisplay.textContent = "00:00";
-                clearInterval(timerInterval);
+        // --- Generador de sonido nativo (UX Alertas) ---
+        function playNotificationSound(type) {
+            try {
+                const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                const oscillator = audioCtx.createOscillator();
+                const gainNode = audioCtx.createGain();
+                
+                oscillator.type = type === 'success' ? 'sine' : 'triangle';
+                oscillator.frequency.setValueAtTime(type === 'success' ? 880 : 380, audioCtx.currentTime);
+                gainNode.gain.setValueAtTime(0.2, audioCtx.currentTime);
+                
+                oscillator.connect(gainNode);
+                gainNode.connect(audioCtx.destination);
+                oscillator.start();
+                oscillator.stop(audioCtx.currentTime + 0.5); 
+            } catch (e) {
+                console.log("Audio de alerta bloqueado temporalmente por el navegador.");
+            }
+        }
+
+        // --- Renderizador de la interfaz gráfica ---
+        function renderUI() {
+            // Removemos los pulsos anteriores del círculo en cada ciclo
+            progressCircle?.classList.remove('circle-pulse-success', 'circle-pulse-danger');
+
+            if (currentFase === 'ANTES') {
+                if (statusMessage) statusMessage.textContent = "Esperando nuevo pedido confirmado.";
+                if (timerDisplay) timerDisplay.textContent = "00:00";
                 setProgress(0);
-                progressCircle.style.stroke = 'red';
-                return;
+                if (progressCircle) progressCircle.style.stroke = 'red';
+                alertSoundPlayed = false;
+            } 
+            else if (currentFase === 'SERVIDO') {
+                if (statusMessage) statusMessage.textContent = "¡Pedido completado con éxito! Despachando comida.";
+                
+                // Agregamos el pulso al CÍRCULO
+                progressCircle?.classList.add('circle-pulse-success');
+                if (progressCircle) progressCircle.style.stroke = '#28a745'; 
+                
+                if (timerDisplay) timerDisplay.textContent = "LISTO";
+                setProgress(100); 
+
+                if (!alertSoundPlayed) {
+                    playNotificationSound('success');
+                    alertSoundPlayed = true;
+                }
+            } 
+            else if (currentFase === 'COMPLETADO') {
+                if (statusMessage) statusMessage.textContent = "¡Tiempo límite agotado! Pedido retrasado.";
+                
+                // Agregamos el pulso al CÍRCULO
+                progressCircle?.classList.add('circle-pulse-danger');
+                if (progressCircle) progressCircle.style.stroke = '#dc3545';
+                
+                if (timerDisplay) timerDisplay.textContent = "00:00";
+                
+                // SOLUCIÓN: Cambiar de 0 a 100 para que el círculo rojo esté visible
+                // y el drop-shadow tenga un elemento sobre el cual proyectarse.
+                setProgress(100); 
+
+                if (!alertSoundPlayed) {
+                    playNotificationSound('danger');
+                    alertSoundPlayed = true;
+                }
             }
-
-            // 1. Cálculo del porcentaje
-            const percentRemaining = (remainingSeconds / totalSeconds) * 100;
-
-            // 2. Actualizar el círculo y el color
-            setProgress(percentRemaining);
-            
-            if (remainingSeconds <= 30) {
-                progressCircle.style.stroke = 'orange'; // Últimos 30 segundos
-            } else if (remainingSeconds > 30) {
-                progressCircle.style.stroke = 'green'; // Más de 30 segundos
+            else { 
+                // FASE: DURANTE
+                if (statusMessage) statusMessage.textContent = "Tiempo restante para el servicio del pedido.";
+                if (timerDisplay) timerDisplay.textContent = formatTime(remainingSeconds);
+                
+                const percent = totalSeconds > 0 ? (remainingSeconds / totalSeconds) * 100 : 0;
+                setProgress(percent);
+                
+                if (progressCircle) {
+                    if (remainingSeconds <= 30) {
+                        progressCircle.style.stroke = 'orange';
+                    } else {
+                        progressCircle.style.stroke = 'green';
+                    }
+                }
+                alertSoundPlayed = false;
             }
-
-            // 3. Actualizar el texto
-            timerDisplay.textContent = formatTime(remainingSeconds);
-            
-            // 4. Reducir el contador
-            remainingSeconds--;
         }
 
-        // --- Ejecución ---
-        if (remainingSeconds > 0) {
-            // Inicializar el display inmediatamente
-            updateTimer(); 
+        // 1. Cuenta regresiva local fluida en el cliente (Cada 1 segundo)
+        setInterval(() => {
+            // EL CAMBIO: Solo resta segundos a la vista SI la fase es "DURANTE"
+            if (remainingSeconds > 0 && currentFase === 'DURANTE') {
+                remainingSeconds--;
+                renderUI();
+            }
+        }, 1000);
 
-            // Iniciar el intervalo de actualización (cada 1 segundo)
-            const timerInterval = setInterval(updateTimer, 1000);
-        } else {
-            // Si no hay pedido activo o el tiempo restante es 0, mostrar 0 y rojo.
-            timerDisplay.textContent = "00:00";
-            progressCircle.style.stroke = 'red';
-            setProgress(0);
+        // 2. Polling asíncrono (Sincroniza con el servidor cada 4 segundos)
+        function fetchServerSync() {
+            fetch('?format=json')
+                .then(response => {
+                    if (!response.ok) throw new Error("Error en la respuesta de red");
+                    return response.json();
+                })
+                .then(data => {
+                    remainingSeconds = data.remaining_seconds;
+                    totalSeconds = data.tiempo_total_segundos;
+                    
+                    if (currentFase !== data.fase) {
+                        currentFase = data.fase;
+                        if (['ANTES', 'SERVIDO', 'COMPLETADO'].includes(currentFase)) {
+                            alertSoundPlayed = false;
+                        }
+                    }
+                    // Aunque se actualice el contador interno, la vista renderizará "LISTO"
+                    renderUI();
+                })
+                .catch(error => console.error("Sincronización silenciosa en espera:", error.message));
         }
 
+        setInterval(fetchServerSync, 4000);
+        renderUI();
     </script>
 </body>
 </html>
