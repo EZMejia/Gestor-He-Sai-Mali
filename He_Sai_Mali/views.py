@@ -1300,6 +1300,49 @@ def editar_ingrediente(request, ingrediente_id):
     
     return render(request, 'He_Sai_Mali/admin_ingredientes.html', context)
 
+@require_POST
+@user_passes_test(es_rol("Administrador"), login_url='login')
+def registrar_merma_ingrediente(request):
+    # 1. Obtener y validar datos
+    id_ingrediente = request.POST.get('id_ingrediente')
+    cantidad_merma_str = request.POST.get('cantidad_merma')
+    # motivo = request.POST.get('motivo', '').strip() Se recibe pero no se guarda en BD por ahora
+
+    if not all([id_ingrediente, cantidad_merma_str]):
+        messages.error(request, 'Todos los campos son obligatorios para registrar la pérdida.')
+        return redirect('admin_ingredientes')
+
+    try:
+        cantidad_merma = Decimal(str(cantidad_merma_str))
+        
+        if cantidad_merma <= 0:
+            messages.error(request, 'La cantidad de pérdida debe ser un valor positivo.')
+            return redirect('admin_ingredientes')
+
+        with transaction.atomic():
+            # Bloquear la fila con select_for_update() para evitar condiciones de carrera si varios descuentan a la vez
+            articulo = ArticuloInventario.objects.select_for_update().get(pk=id_ingrediente)
+            
+            # Verificar que haya suficiente stock para descontar
+            if cantidad_merma > articulo.stock:
+                messages.error(request, f'No puedes descontar {cantidad_merma}. El stock actual de "{articulo.nombre}" es solo de {articulo.stock}.')
+                return redirect('admin_ingredientes')
+
+            # Actualizar el stock
+            articulo.stock = articulo.stock - cantidad_merma
+            articulo.save()
+
+        messages.success(request, f'Pérdida registrada: Se descontaron {cantidad_merma} {articulo.unidad_de_medida} de "{articulo.nombre}".')
+
+    except ArticuloInventario.DoesNotExist:
+        messages.error(request, 'Error: El artículo seleccionado no existe.')
+    except (ValueError, TypeError, Decimal.InvalidOperation):
+        messages.error(request, 'Error: La cantidad ingresada no es un número válido.')
+    except Exception as e:
+        messages.error(request, f'Error inesperado al procesar la pérdida: {e}')
+
+    return redirect('admin_ingredientes')
+
 # Vistas para el control de los productos del menu
 @never_cache
 @user_passes_test(es_rol("Administrador"), login_url='login')
@@ -2142,7 +2185,7 @@ def temporizador_mesa(request, mesa_id):
 
                 # Tiempos de preparación teóricos
                 tiempo_logistica_segundos = total_quantity * 45
-                tiempo_servicio_segundos = 300
+                tiempo_servicio_segundos = 60
                 tiempo_total_segundos = tiempo_base_segundos + tiempo_logistica_segundos + tiempo_servicio_segundos
 
                 # Tiempo restante teórico original
