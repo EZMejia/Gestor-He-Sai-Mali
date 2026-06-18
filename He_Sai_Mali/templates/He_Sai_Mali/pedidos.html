@@ -285,9 +285,14 @@
                                             </div>
 
                                             <div class="d-flex align-items-center justify-content-end gap-2" style="width: 100%;">
-                                                <form method="POST" action="{% url 'cambiar_estado_platillo' platillo.IdPedido_Platillo %}" style="display:inline; width: 100%;" class="ajax-form">
+                                                <form method="POST" action="{% url 'cambiar_estado_platillo' platillo.IdPedido_Platillo %}" style="display:inline; width: 100%;" class="ajax-form estado-form">
                                                     {% csrf_token %}
-                                                    <button type="submit" class="platillo_estado" {% if platillo.Estado == 'Servido' %} disabled {% endif %} style="background-color: #981a28;">
+                                                    <button type="button" class="platillo_estado btn-cambio-estado" 
+                                                            data-id="{{ platillo.IdPedido_Platillo }}"
+                                                            data-original-color="#981a28"
+                                                            data-original-html='{% if platillo.Estado == "Registrado" %}<i class="fas fa-fire"></i> Preparar{% elif platillo.Estado == "Listo" %}<i class="fas fa-check"></i> Servir{% else %}<i class="fas fa-concierge-bell"></i> Servido{% endif %}'
+                                                            {% if platillo.Estado == 'Servido' %} disabled {% endif %} 
+                                                            style="background-color: #981a28;">
                                                         {% if platillo.Estado == "Registrado" %}
                                                             <i class="fas fa-fire"></i> Preparar
                                                         {% elif platillo.Estado == "Listo" %}
@@ -298,13 +303,15 @@
                                                     </button>
                                                 </form>
 
-                                                {% if platillo.Estado == 'Registrado' %}
+                                                {% if platillo.Estado == 'Registrado' or platillo.TiempoPreparacion == 0 and platillo.Estado != 'Servido' %}
+                                                    <!-- Tratamiento como ANULACIÓN (Gris) si está registrado o si es producto directo sin servir -->
                                                     <button type="button" class="btn btn-secondary btn-sm" style="height: 100%;" title="Anular Platillo"
                                                         onclick="abrirModalBaja('{% url 'registrar_merma_platillo' platillo.IdPedido_Platillo %}', 
                                                         '{{ platillo.Nombre }}', 'Anular', '{{ pedido.idPedido }}', '{{ pedido.nombre }}')">
                                                         <i class="fas fa-minus-circle"></i>
                                                     </button>
                                                 {% else %}
+                                                    <!-- Tratamiento como MERMA (Amarillo) si ya se cocinó o si ya fue servido y se echó a perder -->
                                                     <button type="button" class="btn btn-warning btn-sm text-dark" style="height: 100%;" title="Registrar Merma"
                                                         onclick="abrirModalBaja('{% url 'registrar_merma_platillo' platillo.IdPedido_Platillo %}', 
                                                         '{{ platillo.Nombre }}', 'Merma', '{{ pedido.idPedido }}', '{{ pedido.nombre }}')">
@@ -522,90 +529,141 @@
 
     <script>
         document.addEventListener('DOMContentLoaded', function() {
-            
-            // NUEVA FUNCIÓN: Procesa el HTML recibido e inyecta los cambios en el DOM
-            function procesarHTML(html) {
-                // Parsea el HTML recibido
-                const parser = new DOMParser();
-                const doc = parser.parseFromString(html, 'text/html');
+        // Diccionario para rastrear los contadores activos: { 'id-platillo': { tiempo: 10, intervalo: ID, ... } }
+        let countdowns = {};
 
-                // 1. Actualiza la lista de pedidos siempre (polling y formularios)
-                const nuevoContenido = doc.getElementById('lista-pedidos');
-                const actualContenido = document.getElementById('lista-pedidos');
-                if (nuevoContenido && actualContenido) {
-                    actualContenido.innerHTML = nuevoContenido.innerHTML;
-                }
+        function procesarHTML(html) {
+            const parser = new DOMParser();
+            const doc = parser.parseFromString(html, 'text/html');
 
-                // 2. CORRECCIÓN CRÍTICA PARA EL POLLING:
-                const nuevosMensajes = doc.getElementById('contenedor-mensajes');
-                const actualesMensajes = document.getElementById('contenedor-mensajes');
-                
-                if (nuevosMensajes && actualesMensajes) {
-                    // Evaluamos si el HTML recibido contiene al menos una alerta (.alert)
-                    if (nuevosMensajes.querySelector('.alert')) {
-                        // Si trae un mensaje nuevo (ej. de la eliminación), reemplazamos el contenedor
-                        actualesMensajes.innerHTML = nuevosMensajes.innerHTML;
-                        
-                        // Opcional: Si manejas cierre automático por JS (como un setTimeout de 4s),
-                        // puedes invocar aquí tu función para programar el cierre de esta nueva alerta.
-                    } 
-                    // SI NO TRAE ALERTAS (caso del polling constante): 
-                    // No hacemos nada. Ignoramos nuevosMensajes para que la alerta actual no se borre.
-                }
+            const nuevoContenido = doc.getElementById('lista-pedidos');
+            const actualContenido = document.getElementById('lista-pedidos');
+
+            if (nuevoContenido && actualContenido) {
+                // ANTES de inyectar el HTML, revisamos si el servidor nos ganó o si todo sigue igual
+                Object.keys(countdowns).forEach(id => {
+                    let btnNuevo = nuevoContenido.querySelector(`.btn-cambio-estado[data-id="${id}"]`);
+                    
+                    // Si el platillo ya no está, o si su estado (texto) cambió en el servidor:
+                    if (!btnNuevo || btnNuevo.dataset.originalHtml !== countdowns[id].htmlOriginal) {
+                        clearInterval(countdowns[id].intervalo);
+                        delete countdowns[id];
+                        // Opcional: Podrías disparar un toast aquí avisando "El estado fue modificado por otro usuario"
+                    } else {
+                        // Si sigue igual, le pasamos la "ropa" de cuenta regresiva al botón nuevo para que no parpadee
+                        btnNuevo.classList.add('counting-down');
+                        btnNuevo.style.backgroundColor = 'var(--secondary-color)';
+                        btnNuevo.style.color = '#333';
+                        btnNuevo.innerHTML = `<i class="fas fa-undo"></i> Deshacer (${countdowns[id].tiempo}s)`;
+                    }
+                });
+
+                actualContenido.innerHTML = nuevoContenido.innerHTML;
             }
 
-            // 1. Función para obtener y renderizar los nuevos datos (Polling cada 5s)
-            function actualizarVista() {
-                fetch(window.location.href, {
-                    headers: {
-                        'X-Requested-With': 'XMLHttpRequest'
-                    }
-                })
-                .then(response => response.text())
-                .then(html => {
-                    procesarHTML(html);
-                })
-                .catch(error => console.error('Error de sincronización:', error));
+            const nuevosMensajes = doc.getElementById('contenedor-mensajes');
+            const actualesMensajes = document.getElementById('contenedor-mensajes');
+            if (nuevosMensajes && actualesMensajes && nuevosMensajes.querySelector('.alert')) {
+                actualesMensajes.innerHTML = nuevosMensajes.innerHTML;
             }
+        }
 
-            // 2. Interceptar el envío normal de los formularios con la clase 'ajax-form'
-            document.body.addEventListener('submit', function(e) {
-                if (e.target.classList.contains('ajax-form')) {
-                    e.preventDefault(); // Evita la recarga de página completa
-                    
-                    const form = e.target;
+        function actualizarVista() {
+            fetch(window.location.href, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+            .then(response => response.text())
+            .then(html => procesarHTML(html))
+            .catch(error => console.error('Error:', error));
+        }
 
-                    // Si es el formulario de pago, cerramos el modal aquí ya que pasó la validación nativa
-                    if (form.id === 'formularioPago') {
-                        cerrarModalPago();
-                    }
-                    else if (form.id === 'form-baja-platillo') {
-                        cerrarModalBaja();
-                    }
-                    
-                    const submitBtn = form.querySelector('button[type="submit"]');
-                    if (submitBtn) submitBtn.disabled = true; // Previene doble clic
+        function enviarFormularioAjax(form) {
+            const submitBtn = form.querySelector('button');
+            if (submitBtn) submitBtn.disabled = true;
 
-                    fetch(form.action, {
-                        method: 'POST',
-                        body: new FormData(form),
-                        headers: {
-                            'X-Requested-With': 'XMLHttpRequest'
-                        }
-                    })
-                    .then(response => response.text()) // <-- CORRECCIÓN: Leemos el HTML resultante de la redirección
-                    .then(html => {
-                        procesarHTML(html); // <-- CORRECCIÓN: Inyectamos directamente este HTML que ya contiene el mensaje
-                    })
-                    .catch(error => console.error('Error al procesar el formulario:', error))
-                    .finally(() => {
-                        if (submitBtn) submitBtn.disabled = false;
-                    });
-                }
-            });
+            fetch(form.action, {
+                method: 'POST',
+                body: new FormData(form),
+                headers: { 'X-Requested-With': 'XMLHttpRequest' }
+            })
+            .then(response => response.text())
+            .then(html => procesarHTML(html))
+            .finally(() => { if (submitBtn) submitBtn.disabled = false; });
+        }
 
-            // 3. Ejecutar el Polling cada 5 segundos (5000 milisegundos)
-            setInterval(actualizarVista, 5000);
+        // Interceptar envíos normales
+        document.body.addEventListener('submit', function(e) {
+            if (e.target.classList.contains('ajax-form') && !e.target.classList.contains('estado-form')) {
+                e.preventDefault(); 
+                if (e.target.id === 'formularioPago') cerrarModalPago();
+                else if (e.target.id === 'form-baja-platillo') cerrarModalBaja();
+                enviarFormularioAjax(e.target);
+            }
         });
+
+        // Doble Tap
+        document.body.addEventListener('dblclick', function(e) {
+            let btn = e.target.closest('.btn-cambio-estado');
+            if (!btn || btn.disabled || btn.classList.contains('counting-down')) return;
+            
+            let id = btn.dataset.id;
+            if (countdowns[id]) return; // Ya está corriendo
+
+            countdowns[id] = {
+                tiempo: 10,
+                colorOriginal: btn.dataset.originalColor,
+                htmlOriginal: btn.dataset.originalHtml
+            };
+
+            function tick() {
+                countdowns[id].tiempo--;
+                let botonVivo = document.querySelector(`.btn-cambio-estado[data-id="${id}"]`);
+
+                if (countdowns[id].tiempo > 0) {
+                    if (botonVivo) {
+                        botonVivo.classList.add('counting-down');
+                        botonVivo.style.backgroundColor = 'var(--secondary-color)';
+                        botonVivo.style.color = '#333';
+                        botonVivo.innerHTML = `<i class="fas fa-undo"></i> Deshacer (${countdowns[id].tiempo}s)`;
+                    }
+                } else {
+                    // Terminaron los 10 segundos
+                    clearInterval(countdowns[id].intervalo);
+                    delete countdowns[id];
+
+                    if (botonVivo) {
+                        botonVivo.classList.remove('counting-down');
+                        botonVivo.innerHTML = `<i class="fas fa-spinner fa-spin"></i> Procesando...`;
+                        botonVivo.disabled = true;
+                        botonVivo.style.backgroundColor = botonVivo.dataset.originalColor;
+                        botonVivo.style.color = 'white';
+                        
+                        let formVivo = botonVivo.closest('form');
+                        if (formVivo) enviarFormularioAjax(formVivo);
+                    }
+                }
+            }
+
+            countdowns[id].intervalo = setInterval(tick, 1000);
+            tick(); // Forzar primer cambio visual inmediato
+        });
+
+        // Clic para Cancelar
+        document.body.addEventListener('click', function(e) {
+            let btn = e.target.closest('.btn-cambio-estado.counting-down');
+            if (!btn) return;
+            
+            let id = btn.dataset.id;
+            if (countdowns[id]) {
+                clearInterval(countdowns[id].intervalo);
+                delete countdowns[id];
+                
+                btn.classList.remove('counting-down');
+                btn.style.backgroundColor = btn.dataset.originalColor;
+                btn.style.color = 'white';
+                btn.innerHTML = btn.dataset.originalHtml;
+            }
+        });
+
+        setInterval(actualizarVista, 5000);
+    });
     </script>
 {% endblock %}

@@ -137,7 +137,7 @@
         <main class="main-content" id="main-content">
             <div class="contenido">
                 
-                <div class="toast-container position-fixed top-0 end-0 p-4" style="z-index: 1080;">
+                <div id="contenedor-mensajes" class="toast-container position-fixed top-0 end-0 p-4" style="z-index: 1080;">
                     {% if messages %}
                         {% for message in messages %}
                             <div class="alert alert-{% if message.tags == 'error' %}danger{% else %}{{ message.tags }}{% endif %} alert-dismissible fade show shadow-lg pe-auto" role="alert">
@@ -172,9 +172,13 @@
                                             <div style="font-weight: bold;">
                                                 {{ platillo.cantidad }}x {{ platillo.nombre }}
                                             </div>
-                                            <form method="post" action="{% url 'platillo_listo' platillo.id_pp %}" style="display:inline;" class="ajax-form">
+                                            <form method="post" action="{% url 'platillo_listo' platillo.id_pp %}" style="display:inline;" class="ajax-form estado-form">
                                                 {% csrf_token %}
-                                                <button type="submit" class="btn-listo" title="Marcar como listo para servir">
+                                                <button type="button" class="btn-listo btn-cambio-estado" 
+                                                        data-id="{{ platillo.id_pp }}"
+                                                        data-original-color="#4CAF50"
+                                                        title="Doble clic para marcar como listo" 
+                                                        data-original-html="Marcar como listo">
                                                     Marcar como listo
                                                 </button>
                                             </form>
@@ -199,21 +203,19 @@
     <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
     <script>
         document.addEventListener('DOMContentLoaded', function() {
-            // 0. Variable global para pausar el AJAX
+            // --- VARIABLES GLOBALES ---
             let estaArrastrando = false;
+            // Diccionario para rastrear contadores activos: { 'id-platillo': { tiempo: 10, intervalo: ID, ... } }
+            let countdowns = {};
 
-            // --- 1. CONFIGURACIÓN DE SORTABLE JS ---
+            // --- 1. CONFIGURACIÓN DE SORTABLE JS (Drag & Drop) ---
             var el = document.getElementById('lista-pedidos');
             if (el) {
                 var sortable = Sortable.create(el, {
                     animation: 150,
                     ghostClass: 'sortable-ghost',
                     handle: '.card-header',
-                    // CUANDO EMPIEZA A ARRASTRAR: Pausamos el AJAX
-                    onStart: function (evt) {
-                        estaArrastrando = true;
-                    },
-                    // CUANDO SUELTA EL PEDIDO: Reactivamos el AJAX y guardamos el orden
+                    onStart: function (evt) { estaArrastrando = true; },
                     onEnd: function (evt) {
                         estaArrastrando = false;
                         guardarOrdenManual();
@@ -221,16 +223,12 @@
                 });
             }
 
-            // --- 2. FUNCIONES DE PERSISTENCIA LOCAL ---
+            // --- 2. PERSISTENCIA DEL ORDEN MANUAL ---
             function guardarOrdenManual() {
                 const contenedor = document.getElementById('lista-pedidos');
                 if (!contenedor) return;
-
-                // Capturamos todos los hijos directos (las tarjetas de pedidos)
                 const tarjetas = Array.from(contenedor.children);
-                // Extraemos el data-id de cada tarjeta
                 const ordenIds = tarjetas.map(tarjeta => tarjeta.dataset.id).filter(id => id != null);
-
                 localStorage.setItem('orden_cocina_manual', JSON.stringify(ordenIds));
             }
 
@@ -241,82 +239,163 @@
                 if (!contenedor || !ordenGuardado || ordenGuardado.length === 0) return;
 
                 const tarjetas = Array.from(contenedor.children);
-                // Creamos un mapa para buscar las tarjetas rápidamente por su data-id
                 const mapaTarjetas = new Map(tarjetas.map(t => [t.dataset.id, t]));
 
-                // 1. Insertamos las tarjetas en el orden que guardó el cocinero
                 ordenGuardado.forEach(id => {
                     if (mapaTarjetas.has(id)) {
                         contenedor.appendChild(mapaTarjetas.get(id));
-                        mapaTarjetas.delete(id); // La borramos del mapa
+                        mapaTarjetas.delete(id);
                     }
                 });
 
-                // 2. Si entraron pedidos nuevos de la BD, se añaden al final
-                mapaTarjetas.forEach(tarjeta => {
-                    contenedor.appendChild(tarjeta);
-                });
+                mapaTarjetas.forEach(tarjeta => contenedor.appendChild(tarjeta));
             }
 
-            // --- 3. ACTUALIZACIÓN AJAX (POLLING) ---
-            function actualizarVista() {
-                // REGLA DE ORO: Si está arrastrando una tarjeta, cancelamos la actualización este turno
-                if (estaArrastrando) return;
+            // --- 3. PROCESAMIENTO Y RECONCILIACIÓN EN TIEMPO REAL ---
+            function procesarHTML(html) {
+                const parser = new DOMParser();
+                const doc = parser.parseFromString(html, 'text/html');
+
+                const nuevoContenido = doc.getElementById('lista-pedidos');
+                const actualContenido = document.getElementById('lista-pedidos');
+
+                if (nuevoContenido && actualContenido) {
+                    // Sincronización inteligente: Validar si el mesero cambió algo en el servidor
+                    Object.keys(countdowns).forEach(id => {
+                        let btnNuevo = nuevoContenido.querySelector(`.btn-cambio-estado[data-id="${id}"]`);
+                        
+                        // Si el platillo ya no está en cocina (porque se despachó) o su estado cambió en el servidor:
+                        if (!btnNuevo || btnNuevo.dataset.originalHtml !== countdowns[id].htmlOriginal) {
+                            clearInterval(countdowns[id].intervalo);
+                            delete countdowns[id]; // Cancelamos la cuenta atrás local porque el servidor cambió
+                        } else {
+                            // Si todo sigue igual, le inyectamos los estilos de cuenta regresiva al nuevo HTML para que no parpadee
+                            btnNuevo.classList.add('counting-down');
+                            btnNuevo.style.backgroundColor = 'var(--secondary-color)';
+                            btnNuevo.style.color = '#333';
+                            btnNuevo.innerHTML = `<i class="fas fa-undo"></i> Deshacer (${countdowns[id].tiempo}s)`;
+                        }
+                    });
+
+                    actualContenido.innerHTML = nuevoContenido.innerHTML;
+                    aplicarOrdenManual(); // Reaplicamos el orden de las tarjetas arrastradas
+                }
+
+                const nuevosMensajes = doc.getElementById('contenedor-mensajes');
+                const actualesMensajes = document.getElementById('contenedor-mensajes');
+                if (nuevosMensajes && actualesMensajes) {
+                    actualesMensajes.innerHTML += nuevosMensajes.innerHTML;
+                }
+            }
+
+            function actualizarVista(forzar = false) {
+                // Bloqueamos la recarga SOLO si el cocinero está moviendo una tarjeta.
+                // NO la bloqueamos por las cuentas regresivas para poder enterarnos de lo que hace el mesero.
+                if (!forzar && estaArrastrando) return;
 
                 fetch(window.location.href, {
                     headers: { 'X-Requested-With': 'XMLHttpRequest' }
                 })
                 .then(response => response.text())
-                .then(html => {
-                    const parser = new DOMParser();
-                    const doc = parser.parseFromString(html, 'text/html');
-
-                    // Actualiza la lista de pedidos
-                    const nuevoContenido = doc.getElementById('lista-pedidos');
-                    const actualContenido = document.getElementById('lista-pedidos');
-                    if (nuevoContenido && actualContenido) {
-                        actualContenido.innerHTML = nuevoContenido.innerHTML;
-                        
-                        // INMEDIATAMENTE DESPUÉS de inyectar el HTML, reaplicamos el orden
-                        aplicarOrdenManual();
-                    }
-
-                    // Actualiza las alertas/mensajes de Django
-                    const nuevosMensajes = doc.getElementById('contenedor-mensajes');
-                    const actualesMensajes = document.getElementById('contenedor-mensajes');
-                    if (nuevosMensajes && actualesMensajes) {
-                        actualesMensajes.innerHTML = nuevosMensajes.innerHTML;
-                    }
-                })
+                .then(html => procesarHTML(html))
                 .catch(error => console.error('Error de sincronización:', error));
             }
 
-            // --- 4. INTERCEPTAR FORMULARIOS AJAX ---
-            document.body.addEventListener('submit', function(e) {
-                if (e.target.classList.contains('ajax-form')) {
-                    e.preventDefault(); 
-                    
-                    const form = e.target;
-                    const submitBtn = form.querySelector('button[type="submit"]');
-                    if (submitBtn) submitBtn.disabled = true;
+            // --- 4. ENVÍO DE FORMULARIOS POR AJAX ---
+            function enviarFormularioAjax(form) {
+                const submitBtn = form.querySelector('button');
+                if (submitBtn) submitBtn.disabled = true;
 
-                    fetch(form.action, {
-                        method: 'POST',
-                        body: new FormData(form),
-                        headers: { 'X-Requested-With': 'XMLHttpRequest' }
-                    })
-                    .then(response => {
-                        actualizarVista(); 
-                    })
-                    .finally(() => {
-                        if (submitBtn) submitBtn.disabled = false;
-                    });
+                fetch(form.action, {
+                    method: 'POST',
+                    body: new FormData(form),
+                    headers: { 'X-Requested-With': 'XMLHttpRequest' }
+                })
+                .then(response => response.text())
+                .then(html => procesarHTML(html))
+                .catch(error => console.error('Error al procesar:', error))
+                .finally(() => {
+                    if (submitBtn) submitBtn.disabled = false;
+                });
+            }
+
+            // Intercepta otros formularios que usen la clase ajax-form (que no sean de estado)
+            document.body.addEventListener('submit', function(e) {
+                if (e.target.classList.contains('ajax-form') && !e.target.classList.contains('estado-form')) {
+                    e.preventDefault(); 
+                    enviarFormularioAjax(e.target);
                 }
             });
 
-            // --- 5. INICIAR EL SISTEMA ---
-            aplicarOrdenManual(); // Aplica el orden guardado si el usuario recarga la página con F5
-            setInterval(actualizarVista, 5000); // Polling cada 5 segundos
+            // --- 5. LÓGICA DE DOBLE TAP (Manejo de estados) ---
+            document.body.addEventListener('dblclick', function(e) {
+                let btn = e.target.closest('.btn-cambio-estado');
+                if (!btn || btn.disabled || btn.classList.contains('counting-down')) return;
+                
+                let id = btn.dataset.id;
+                if (countdowns[id]) return; // Evita duplicar el temporizador si ya existe
+
+                // Registrar el temporizador en el diccionario global
+                countdowns[id] = {
+                    tiempo: 10,
+                    colorOriginal: btn.dataset.originalColor || '#4CAF50',
+                    htmlOriginal: btn.dataset.originalHtml
+                };
+
+                function tick() {
+                    countdowns[id].tiempo--;
+                    // Buscamos el botón en el DOM actual (por si el polling reemplazó el HTML en el camino)
+                    let botonVivo = document.querySelector(`.btn-cambio-estado[data-id="${id}"]`);
+
+                    if (countdowns[id].tiempo > 0) {
+                        if (botonVivo) {
+                            botonVivo.classList.add('counting-down');
+                            botonVivo.style.backgroundColor = 'var(--secondary-color)';
+                            botonVivo.style.color = '#333';
+                            botonVivo.innerHTML = `<i class="fas fa-undo"></i> Deshacer (${countdowns[id].tiempo}s)`;
+                        }
+                    } else {
+                        // El tiempo llegó a 0, enviamos la petición al servidor
+                        clearInterval(countdowns[id].intervalo);
+                        delete countdowns[id];
+
+                        if (botonVivo) {
+                            botonVivo.classList.remove('counting-down');
+                            botonVivo.innerHTML = `<i class="fas fa-spinner fa-spin"></i> Procesando...`;
+                            botonVivo.disabled = true;
+                            botonVivo.style.backgroundColor = botonVivo.dataset.originalColor;
+                            botonVivo.style.color = 'white';
+                            
+                            let formVivo = botonVivo.closest('form');
+                            if (formVivo) enviarFormularioAjax(formVivo);
+                        }
+                    }
+                }
+
+                countdowns[id].intervalo = setInterval(tick, 1000);
+                tick(); // Ejecución inmediata para evitar retraso visual de 1s
+            });
+
+            // --- 6. UN CLIC PARA CANCELAR ---
+            document.body.addEventListener('click', function(e) {
+                let btn = e.target.closest('.btn-cambio-estado.counting-down');
+                if (!btn) return;
+                
+                let id = btn.dataset.id;
+                if (countdowns[id]) {
+                    clearInterval(countdowns[id].intervalo);
+                    delete countdowns[id];
+                    
+                    btn.classList.remove('counting-down');
+                    btn.style.backgroundColor = btn.dataset.originalColor;
+                    btn.style.color = 'white';
+                    btn.innerHTML = btn.dataset.originalHtml;
+                }
+            });
+
+            // --- 7. INICIALIZACIÓN ---
+            aplicarOrdenManual(); // Ordenar al cargar la página por primera vez
+            setInterval(() => actualizarVista(false), 5000); // Polling activo cada 5 segundos
         });
     </script>
 {% endblock %}
