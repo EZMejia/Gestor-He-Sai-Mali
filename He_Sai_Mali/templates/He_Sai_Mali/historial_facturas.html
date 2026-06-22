@@ -2,6 +2,7 @@
 
 {% block extra_style %}
 <style>
+    /* ==== ESTILO UNIFICADO CON EL DASHBOARD ORIGINAL ==== */
     :root {
         --primary-color: #981a28;
         --secondary-color: #f3bb67;
@@ -220,9 +221,7 @@
         <p style="color: #6c757d;">Visualiza, filtra y gestiona los registros contables.</p>
     </div>
 
-    <!-- MÉTRICAS (estilo dashboard) -->
     <div class="row g-4 mb-4" id="metricas-contenedor">
-        <!-- Ventas Totales -->
         <div class="col-md-4">
             <div class="metric-card" style="border-left-color: var(--success-color);">
                 <div class="card-header">
@@ -233,7 +232,6 @@
                 <p>Total facturado en el período</p>
             </div>
         </div>
-        <!-- Facturas Emitidas -->
         <div class="col-md-4">
             <div class="metric-card" style="border-left-color: var(--info-color);">
                 <div class="card-header">
@@ -244,7 +242,6 @@
                 <p>Documentos generados</p>
             </div>
         </div>
-        <!-- Clientes Atendidos -->
         <div class="col-md-4">
             <div class="metric-card" style="border-left-color: var(--warning-color);">
                 <div class="card-header">
@@ -257,7 +254,6 @@
         </div>
     </div>
 
-    <!-- FILTROS (tarjeta blanca) -->
     <div class="card-filtros">
         <form id="filtro-facturas" method="GET" action="{% url 'historial_facturas' %}" class="row g-3 align-items-end">
             <div class="col-md-4">
@@ -267,12 +263,12 @@
             
             <div class="col-md-2">
                 <label for="fecha_inicio">Desde</label>
-                <input type="date" class="form-control" id="fecha_inicio" name="fecha_inicio" value="{{ request.GET.fecha_inicio }}">
+                <input type="date" class="form-control" id="fecha_inicio" name="fecha_inicio" value="{{ fecha_inicio }}">
             </div>
-            
+
             <div class="col-md-2">
                 <label for="fecha_fin">Hasta</label>
-                <input type="date" class="form-control" id="fecha_fin" name="fecha_fin" value="{{ request.GET.fecha_fin }}">
+                <input type="date" class="form-control" id="fecha_fin" name="fecha_fin" value="{{ fecha_fin }}">
             </div>
 
             <div class="col-md-2">
@@ -295,7 +291,6 @@
         </form>
     </div>
 
-    <!-- TABLA DE FACTURAS -->
     <div class="table-container" id="tabla-contenedor">
         <div class="table-responsive">
             <table class="table table-borderless align-middle text-center">
@@ -315,7 +310,7 @@
                         <td class="text-start ps-4" style="font-weight: 500;">#{{ factura.idPedido }}</td>
                         <td class="fecha-factura">{{ factura.fecha|date:"d \d\e F \d\e Y" }}</td>
                         <td class="text-start fw-bold">{{ factura.idCliente.nombre }}</td>
-                        <td class="text-end fw-bold">C${{ factura.montoTotal }}</td>
+                        <td class="text-end fw-bold">C${{ factura.monto_con_iva|floatformat:2 }}</td>
                         <td>
                             {% if factura.estado_factura == 'VIGENTE' %}
                                 <span class="badge-vigente"><i class="fas fa-check-circle me-1"></i> Vigente</span>
@@ -329,7 +324,6 @@
                                     <i class="fa-solid fa-file-pdf"></i>
                                 </a>
                                 
-                                <!-- Botón modificado para pasar también el nombre del cliente -->
                                 <button type="button" class="btn-icon btn-icon-anular" title="Anular Factura" 
                                         {% if factura.estado_factura == 'ANULADA' %}disabled{% else %}onclick="prepararModalAnularFactura('{{ factura.idPedido }}', '{{ factura.idCliente.nombre|escapejs }}', '{% url 'anular_factura' factura.idPedido %}')"{% endif %}>
                                     <i class="fa-solid fa-ban"></i>
@@ -352,7 +346,6 @@
         </div>
     </div>
 
-    <!-- Modal para Confirmar Anulación de Factura -->
     <div class="modal fade" id="modalAnularFactura" tabindex="-1" aria-labelledby="modalAnularFacturaLabel" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content">
@@ -362,22 +355,33 @@
                     </h5>
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
-                <div class="modal-body">
-                    <p style="font-size: 1.1rem; margin-bottom: 5px;">¿Está seguro de que desea anular la factura <strong>N° <span id="modal-id-factura-texto"></span></strong>?</p>
-                    <p style="font-size: 1.1rem; margin-bottom: 15px;"><strong>Cliente:</strong> <span id="modal-nombre-cliente-texto" style="color: var(--primary-color); font-weight: 600;"></span></p>
-                    <p class="text-muted" style="font-size: 0.9em; border-top: 1px solid #eee; padding-top: 10px;">
-                        Esta acción marcará la factura como anulada y el monto será excluido de las métricas de ventas.
-                    </p>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                    <form id="form-anular-factura" method="POST" action="">
-                        {% csrf_token %}
+                <form id="form-anular-factura" method="POST" action="">
+                    {% csrf_token %}
+                    <div class="modal-body">
+                        <p style="font-size: 1.1rem; margin-bottom: 5px;">¿Está seguro de que desea anular la factura <strong>N° <span id="modal-id-factura-texto"></span></strong>?</p>
+                        <p style="font-size: 1.1rem; margin-bottom: 15px;"><strong>Cliente:</strong> <span id="modal-nombre-cliente-texto" style="color: var(--primary-color); font-weight: 600;"></span></p>
+                        
+                        <div class="mb-3 mt-4" style="text-align: left;">
+                            <label for="motivo_anulacion" class="form-label" style="font-weight: bold; color: var(--text-dark);">Motivo de la anulación:</label>
+                            <select class="form-select form-control-custom" id="motivo_anulacion" name="motivo_anulacion" required>
+                                <option value="" selected disabled>-- Seleccione un motivo --</option>
+                                <option value="error_cobro">Error de cobro / Refacturación (No afecta stock)</option>
+                                <option value="rechazo">Comida devuelta / Desperdicio (Registrar como Merma)</option>
+                                <option value="duplicado">Pedido duplicado por error (Devolver ingredientes al inventario)</option>
+                            </select>
+                        </div>
+
+                        <p class="text-muted" style="font-size: 0.9em; border-top: 1px solid #eee; padding-top: 10px;">
+                            El monto de esta factura será excluido de las métricas de ventas. El comportamiento del inventario dependerá del motivo seleccionado.
+                        </p>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
                         <button type="submit" class="btn" style="background-color: var(--primary-color); color: white;">
                             Sí, Anular Factura
                         </button>
-                    </form>
-                </div>
+                    </div>
+                </form>
             </div>
         </div>
     </div>
@@ -416,13 +420,13 @@
     let modalAnularInstancia = null;
 
     function prepararModalAnularFactura(idFactura, nombreCliente, urlAccion) {
-        // Asignar el ID y Nombre de la factura al texto del modal
         document.getElementById('modal-id-factura-texto').textContent = idFactura;
         document.getElementById('modal-nombre-cliente-texto').textContent = nombreCliente;
-        // Asignar la URL dinámica al formulario del modal
         document.getElementById('form-anular-factura').action = urlAccion;
         
-        // Inicializar y mostrar el modal usando Bootstrap 5
+        // Limpiamos el select cada vez que se abre el modal
+        document.getElementById('motivo_anulacion').value = "";
+
         if (!modalAnularInstancia) {
             modalAnularInstancia = new bootstrap.Modal(document.getElementById('modalAnularFactura'));
         }
@@ -430,7 +434,6 @@
     }
 
     document.addEventListener("DOMContentLoaded", function() {
-        // Traducir fechas al cargar la página inicial
         traducirFechas();
 
         const form = document.getElementById('filtro-facturas');
@@ -454,7 +457,6 @@
                 document.getElementById('tabla-contenedor').innerHTML = doc.getElementById('tabla-contenedor').innerHTML;
                 document.getElementById('metricas-contenedor').innerHTML = doc.getElementById('metricas-contenedor').innerHTML;
                 window.history.replaceState({}, '', url);
-                // Traducir fechas después de actualizar la tabla
                 traducirFechas();
             });
         }
