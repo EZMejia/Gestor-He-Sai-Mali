@@ -2359,7 +2359,7 @@ def logout_view(request):
 # Funcionalidad para ver el historial de facturas (pedidos) en el dashboard del administrador
 @user_passes_test(es_rol("Administrador"), login_url='login')
 def historial_facturas(request):
-    # Empezamos con todos los pedidos ordenados de más reciente a más antiguo
+    # Consulta NORMAL: Traemos los pedidos ordenados por fecha
     facturas = Pedido.objects.all().order_by('-fecha')
 
     # --- 1. CAPTURAR DATOS DE LA BARRA DE BÚSQUEDA ---
@@ -2368,13 +2368,11 @@ def historial_facturas(request):
     fecha_fin = request.GET.get('fecha_fin', '')
     estado = request.GET.get('estado', 'TODOS')
 
-    # --- 2. APLICAR FILTROS EN POSTGRESQL ---
+    # --- 2. APLICAR FILTROS ---
     if q:
         if q.isdigit():
-            # Si escribieron un número, filtramos por el ID del pedido exactamente
             facturas = facturas.filter(idPedido=q)
         else:
-            # Si escribieron texto, buscamos por nombre del cliente (ignorando mayúsculas)
             facturas = facturas.filter(idCliente__nombre__icontains=q)
 
     if fecha_inicio:
@@ -2386,14 +2384,19 @@ def historial_facturas(request):
     if estado != 'TODOS':
         facturas = facturas.filter(estado_factura=estado)
 
-    # --- 3. CÁLCULO DE MÉTRICAS REALES ---
-    # Sumamos el monto solo de las facturas vigentes que coincidan con la búsqueda
-    ventas_totales = facturas.filter(estado_factura='VIGENTE').aggregate(Sum('montoTotal'))['montoTotal__sum'] or 0.00
+    # --- 3. CÁLCULO NORMAL CON MATEMÁTICAS DE PYTHON ---
+    # Sumamos el monto normal de la base de datos
+    suma_base = facturas.filter(estado_factura='VIGENTE').aggregate(Sum('montoTotal'))['montoTotal__sum'] or 0.00
     
-    # Contamos cuántas facturas hay en total en esta vista
+    # Le aplicamos el 15% de IVA a la suma total para que cuadre con el Dashboard
+    ventas_totales = float(suma_base) * 1.15
+    
+    # Le agregamos el IVA a cada factura de forma sencilla para mostrarlo en la tabla
+    for factura in facturas:
+        factura.monto_con_iva = float(factura.montoTotal) * 1.15
+
+    # Contamos facturas y clientes
     total_facturas = facturas.count()
-    
-    # Contamos cuántos clientes distintos hay en estas facturas
     total_clientes = facturas.values('idCliente').distinct().count()
 
     # --- 4. ENVIAR AL HTML ---
@@ -2419,4 +2422,3 @@ def anular_factura(request, pedido_id):
         messages.warning(request, f'La factura N°{pedido.idPedido} ya se encuentra anulada.')
         
     return redirect('historial_facturas')
-
