@@ -7,12 +7,13 @@ from django.contrib import messages
 from django.contrib.auth.hashers import make_password
 from django.views.decorators.cache import never_cache
 from django.views.decorators.http import require_POST
-from django.db.models import F, Sum, Count, ProtectedError, FloatField
+from django.db.models import F, Sum, Count, ProtectedError, FloatField, Max
 from itertools import groupby
 from operator import attrgetter
 from datetime import timedelta
 from django.utils import timezone
 from django.urls import reverse
+from django.http import JsonResponse
 import qrcode
 from io import BytesIO
 import base64
@@ -20,6 +21,7 @@ from decimal import Decimal
 import re
 from datetime import datetime
 from django.db.models import Sum, Q
+import time
 
 # Importaciones para generar pdf
 from django.contrib.staticfiles.finders import find
@@ -572,6 +574,7 @@ def vista_mesero(request):
             'Nombre': pp.idProductoMenu.nombre,
             'Estado': pp.estado,
             'Cantidad': pp.cantidad,
+            'TiempoPreparacion': getattr(pp.idProductoMenu, 'tiempoPreparacion', 0), # <-- NUEVO: Enviamos el tiempo al HTML
         }
         if pp.idPedido_id not in ProductoMenu_por_pedido:
             ProductoMenu_por_pedido[pp.idPedido_id] = []
@@ -584,12 +587,14 @@ def vista_mesero(request):
         items = ProductoMenu_por_pedido.get(pedido_id, [])
         
         # Verificar estado para el botón 'Facturar'
-        # Facturable: Todos los platillos en el pedido deben estar en estado 'Servido'
         puede_facturar = (len(items) > 0) and all(item['Estado'] == 'Servido' for item in items)
         
-        # Verificar estado para el botón 'Eliminar'
-        # Eliminable: Todos los platillos en el pedido deben estar en estado 'Registrado'
-        puede_eliminar = (len(items) > 0) and all(item['Estado'] == 'Registrado' for item in items)
+        # --- CONTROL INTELIGENTE DE ELIMINACIÓN ---
+        # Un pedido es eliminable si todos sus ítems están 'Registrado' OR si están 'Listo' siendo productos sin tiempo de cocción (bebidas, etc.)
+        puede_eliminar = (len(items) > 0) and all(
+            item['Estado'] == 'Registrado' or (item['TiempoPreparacion'] == 0 and item['Estado'] == 'Listo')
+            for item in items
+        )
         
         estado_botones[pedido_id] = {
             'puede_facturar': puede_facturar,
@@ -598,9 +603,8 @@ def vista_mesero(request):
 
     context = {
         'cola_pedidos': cola_pedidos,
-        # Pasamos el diccionario pre-procesado a la plantilla
         'platillos_por_pedido': ProductoMenu_por_pedido, 
-        'estado_botones': estado_botones, # Contexto para los botones
+        'estado_botones': estado_botones,
         'rol_empleado': request.user.rol,
         'nombre_mesero': request.user.nombre,
         'apellido_mesero': request.user.apellido,
@@ -639,18 +643,15 @@ def vista_registrarpedido(request, pedido_id=None):
     all_menu_ProductoMenu = list(ProductoMenu.objects.raw("""SELECT * FROM "ProductoMenu" WHERE "disponible" = 'true' ORDER BY "categoria", "nombre" """))
     
     # Agrupar los platillos usando itertools.groupby
-    # attrgetter('categoria') permite agrupar por el valor del atributo 'categoria' del objeto
     platillos_agrupados = {}
     for categoria, platillos in groupby(all_menu_ProductoMenu, key=attrgetter('categoria')):
         platillos_agrupados[categoria] = list(platillos)
     
-    # Se usa la lista original para la lógica POST (donde se itera sobre todos)
     menu_ProductoMenu = all_menu_ProductoMenu 
     # ----------------------------------------------------------------------------
 
     pedido_existente = None
     if pedido_id:
-        # Si se ingresa un id (agregan productos) se busca la informacion del pedido
         sql_pedido_existente = """
             SELECT p."idPedido", p."idCliente_id", p."idMesa_id", p."montoTotal", p."fecha", c."nombre" AS "cliente_nombre", c."telefono" AS "cliente_telefono"
             FROM "Pedido" p
@@ -665,7 +666,6 @@ def vista_registrarpedido(request, pedido_id=None):
             class PedidoData:
                 idPedido = pedido_data.idPedido
                 montoTotal = pedido_data.montoTotal
-                # Necesitamos obtener el objeto Mesa real para verificar su estado, si existe
                 idMesa = Mesa.objects.filter(idMesa=pedido_data.idMesa_id).first() if pedido_data.idMesa_id else None 
                 class idCliente:
                     nombre = pedido_data.cliente_nombre
@@ -693,12 +693,10 @@ def vista_registrarpedido(request, pedido_id=None):
         telefono_cliente = request.POST.get('telefono_cliente')
         correo_cliente = request.POST.get('correo_cliente')
 
-        tipo_cliente = request.POST.get('tipo_cliente') # 'persona' o 'empresa'
+        tipo_cliente = request.POST.get('tipo_cliente') 
         identificacion_cliente = request.POST.get('identificacion_cliente')
-        
         id_mesa_seleccionada = request.POST.get('mesa') 
         
-        # Filtra platillos seleccionados
         productos_a_registrar = {}
         for productoMenu in menu_ProductoMenu:
             cantidad = request.POST.get(f'cantidad_{productoMenu.idProductoMenu}', 0)
@@ -708,13 +706,11 @@ def vista_registrarpedido(request, pedido_id=None):
                 cantidad = 0
             if cantidad > 0:
                 productos_a_registrar[productoMenu.idProductoMenu] = cantidad
-        # --- FIN Filtra platillos seleccionados ---
 
         if not nombre_cliente:
             messages.error(request, 'El nombre del cliente es obligatorio.')
             return redirect('registrarpedido')
             
-        # Validación de 0 productos
         if not productos_a_registrar and not pedido_existente:
             messages.error(request, 'Debe seleccionar al menos un platillo para registrar un nuevo pedido.')
             return redirect('registrarpedido')
@@ -729,25 +725,20 @@ def vista_registrarpedido(request, pedido_id=None):
         items_registrados = 0
         
         try:
-            with transaction.atomic(): # Inicia una transacción atómica
+            with transaction.atomic():
 
-                mesa_asignada_obj = None # Inicializar para usar fuera de los bloques
+                mesa_asignada_obj = None 
 
                 if pedido_existente:
                     id_pedido_a_usar = pedido_existente.idPedido
-                    
-                    # --- LÓGICA PARA CAMBIAR MESA ---
                     id_mesa_nueva = request.POST.get('mesa')
-                    mesa_actual = pedido_existente.idMesa # Objeto Mesa actual
+                    mesa_actual = pedido_existente.idMesa 
 
-                    # Si la mesa seleccionada es diferente a la actual
                     if str(id_mesa_nueva) != str(mesa_actual.idMesa if mesa_actual else 'ninguna'):
-                        # 1. Liberar mesa anterior si existía
                         if mesa_actual:
                             mesa_actual.ocupada = False
                             mesa_actual.save()
                         
-                        # 2. Asignar nueva mesa si no es 'ninguna'
                         if id_mesa_nueva and id_mesa_nueva != 'ninguna':
                             nueva_mesa_obj = get_object_or_404(Mesa, pk=id_mesa_nueva)
                             nueva_mesa_obj.ocupada = True
@@ -758,7 +749,6 @@ def vista_registrarpedido(request, pedido_id=None):
                             mesa_id_para_sql = None
                             mesa_asignada_obj = None
 
-                        # 3. Actualizar el registro del Pedido en la BD
                         with connection.cursor() as cursor:
                             cursor.execute('UPDATE "Pedido" SET "idMesa_id" = %s WHERE "idPedido" = %s', 
                                         [mesa_id_para_sql, id_pedido_a_usar])
@@ -771,11 +761,7 @@ def vista_registrarpedido(request, pedido_id=None):
                         mesa_asignada_obj = mesa_actual
                         messages.info(request,"")
                 else:
-                    # Opción 2: Crear nuevo Cliente y Pedido (Encabezado)
-                    
-                    # A. Obtener/Crear Cliente
                     with connection.cursor() as cursor:
-                        # 1. Buscar cliente por Nombre
                         sql_select_cliente = """
                             SELECT "idCliente" FROM "Cliente" WHERE "nombre" = %s LIMIT 1;
                         """
@@ -785,7 +771,6 @@ def vista_registrarpedido(request, pedido_id=None):
                         if cliente_existente:
                             cliente_a_usar_id = cliente_existente[0]
                         else:
-                            # 2. Si no existe, crear nuevo cliente
                             sql_insert_cliente = """
                                 INSERT INTO "Cliente" ("nombre", "telefono", "correo","tipoCliente","identificacion")
                                 VALUES (%s, %s, %s,%s,%s)
@@ -794,32 +779,22 @@ def vista_registrarpedido(request, pedido_id=None):
                             cursor.execute(sql_insert_cliente, [nombre_cliente, telefono_cliente, correo_cliente, tipo_cliente, identificacion_cliente])
                             cliente_a_usar_id = cursor.fetchone()[0]
 
-
-                    # B. ASIGNAR MESA Y MARCAR COMO OCUPADA
                     mesa_id_para_sql = None
-
                     if id_mesa_seleccionada and id_mesa_seleccionada != 'ninguna':
-                        # Se seleccionó una mesa, buscar el objeto por su ID
                         mesa_asignada_obj = get_object_or_404(Mesa, pk=id_mesa_seleccionada)
-                        
-                        # Marcar como ocupada
                         mesa_asignada_obj.ocupada = True
                         mesa_asignada_obj.save()
-                        
                         mesa_id_para_sql = mesa_asignada_obj.idMesa
                         
-                    # C. Crear nuevo Pedido
                     with connection.cursor() as cursor:
                         sql_insert_pedido = """
                             INSERT INTO "Pedido" ("idCliente_id", "idMesa_id", "montoTotal", "fecha", "metodoPago", "estadoDePago", "estado_factura")
                             VALUES (%s, %s, %s, NOW() AT TIME ZONE 'CST', NULL, False, 'VIGENTE')
                             RETURNING "idPedido";
                         """
-                        # Enviamos NULL para metodoPago, Django/Postgres lo manejará vacío
                         cursor.execute(sql_insert_pedido, [cliente_a_usar_id, mesa_id_para_sql, 0.00])
                         id_pedido_a_usar = cursor.fetchone()[0]
                         
-                        # D. Asignar el nuevo pedido al Mesero (USO DE CURSOR)
                         sql_insert_empleado_pedido = """
                             INSERT INTO "Empleado_Pedido" ("idEmpleado_id", "idPedido_id", "fechaAsignacion")
                             VALUES (%s, %s, NOW() AT TIME ZONE 'CST');
@@ -830,75 +805,64 @@ def vista_registrarpedido(request, pedido_id=None):
                 # VALIDACIÓN DE STOCK
                 # -------------------------------------------------------------------
                 ingredientes_requeridos = {}
-                
                 if productos_a_registrar:
                     with connection.cursor() as cursor:
-                        # 1. Calcular el total de ingredientes necesarios para todo el pedido
                         for producto_id, cantidad_pedido in productos_a_registrar.items():
-                            # Obtener los ingredientes para este producto_id
                             sql_ingredientes = """
                                 SELECT "idArticuloInventario_id", "cantidad_usada" 
                                 FROM "ProductoMenu_ArticuloInventario"
                                 WHERE "idProductoMenu_id" = %s;
                             """
-                            # Convertir a Decimal para asegurar precisión con el stock
                             cantidad_pedido_decimal = Decimal(str(cantidad_pedido))
-                            
                             cursor.execute(sql_ingredientes, [producto_id])
+                            
                             for id_ingrediente, cantidad_usada in cursor.fetchall():
-                                # Asegurar que cantidad_usada también sea Decimal para la multiplicación
                                 try:
                                     cantidad_usada_decimal = Decimal(str(cantidad_usada))
                                 except:
                                     cantidad_usada_decimal = Decimal(cantidad_usada)
 
                                 cantidad_total_requerida = cantidad_usada_decimal * cantidad_pedido_decimal
-                                
-                                # Acumular el requerimiento total por ArticuloInventario
                                 ingredientes_requeridos[id_ingrediente] = ingredientes_requeridos.get(id_ingrediente, Decimal('0.00')) + cantidad_total_requerida
 
-                        # 2. Validar el stock para cada ingrediente acumulado
                         for id_ingrediente, cantidad_requerida in ingredientes_requeridos.items():
-                            # Obtener el stock actual y el nombre del artículo de inventario
                             sql_stock = """
                                 SELECT "stock", "nombre" FROM "ArticuloInventario"
                                 WHERE "idArticuloInventario" = %s;
                             """
                             cursor.execute(sql_stock, [id_ingrediente])
-                            
                             stock_data = cursor.fetchone()
                             if stock_data:
                                 stock, nombre_ingrediente = stock_data
-                                # Asegurar que stock sea Decimal para la comparación
                                 try:
                                     stock_decimal = Decimal(str(stock))
                                 except:
                                     stock_decimal = Decimal(stock)
                                 
-                                # Comparar: Si la cantidad requerida es mayor al stock disponible
                                 if cantidad_requerida > stock_decimal:
-                                    # **Lanzar un error** para forzar el rollback de la transacción atómica
                                     raise ValueError(f"Stock insuficiente para '{nombre_ingrediente}'. Requerido: {cantidad_requerida:.2f}, Disponible: {stock_decimal:.2f}.")
 
                 # -------------------------------------------------------------------
-                # FIN DE LA FUNCIONALIDAD
-                # -------------------------------------------------------------------
-                
                 # 2. Procesar los ProductosMenu seleccionados (Detalle)
+                # -------------------------------------------------------------------
                 for producto_id, cantidad in productos_a_registrar.items():
-                    # Buscar el ProductoMenu en la lista inicial
                     productoMenu = next((p for p in menu_ProductoMenu if p.idProductoMenu == producto_id), None)
                     
                     if productoMenu and cantidad > 0:
                         with connection.cursor() as cursor:
-                            # 2.1. Insertar el detalle del ProductoMenu
+                            
+                            # --- CAMBIO AQUÍ: CONDICIÓN DE ESTADO SEGÚN TIEMPO DE PREPARACIÓN ---
+                            # Si el tiempo es 0, pasa a 'Listo' directamente (no requiere pantalla de cocina)
+                            estado_inicial = 'Listo' if getattr(productoMenu, 'tiempoPreparacion', 0) == 0 else 'Registrado'
+
+                            # 2.1. Insertar el detalle del ProductoMenu usando el %s para el estado dinámico
                             sql_insert_ProductoMenu_pedido = """
                                 INSERT INTO "Pedido_ProductoMenu" ("idPedido_id", "idProductoMenu_id", "cantidad", "estado")
-                                VALUES (%s, %s, %s, 'Registrado');
+                                VALUES (%s, %s, %s, %s);
                             """
-                            cursor.execute(sql_insert_ProductoMenu_pedido, [id_pedido_a_usar, productoMenu.idProductoMenu, cantidad])
+                            cursor.execute(sql_insert_ProductoMenu_pedido, [id_pedido_a_usar, productoMenu.idProductoMenu, cantidad, estado_inicial])
                             
-                            # 2.2. Restar ingredientes del stock (LÓGICA ORIGINAL ADAPTADA A DECIMAL)
+                            # 2.2. Restar ingredientes del stock
                             sql_ingredientes = """
                                 SELECT "idArticuloInventario_id", "cantidad_usada" 
                                 FROM "ProductoMenu_ArticuloInventario" 
@@ -906,7 +870,6 @@ def vista_registrarpedido(request, pedido_id=None):
                             """
                             cursor.execute(sql_ingredientes, [productoMenu.idProductoMenu])
                             for id_ingrediente, cantidad_usada in cursor.fetchall():
-                                # Usar Decimal para la resta segura
                                 try:
                                     cantidad_a_restar = Decimal(str(cantidad_usada)) * Decimal(str(cantidad))
                                 except:
@@ -925,29 +888,24 @@ def vista_registrarpedido(request, pedido_id=None):
                 # 3. Lógica de validación de 0 items si es pedido nuevo
                 if items_registrados == 0:
                     if not pedido_existente:
-                        # Si es un pedido nuevo y no se seleccionó nada, eliminar el encabezado
                         with connection.cursor() as cursor:
                             sql_delete_pedido = """
                                 DELETE FROM "Pedido" WHERE "idPedido" = %s;
                             """
                             cursor.execute(sql_delete_pedido, [id_pedido_a_usar])
                         
-                        # LIBERAR MESA SI SE HABÍA ASIGNADO Y LUEGO SE CANCELÓ
                         if mesa_asignada_obj:
                             mesa_asignada_obj.ocupada = False
                             mesa_asignada_obj.save()
                         
                         messages.error(request, "Debe seleccionar al menos un platillo para registrar el pedido.")
-                        # Retornar a la misma vista con el mensaje de error
                         return redirect('registrarpedido')
                 
-                # 4. Actualizar el MontoTotal del pedido (Manejada por Trigger BD)
                 if items_registrados > 0:
                     messages.success(request, f"Pedido N°{id_pedido_a_usar} registrado/actualizado con éxito.")
                 
                 return redirect('pedidos')
             
-            # --- MANEJO DE EXCEPCIONES: CAPTURA EL ERROR DE STOCK Y FUERZA EL ROLLBACK ---
         except Exception as e:
             messages.error(request, e)
             return redirect('registrarpedido')
@@ -955,12 +913,9 @@ def vista_registrarpedido(request, pedido_id=None):
     # ------------------ PETICIÓN GET (Contexto) ------------------
     mesas_disponibles = Mesa.objects.filter(ocupada=False).order_by('idMesa') 
 
-    # ------------------ Pasar el nuevo diccionario agrupado ------------------
-    # Petición GET
     context = {
         'platillos': menu_ProductoMenu,
         'platillos_agrupados': platillos_agrupados,
-        # Si es un pedido existente (para agregar), pre-rellenar el nombre del cliente
         'nombre_cliente_previo': pedido_existente.idCliente.nombre if pedido_existente else '',
         'telefono_cliente_previo': pedido_existente.idCliente.telefono if pedido_existente else '',
         'pedido_existente': pedido_existente,
@@ -988,9 +943,13 @@ def registrar_merma_platillo(request, pedido_platillo_id):
             with connection.cursor() as cursor:
                 
                 # --- CONTROL DE INVENTARIO INTELIGENTE ---
-                if estado_actual == 'Registrado':
+                # Se marca como 'Anulado' (y devuelve stock) si:
+                # 1. El platillo está únicamente 'Registrado'.
+                # 2. El producto no requiere preparación (tiempo 0) y AÚN NO ha sido 'Servido'.
+                if estado_actual == 'Registrado' or (getattr(producto, 'tiempoPreparacion', 0) == 0 and estado_actual != 'Servido'):
                     nuevo_estado = 'Anulado'
-                    # Aún no se cocina: Buscamos su receta y DEVOLVEMOS el stock al inventario
+                    
+                    # Buscamos su receta y DEVOLVEMOS el stock al inventario
                     sql_receta = 'SELECT "idArticuloInventario_id", "cantidad_usada" FROM "ProductoMenu_ArticuloInventario" WHERE "idProductoMenu_id" = %s;'
                     cursor.execute(sql_receta, [producto.idProductoMenu])
                     ingredientes = cursor.fetchall()
@@ -1000,21 +959,34 @@ def registrar_merma_platillo(request, pedido_platillo_id):
                         sql_update_stock = 'UPDATE "ArticuloInventario" SET "stock" = "stock" + %s WHERE "idArticuloInventario" = %s;'
                         cursor.execute(sql_update_stock, [cantidad_a_devolver, id_ingrediente])
                 else:
+                    # Si ya empezó a cocinarse (para tiempo > 0) o ya fue 'Servido' (para tiempo == 0), pasa a Merma
                     nuevo_estado = 'Merma'
 
-                # --- REGISTRO DE LA MERMA ---
-                # En ambos casos el platillo pasa a 'Merma' para que no se cobre en la factura
+                # --- REGISTRO DE LA MERMA / ANULACIÓN ---
                 sql_update = """
                     UPDATE "Pedido_ProductoMenu"
                     SET "estado" = %s
                     WHERE "idPedido_ProductoMenu" = %s;
                 """
                 cursor.execute(sql_update, [nuevo_estado, pedido_platillo_id])
+                
+            # --- LIBERAR MESA SI YA NO QUEDAN PLATILLOS ACTIVOS ---
+            pedido = pedido_platillo.idPedido
+            items_activos = Pedido_ProductoMenu.objects.filter(
+                idPedido=pedido
+            ).exclude(estado__in=['Anulado', 'Merma']).count()
 
-        if estado_actual == 'Registrado':
-            messages.success(request, f"'{nombre_platillo}' cancelado antes de prepararse.")
+            # Si el conteo de platillos válidos llega a 0, liberamos la mesa
+            if items_activos == 0 and pedido.idMesa:
+                mesa_a_liberar = pedido.idMesa
+                mesa_a_liberar.ocupada = False
+                mesa_a_liberar.save()
+
+        # Ajuste en los mensajes dinámicos evaluando el 'nuevo_estado' obtenido
+        if nuevo_estado == 'Anulado':
+            messages.success(request, f"'{nombre_platillo}' cancelado con éxito. Los productos se devolvieron al inventario.")
         else:
-            messages.warning(request, f"'{nombre_platillo}' enviado a Mermas.")
+            messages.warning(request, f"'{nombre_platillo}' enviado a Mermas (Pérdida de inventario).")
             
     except Exception as e:
         messages.error(request, f"Error al registrar la merma: {e}")
@@ -1025,17 +997,58 @@ def registrar_merma_platillo(request, pedido_platillo_id):
 @never_cache
 @user_passes_test(es_rol("Cocinero"), login_url='login')
 def vista_cocinero(request):
-    # Reemplazamos todo el SQL raw con una consulta limpia al ORM usando la Vista
     pedidos_pendientes = VistaPedidosCocina.objects.all().order_by('fecha', 'id')
-
     id_mas_antiguo = pedidos_pendientes.first().id_pedido if pedidos_pendientes.exists() else None
 
+    # --- LÓGICA DE ALERTA ---
+    # Usamos timezone.now() directo (es UTC-aware, ideal para comparar con los datos de la BD)
+    ahora = timezone.now() - timedelta(hours=6)
     pedidos_activos = {}
+    
     for pp in pedidos_pendientes:
         pedido_id = pp.id_pedido
-        numero_mesa = f"Mesa: {pp.id_mesa}" if pp.id_mesa else "Sin Mesa"
-
+        
+        # --- OPTIMIZACIÓN Y ALERTA ÚNICA POR PEDIDO ---
+        # Si el pedido NO está en 'pedidos_activos', significa que es la primera vez que 
+        # lo procesamos en este ciclo. Aquí ejecutamos la lógica de tiempo y alerta general.
         if pedido_id not in pedidos_activos:
+            
+            # 1. Obtener ítems para calcular el tiempo dinámico del pedido completo
+            items_validos = Pedido_ProductoMenu.objects.filter(
+                idPedido=pedido_id
+            ).exclude(
+                estado__in=['Anulado', 'Merma']
+            )
+            
+            agregados = items_validos.aggregate(
+                tiempo_maximo=Max('idProductoMenu__tiempoPreparacion'),
+                total_quantity=Sum('cantidad')
+            )
+            
+            tiempo_base_segundos = agregados.get('tiempo_maximo') or 0
+            total_quantity = agregados.get('total_quantity') or 0
+            
+            tiempo_logistica_segundos = total_quantity * 45
+            tiempo_servicio_segundos = 60
+            tiempo_total_segundos = tiempo_base_segundos + tiempo_logistica_segundos + tiempo_servicio_segundos
+            
+            # 2. Calcular tiempo límite general del pedido
+            tiempo_limite = pp.fecha + timedelta(seconds=tiempo_total_segundos) 
+            
+            # 3. Evaluar alerta única usando el ID del pedido global
+            if ahora > tiempo_limite:
+                alerta_key = f"alerta_cocina_pedido_{pedido_id}" # Clave cambiada a nivel de Pedido
+                if alerta_key not in request.session:
+                    # Mensaje general usando el número de pedido y la mesa
+                    messages.error(
+                        request, 
+                        f"¡El Pedido #{pedido_id} lleva mucho tiempo de retraso!"
+                    )
+                    request.session[alerta_key] = True
+                    request.session.modified = True
+
+            # 4. Inicializar la estructura del pedido en el diccionario
+            numero_mesa = f"Mesa: {pp.id_mesa}" if pp.id_mesa else "Sin Mesa"
             pedidos_activos[pedido_id] = {
                 'id': pedido_id,
                 'cliente': pp.nombre_cliente,
@@ -1044,17 +1057,16 @@ def vista_cocinero(request):
                 'es_mas_antiguo': pedido_id == id_mas_antiguo,
                 'platillos': []
             }
+        
+        # --- AGRUPACIÓN DE PLATILLOS ---
+        # Esto se ejecuta para todos los registros (el primero y los subsecuentes de un mismo pedido)
         pedidos_activos[pedido_id]['platillos'].append({
-            'id_pp': pp.id, # idPedido_ProductoMenu
+            'id_pp': pp.id,
             'nombre': pp.nombre_platillo,
             'cantidad': pp.cantidad,
         })
     
-    pedidos_ordenados = list(pedidos_activos.values())
-
-    context = {
-        'pedidos_en_cola': pedidos_ordenados,
-    }
+    context = {'pedidos_en_cola': list(pedidos_activos.values())}
     return render(request, 'He_Sai_Mali/cocina.html', context)
 
 # Funcionalidad en vista cocina para marcar como Listo
@@ -1285,6 +1297,49 @@ def editar_ingrediente(request, ingrediente_id):
     }
     
     return render(request, 'He_Sai_Mali/admin_ingredientes.html', context)
+
+@require_POST
+@user_passes_test(es_rol("Administrador"), login_url='login')
+def registrar_merma_ingrediente(request):
+    # 1. Obtener y validar datos
+    id_ingrediente = request.POST.get('id_ingrediente')
+    cantidad_merma_str = request.POST.get('cantidad_merma')
+    # motivo = request.POST.get('motivo', '').strip() Se recibe pero no se guarda en BD por ahora
+
+    if not all([id_ingrediente, cantidad_merma_str]):
+        messages.error(request, 'Todos los campos son obligatorios para registrar la pérdida.')
+        return redirect('admin_ingredientes')
+
+    try:
+        cantidad_merma = Decimal(str(cantidad_merma_str))
+        
+        if cantidad_merma <= 0:
+            messages.error(request, 'La cantidad de pérdida debe ser un valor positivo.')
+            return redirect('admin_ingredientes')
+
+        with transaction.atomic():
+            # Bloquear la fila con select_for_update() para evitar condiciones de carrera si varios descuentan a la vez
+            articulo = ArticuloInventario.objects.select_for_update().get(pk=id_ingrediente)
+            
+            # Verificar que haya suficiente stock para descontar
+            if cantidad_merma > articulo.stock:
+                messages.error(request, f'No puedes descontar {cantidad_merma}. El stock actual de "{articulo.nombre}" es solo de {articulo.stock}.')
+                return redirect('admin_ingredientes')
+
+            # Actualizar el stock
+            articulo.stock = articulo.stock - cantidad_merma
+            articulo.save()
+
+        messages.success(request, f'Pérdida registrada: Se descontaron {cantidad_merma} {articulo.unidad_de_medida} de "{articulo.nombre}".')
+
+    except ArticuloInventario.DoesNotExist:
+        messages.error(request, 'Error: El artículo seleccionado no existe.')
+    except (ValueError, TypeError, Decimal.InvalidOperation):
+        messages.error(request, 'Error: La cantidad ingresada no es un número válido.')
+    except Exception as e:
+        messages.error(request, f'Error inesperado al procesar la pérdida: {e}')
+
+    return redirect('admin_ingredientes')
 
 # Vistas para el control de los productos del menu
 @never_cache
@@ -2081,57 +2136,104 @@ def vista_qr_mesas(request, mesa_id):
         'titulo': f'Código QR Mesa {mesa.idMesa}' # Título dinámico para la plantilla
     })
 
-# Temporizador para una mesa específica
 def temporizador_mesa(request, mesa_id):
-    # Calcula el tiempo restante para el último pedido de la mesa
-
-    # Se verifica que la mesa exista
     mesa = get_object_or_404(Mesa, idMesa=mesa_id)
     
-    # 1. Obtener el pedido más reciente para esta mesa
-    # Filtra por la mesa y ordena por "tiempo_inicio" de forma descendente.
     latest_pedido = Pedido.objects.filter(
         idMesa=mesa,
+        estado_factura='VIGENTE' 
     ).order_by('idPedido').last()
 
     remaining_seconds = 0
     tiempo_total_segundos = 0
+    fase = 'ANTES'  # Fases posibles: ANTES, DURANTE, SERVIDO, COMPLETADO
+    has_active_pedido = False
+    current_ts = int(time.time()) # Timestamp actual absoluto para cálculos limpios
 
     if latest_pedido:
-        total_duration_seconds = Pedido_ProductoMenu.objects.filter(
-            idPedido=latest_pedido.idPedido,
-        ).aggregate(
-        # Aplica la función Sum al campo 'tiempo'
-        suma_tiempos=Sum(F('cantidad') * F('idProductoMenu__tiempoPreparacion')),
-        total_quantity=Sum('cantidad')
-        )
+        ready_key = f"pedido_ready_{latest_pedido.idPedido}"
         
-        start_time = latest_pedido.fecha
-
-        duracion = 0
-
-        if total_duration_seconds.get('total_quantity') == 1:
-            duracion = 2
+        # REGLA 5: Solo aplicamos ventana de gracia si ya fue marcado como "Listo" (SERVIDO)
+        # Eliminamos la condición del finished_key
+        if ready_key in request.session and (current_ts - request.session[ready_key]) > 300:
+            fase = 'ANTES'
+            remaining_seconds = 0
+            tiempo_total_segundos = 0
+            has_active_pedido = False
         else:
-            duracion = total_duration_seconds.get('total_quantity')
-        
-        tiempo_total_segundos = int(total_duration_seconds.get('suma_tiempos')/(duracion - 1)) + 5*60
-        # Hora en que el temporizador debería terminar
-        end_time = start_time + timedelta(seconds=tiempo_total_segundos)
+            # Obtener solo productos válidos
+            items_validos = Pedido_ProductoMenu.objects.filter(
+                idPedido=latest_pedido.idPedido
+            ).exclude(
+                estado__in=['Anulado', 'Merma']
+            )
+            
+            agregados = items_validos.aggregate(
+                tiempo_maximo=Max('idProductoMenu__tiempoPreparacion'),
+                total_quantity=Sum('cantidad')
+            )
+            
+            tiempo_base_segundos = agregados.get('tiempo_maximo') or 0
+            total_quantity = agregados.get('total_quantity') or 0
 
-        # Cálculo del tiempo restante
-        time_difference = end_time - timezone.localtime(timezone.now()) + timedelta(hours=6)
+            if total_quantity > 0:
+                # REGLA 1: Verificar si TODOS los productos válidos pasaron a 'Listo' o 'Entregado'
+                items_no_listos = items_validos.exclude(estado__in=['Listo', 'Servido', 'Facturado'])
+                todos_listos = not items_no_listos.exists()
 
-        # Asegurar que el tiempo restante no sea negativo
-        remaining_seconds = max(0, int(time_difference.total_seconds()))
-    
+                # Tiempos de preparación teóricos
+                tiempo_logistica_segundos = total_quantity * 45
+                tiempo_servicio_segundos = 60
+                tiempo_total_segundos = tiempo_base_segundos + tiempo_logistica_segundos + tiempo_servicio_segundos
+
+                # Tiempo restante teórico original
+                end_time = latest_pedido.fecha + timedelta(seconds=tiempo_total_segundos)
+                time_difference = end_time - timezone.localtime(timezone.now()) + timedelta(hours=6)
+                remaining_seconds_teorico = int(time_difference.total_seconds())
+
+                # Evaluación de escenarios en tiempo real
+                if todos_listos:
+                    # El pedido se terminó. AQUÍ inicia la ventana de gracia.
+                    if ready_key not in request.session:
+                        request.session[ready_key] = current_ts
+                        request.session.modified = True
+                    
+                    elapsed_since_ready = current_ts - request.session[ready_key]
+                    remaining_seconds = max(0, 300 - elapsed_since_ready)
+                    tiempo_total_segundos = 300  # Redefinimos el total del ciclo a 5 min para la interfaz
+                    
+                    if remaining_seconds == 0:
+                        fase = 'ANTES'  # REGLA 4: Pasados los 5 minutos de estar SERVIDO, vuelve a ANTES
+                        has_active_pedido = False
+                    else:
+                        fase = 'SERVIDO'
+                        has_active_pedido = True
+                else:
+                    # Cuenta regresiva normal en proceso
+                    remaining_seconds = max(0, remaining_seconds_teorico)
+                    
+                    if remaining_seconds == 0:
+                        # El tiempo se agotó de forma natural pero los platillos NO están listos.
+                        # Se queda bloqueado en este estado de alerta indefinidamente.
+                        fase = 'COMPLETADO'
+                        has_active_pedido = True # Lo mantenemos activo para que UI no diga "Esperando pedido"
+                        tiempo_total_segundos = 0
+                        remaining_seconds = 0
+                    else:
+                        fase = 'DURANTE'
+                        has_active_pedido = True
+
     context = {
         'mesa_id': mesa_id,
-        'remaining_seconds': remaining_seconds, # El tiempo restante en segundos
-        'has_active_pedido': remaining_seconds > 0,
-        'tiempo_total_segundos': tiempo_total_segundos # Útil para mostrar la duración total
+        'remaining_seconds': remaining_seconds,
+        'has_active_pedido': has_active_pedido,
+        'tiempo_total_segundos': tiempo_total_segundos,
+        'fase': fase
     }
     
+    if request.GET.get('format') == 'json':
+        return JsonResponse(context)
+        
     return render(request, 'He_Sai_Mali/temporizador.html', context)
 
 # Vistas para administrar los empleados
@@ -2257,7 +2359,7 @@ def logout_view(request):
 # Funcionalidad para ver el historial de facturas (pedidos) en el dashboard del administrador
 @user_passes_test(es_rol("Administrador"), login_url='login')
 def historial_facturas(request):
-    # Empezamos con todos los pedidos ordenados de más reciente a más antiguo
+    # Consulta NORMAL: Traemos los pedidos ordenados por fecha
     facturas = Pedido.objects.all().order_by('-fecha')
 
     # --- 1. CAPTURAR DATOS DE LA BARRA DE BÚSQUEDA ---
@@ -2266,13 +2368,11 @@ def historial_facturas(request):
     fecha_fin = request.GET.get('fecha_fin', '')
     estado = request.GET.get('estado', 'TODOS')
 
-    # --- 2. APLICAR FILTROS EN POSTGRESQL ---
+    # --- 2. APLICAR FILTROS ---
     if q:
         if q.isdigit():
-            # Si escribieron un número, filtramos por el ID del pedido exactamente
             facturas = facturas.filter(idPedido=q)
         else:
-            # Si escribieron texto, buscamos por nombre del cliente (ignorando mayúsculas)
             facturas = facturas.filter(idCliente__nombre__icontains=q)
 
     if fecha_inicio:
@@ -2284,14 +2384,19 @@ def historial_facturas(request):
     if estado != 'TODOS':
         facturas = facturas.filter(estado_factura=estado)
 
-    # --- 3. CÁLCULO DE MÉTRICAS REALES ---
-    # Sumamos el monto solo de las facturas vigentes que coincidan con la búsqueda
-    ventas_totales = facturas.filter(estado_factura='VIGENTE').aggregate(Sum('montoTotal'))['montoTotal__sum'] or 0.00
+    # --- 3. CÁLCULO NORMAL CON MATEMÁTICAS DE PYTHON ---
+    # Sumamos el monto normal de la base de datos
+    suma_base = facturas.filter(estado_factura='VIGENTE').aggregate(Sum('montoTotal'))['montoTotal__sum'] or 0.00
     
-    # Contamos cuántas facturas hay en total en esta vista
+    # Le aplicamos el 15% de IVA a la suma total para que cuadre con el Dashboard
+    ventas_totales = float(suma_base) * 1.15
+    
+    # Le agregamos el IVA a cada factura de forma sencilla para mostrarlo en la tabla
+    for factura in facturas:
+        factura.monto_con_iva = float(factura.montoTotal) * 1.15
+
+    # Contamos facturas y clientes
     total_facturas = facturas.count()
-    
-    # Contamos cuántos clientes distintos hay en estas facturas
     total_clientes = facturas.values('idCliente').distinct().count()
 
     # --- 4. ENVIAR AL HTML ---
@@ -2317,4 +2422,3 @@ def anular_factura(request, pedido_id):
         messages.warning(request, f'La factura N°{pedido.idPedido} ya se encuentra anulada.')
         
     return redirect('historial_facturas')
-

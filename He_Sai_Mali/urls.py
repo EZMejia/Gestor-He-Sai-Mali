@@ -39,6 +39,7 @@ urlpatterns = [
     path('ingredientes/agregar/', views.agregar_ingrediente, name='agregar_ingrediente'),
     path('ingredientes/comprar/', views.comprar_ingrediente, name='comprar_ingrediente'),
     path('ingredientes/eliminar/<int:ingrediente_id>/', views.eliminar_ingrediente, name='eliminar_ingrediente'),
+    path('ingredientes/merma/', views.registrar_merma_ingrediente, name='registrar_merma_ingrediente'),
     # -- Platillos
     path('platillos/', views.admin_platillos, name='admin_platillos'),
     path('platillos/editar/<int:platillo_id>/', views.editar_platillo, name='editar_platillo'),

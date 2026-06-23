@@ -2,7 +2,6 @@
 
 {% block extra_style %}
 <style>
-    /* ==== ESTILO UNIFICADO CON EL DASHBOARD ORIGINAL ==== */
     :root {
         --primary-color: #981a28;
         --secondary-color: #f3bb67;
@@ -209,6 +208,8 @@
 </style>
 {% endblock %}
 
+{% block header %}ADMINISTRACIÓN DE FACTURAS{% endblock %}
+
 {% block content %}
 <div class="historial-wrapper container-fluid mt-4 px-4 pb-5">
     
@@ -328,12 +329,11 @@
                                     <i class="fa-solid fa-file-pdf"></i>
                                 </a>
                                 
-                                <form action="{% url 'anular_factura' factura.idPedido %}" method="POST" onsubmit="return confirm('¿Anular la factura N°{{ factura.idPedido }}?');" class="m-0 p-0">
-                                    {% csrf_token %}
-                                    <button type="submit" class="btn-icon btn-icon-anular" title="Anular Factura" {% if factura.estado_factura == 'ANULADA' %}disabled{% endif %}>
-                                        <i class="fa-solid fa-ban"></i>
-                                    </button>
-                                </form>
+                                <!-- Botón modificado para pasar también el nombre del cliente -->
+                                <button type="button" class="btn-icon btn-icon-anular" title="Anular Factura" 
+                                        {% if factura.estado_factura == 'ANULADA' %}disabled{% else %}onclick="prepararModalAnularFactura('{{ factura.idPedido }}', '{{ factura.idCliente.nombre|escapejs }}', '{% url 'anular_factura' factura.idPedido %}')"{% endif %}>
+                                    <i class="fa-solid fa-ban"></i>
+                                </button>
                             </div>
                         </td>
                     </tr>
@@ -351,6 +351,37 @@
             </table>
         </div>
     </div>
+
+    <!-- Modal para Confirmar Anulación de Factura -->
+    <div class="modal fade" id="modalAnularFactura" tabindex="-1" aria-labelledby="modalAnularFacturaLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header" style="background-color: var(--primary-color); color: white;">
+                    <h5 class="modal-title" id="modalAnularFacturaLabel">
+                        <i class="fas fa-exclamation-triangle"></i> Confirmar Anulación
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <p style="font-size: 1.1rem; margin-bottom: 5px;">¿Está seguro de que desea anular la factura <strong>N° <span id="modal-id-factura-texto"></span></strong>?</p>
+                    <p style="font-size: 1.1rem; margin-bottom: 15px;"><strong>Cliente:</strong> <span id="modal-nombre-cliente-texto" style="color: var(--primary-color); font-weight: 600;"></span></p>
+                    <p class="text-muted" style="font-size: 0.9em; border-top: 1px solid #eee; padding-top: 10px;">
+                        Esta acción marcará la factura como anulada y el monto será excluido de las métricas de ventas.
+                    </p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <form id="form-anular-factura" method="POST" action="">
+                        {% csrf_token %}
+                        <button type="submit" class="btn" style="background-color: var(--primary-color); color: white;">
+                            Sí, Anular Factura
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
 </div>
 {% endblock %}
 
@@ -379,6 +410,23 @@
             }
             celda.textContent = texto;
         });
+    }
+
+    // Funciones del Modal de Anulación
+    let modalAnularInstancia = null;
+
+    function prepararModalAnularFactura(idFactura, nombreCliente, urlAccion) {
+        // Asignar el ID y Nombre de la factura al texto del modal
+        document.getElementById('modal-id-factura-texto').textContent = idFactura;
+        document.getElementById('modal-nombre-cliente-texto').textContent = nombreCliente;
+        // Asignar la URL dinámica al formulario del modal
+        document.getElementById('form-anular-factura').action = urlAccion;
+        
+        // Inicializar y mostrar el modal usando Bootstrap 5
+        if (!modalAnularInstancia) {
+            modalAnularInstancia = new bootstrap.Modal(document.getElementById('modalAnularFactura'));
+        }
+        modalAnularInstancia.show();
     }
 
     document.addEventListener("DOMContentLoaded", function() {

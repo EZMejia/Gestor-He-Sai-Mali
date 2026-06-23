@@ -375,18 +375,23 @@
                                         <td>{{ articulo.stock }}</td>
                                         <td>{{ articulo.unidad_de_medida }}</td>
                                         <td>{{ articulo.ubicacion|default:"-" }}</td> 
-                                        <td>
+                                        <td style="white-space: nowrap;">
                                             <button type="button" style="font-weight: bold; padding: 5px 10px;" class="btn-custom-success" 
                                                 onclick="abrirFormularioComprar('{{ articulo.idArticuloInventario }}', '{{ articulo.unidad_de_medida }}', '{{ articulo.nombre }}')">
                                                 <i class="fas fa-shopping-cart"></i> Comprar
                                             </button>
                                         </td>
                                         <td style="white-space: nowrap;">
+                                            <button type="button" style="font-weight: bold; padding: 5px 10px; background-color: #ff9800; color: white; border: none; border-radius: 5px; cursor: pointer; margin-top: 5px; margin-right: 5px;" 
+                                                onclick="abrirFormularioMerma('{{ articulo.idArticuloInventario }}', '{{ articulo.unidad_de_medida }}', '{{ articulo.nombre|escapejs }}')">
+                                                <i class="fas fa-minus-circle"></i> Merma
+                                            </button>
+
                                             <a href="{% url 'editar_ingrediente' articulo.idArticuloInventario %}" class='btn-custom-edit'
                                             style="color: white; padding: 5px 10px; border-radius: 5px; text-decoration: none; font-weight: bold; display: inline-block; margin-right: 5px;">
                                                 <i class="fas fa-edit"></i> Editar
                                             </a>
-                                            <button type="button" class="btn-custom-danger" style="padding: 5px 10px;" 
+                                            <button type="button" class="btn-custom-danger" style="padding: 5px 10px; font-weight: bold;" 
                                                 onclick="prepararModalEliminarIngrediente('{{ articulo.idArticuloInventario }}', '{{ articulo.nombre|escapejs }}', '{% url 'eliminar_ingrediente' articulo.idArticuloInventario %}')">
                                                 <i class="fas fa-trash-alt"></i> Eliminar
                                             </button>
@@ -429,12 +434,62 @@
                     </div>
                 </div>
             </div>
+
+            {# MODAL / FORMULARIO FLOTANTE DE MERMA #}
+            <div class="modal fade" id="modalMermaIngrediente" tabindex="-1" aria-labelledby="modalMermaIngredienteLabel" aria-hidden="true">
+                <div class="modal-dialog modal-dialog-centered">
+                    <div class="modal-content">
+                        <div class="modal-header" style="background-color: #ff9800; color: white;">
+                            <h5 class="modal-title" id="modalMermaIngredienteLabel">
+                                <i class="fas fa-minus-circle"></i> Registrar Merma para: <span id="nombreMermaTexto"></span>
+                            </h5>
+                            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                        </div>
+                        <form method="POST" action="{% url 'registrar_merma_ingrediente' %}">
+                            {% csrf_token %}
+                            <div class="modal-body" style="color: #333;">
+                                <input type="hidden" id="idIngredienteMermaInput" name="id_ingrediente" required>
+
+                                <div class="mb-3">
+                                    <label for="cantidadMerma" class="form-label" style="font-weight: bold;">Cantidad a descontar:</label>
+                                    <input type="number" step="0.01" min="0.01" class="form-control mb-0" id="cantidadMerma" name="cantidad_merma" required
+                                        onkeydown="if(event.key === '-') event.preventDefault();" oninput="if(this.value < 0) this.value = '';">
+                                    <small id="unidadMedidaMermaTexto" class="text-secondary" style="margin: 0px; padding: 0;"></small>
+                                </div>
+                                <!--
+                                <div class="mb-3">
+                                    <label for="motivoMerma" class="form-label" style="font-weight: bold;">Motivo / Justificación:</label>
+                                    <textarea class="form-control-custom" id="motivoMerma" name="motivo" rows="2" placeholder="Ej: Producto caducado, derrame, etc." required></textarea>
+                                </div>-->
+                            </div>
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                                <button type="submit" class="btn" style="background-color: #ff9800; color: white; font-weight: bold;">Descontar Stock</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+            {# FIN DE MODAL / FORMULARIO FLOTANTE DE MERMA #}
         </main>
     </div>
 {% endblock %}
 
 {% block extra_js %}
     <script>
+        function abrirFormularioMerma(idIngrediente, unidadMedida, nombreIngrediente) {
+            // 1. Resetear/Limpiar campos del formulario antes de mostrarlo
+            document.getElementById('idIngredienteMermaInput').value = idIngrediente;
+            document.getElementById('cantidadMerma').value = "";
+            //document.getElementById('motivoMerma').value = "";
+            document.getElementById('nombreMermaTexto').textContent = nombreIngrediente;
+            document.getElementById('unidadMedidaMermaTexto').textContent = `Medida del artículo: ${unidadMedida}`;
+            
+            // 2. Desplegar el modal con Bootstrap 5
+            var modalMerma = new bootstrap.Modal(document.getElementById('modalMermaIngrediente'));
+            modalMerma.show();
+        }
+
         function filtrarArticulos() {
             const input = document.getElementById('buscador');
             const btnLimpiar = document.getElementById('btn-limpiar');
