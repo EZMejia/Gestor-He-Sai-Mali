@@ -213,6 +213,19 @@
 
 {% block content %}
 <div class="historial-wrapper container-fluid mt-4 px-4 pb-5">
+    <div id="contenedor-mensajes" class="toast-container position-fixed top-0 end-0 p-4" style="z-index: 1080;">
+        {% if messages %}
+            {% for message in messages %}
+                <div class="alert alert-{% if message.tags == 'error' %}danger{% else %}{{ message.tags }}{% endif %} alert-dismissible fade show shadow-lg pe-auto" role="alert">
+                    <div class="d-flex align-items-center">
+                        <i class="fa {% if message.tags == 'error' %}fa-exclamation-circle{% else %}fa-check-circle{% endif %} me-2"></i>
+                        <span>{{ message }}</span>
+                    </div>
+                    <button type="button" class="btn-close shadow-none" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            {% endfor %}
+        {% endif %}
+    </div>
     
     <div class="mb-4">
         <h2 style="color: var(--primary-color); font-weight: 700; border-bottom: 2px solid var(--primary-color); padding-bottom: 10px;">

@@ -97,7 +97,7 @@ def registro(request):
         with connection.cursor() as cursor:
             sql_insert_empleado = """
                 INSERT INTO "Empleado" ("nombre", "apellido", "telefono", "correo", "cedula", "rol", "usuario", "password", "is_active", "is_staff","is_superuser", "date_joined")
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, TRUE, FALSE, FALSE, NOW() AT TIME ZONE 'CST');
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, TRUE, FALSE, FALSE, NOW());
             """
             cursor.execute(sql_insert_empleado, [
                 nombre,
@@ -463,8 +463,14 @@ def eliminar_pedido(request, pedido_id):
     with connection.cursor() as cursor:
         # 1. Verificar si todos los ProductoMenu están en 'Registrado'
         sql_items_no_registrados = """
-            SELECT COUNT(*) FROM "Pedido_ProductoMenu" 
-            WHERE "idPedido_id" = %s AND "estado" NOT IN ('Registrado');
+            SELECT COUNT(*) 
+            FROM "Pedido_ProductoMenu" pp
+            JOIN "ProductoMenu" pm ON pp."idProductoMenu_id" = pm."idProductoMenu"
+            WHERE pp."idPedido_id" = %s 
+            AND NOT (
+                pp."estado" = 'Registrado' 
+                OR (pp."estado" = 'Listo' AND pm."tiempoPreparacion" = 0)
+            );
         """
         cursor.execute(sql_items_no_registrados, [pedido_id])
         items_no_registrados = cursor.fetchone()[0]
@@ -544,7 +550,6 @@ def eliminar_pedido(request, pedido_id):
 @user_passes_test(es_rol("Mesero"), login_url='login')
 def vista_mesero(request):
     # Muestra la cola de pedidos activos y obtiene el estado de facturación/registro para los botones.
-    
     # 1. Obtener los pedidos que tienen ProductoMenu no facturado
     cola_pedidos = Pedido.objects.raw("""
         SELECT p."idPedido", p."fecha", p."metodoPago", c."nombre", p."idMesa_id", p."montoTotal"
@@ -552,7 +557,7 @@ def vista_mesero(request):
         JOIN "Cliente" c ON c."idCliente" = p."idCliente_id"
         JOIN "Empleado_Pedido" ep ON ep."idPedido_id" = p."idPedido"
         WHERE p."idPedido" IN (
-            SELECT pp."idPedido_id" FROM "Pedido_ProductoMenu" pp 
+            SELECT pp."idPedido_id" FROM "Pedido_ProductoMenu" pp
             WHERE pp."estado" IN ('Registrado', 'Listo', 'Servido')
             GROUP BY pp."idPedido_id"
         ) AND ep."idEmpleado_id" = %s
@@ -563,7 +568,6 @@ def vista_mesero(request):
     # 2. Obtener el detalle de platillos para los pedidos
     pedidos_ids = [p.idPedido for p in cola_pedidos]
     ProductoMenu_query = Pedido_ProductoMenu.objects.filter(idPedido__in=pedidos_ids).exclude(estado__in=['Merma', 'Anulado']).select_related('idProductoMenu').order_by('idPedido_id')
-    
     # Pre-procesar platillos en un diccionario para acceso rápido en la plantilla
     ProductoMenu_por_pedido = {}
     for pp in ProductoMenu_query:
@@ -585,17 +589,16 @@ def vista_mesero(request):
     for pedido in cola_pedidos:
         pedido_id = pedido.idPedido
         items = ProductoMenu_por_pedido.get(pedido_id, [])
-        
         # Verificar estado para el botón 'Facturar'
         puede_facturar = (len(items) > 0) and all(item['Estado'] == 'Servido' for item in items)
-        
+
         # --- CONTROL INTELIGENTE DE ELIMINACIÓN ---
         # Un pedido es eliminable si todos sus ítems están 'Registrado' OR si están 'Listo' siendo productos sin tiempo de cocción (bebidas, etc.)
         puede_eliminar = (len(items) > 0) and all(
             item['Estado'] == 'Registrado' or (item['TiempoPreparacion'] == 0 and item['Estado'] == 'Listo')
             for item in items
         )
-        
+
         estado_botones[pedido_id] = {
             'puede_facturar': puede_facturar,
             'puede_eliminar': puede_eliminar,
@@ -603,14 +606,15 @@ def vista_mesero(request):
 
     context = {
         'cola_pedidos': cola_pedidos,
-        'platillos_por_pedido': ProductoMenu_por_pedido, 
+        'platillos_por_pedido': ProductoMenu_por_pedido,
         'estado_botones': estado_botones,
         'rol_empleado': request.user.rol,
         'nombre_mesero': request.user.nombre,
         'apellido_mesero': request.user.apellido,
         'metodos': ['Efectivo', 'Tarjeta', 'Transferencia']
     }
-    return render(request, 'He_Sai_Mali/pedidos.html', context)
+
+    return render(request, 'He_Sai_Mali/pedidos.html', context) 
 
 # Vista para registrar nuevos pedidos y agregar productos a un pedido existente
 @never_cache
@@ -789,7 +793,7 @@ def vista_registrarpedido(request, pedido_id=None):
                     with connection.cursor() as cursor:
                         sql_insert_pedido = """
                             INSERT INTO "Pedido" ("idCliente_id", "idMesa_id", "montoTotal", "fecha", "metodoPago", "estadoDePago", "estado_factura")
-                            VALUES (%s, %s, %s, NOW() AT TIME ZONE 'CST', NULL, False, 'VIGENTE')
+                            VALUES (%s, %s, %s, NOW(), NULL, False, 'VIGENTE')
                             RETURNING "idPedido";
                         """
                         cursor.execute(sql_insert_pedido, [cliente_a_usar_id, mesa_id_para_sql, 0.00])
@@ -797,7 +801,7 @@ def vista_registrarpedido(request, pedido_id=None):
                         
                         sql_insert_empleado_pedido = """
                             INSERT INTO "Empleado_Pedido" ("idEmpleado_id", "idPedido_id", "fechaAsignacion")
-                            VALUES (%s, %s, NOW() AT TIME ZONE 'CST');
+                            VALUES (%s, %s, NOW());
                         """
                         cursor.execute(sql_insert_empleado_pedido, [request.user.idEmpleado, id_pedido_a_usar])
                 
@@ -1001,8 +1005,8 @@ def vista_cocinero(request):
     id_mas_antiguo = pedidos_pendientes.first().id_pedido if pedidos_pendientes.exists() else None
 
     # --- LÓGICA DE ALERTA ---
-    # Usamos timezone.now() directo (es UTC-aware, ideal para comparar con los datos de la BD)
-    ahora = timezone.now() - timedelta(hours=6)
+    # Usamos timezone.now()
+    ahora = timezone.now()
     pedidos_activos = {}
     
     for pp in pedidos_pendientes:
@@ -2156,7 +2160,6 @@ def temporizador_mesa(request, mesa_id):
         ready_key = f"pedido_ready_{latest_pedido.idPedido}"
         
         # REGLA 5: Solo aplicamos ventana de gracia si ya fue marcado como "Listo" (SERVIDO)
-        # Eliminamos la condición del finished_key
         if ready_key in request.session and (current_ts - request.session[ready_key]) > 300:
             fase = 'ANTES'
             remaining_seconds = 0
@@ -2188,10 +2191,13 @@ def temporizador_mesa(request, mesa_id):
                 tiempo_servicio_segundos = 60
                 tiempo_total_segundos = tiempo_base_segundos + tiempo_logistica_segundos + tiempo_servicio_segundos
 
-                # Tiempo restante teórico original
+                # --- EL CAMBIO ESTÁ AQUÍ ---
+                # Como la BD ya guarda la hora perfecta, simplemente calculamos el tiempo final
+                # y le restamos la hora actual del sistema operativo (timezone.now() directo).
                 end_time = latest_pedido.fecha + timedelta(seconds=tiempo_total_segundos)
-                time_difference = end_time - timezone.localtime(timezone.now()) + timedelta(hours=6)
+                time_difference = end_time - timezone.now()
                 remaining_seconds_teorico = int(time_difference.total_seconds())
+                # ---------------------------
 
                 # Evaluación de escenarios en tiempo real
                 if todos_listos:
@@ -2216,9 +2222,8 @@ def temporizador_mesa(request, mesa_id):
                     
                     if remaining_seconds == 0:
                         # El tiempo se agotó de forma natural pero los platillos NO están listos.
-                        # Se queda bloqueado en este estado de alerta indefinidamente.
                         fase = 'COMPLETADO'
-                        has_active_pedido = True # Lo mantenemos activo para que UI no diga "Esperando pedido"
+                        has_active_pedido = True 
                         tiempo_total_segundos = 0
                         remaining_seconds = 0
                     else:
@@ -2384,7 +2389,10 @@ def historial_facturas(request):
             fecha_fin = ''
 
     # 1. Consulta base: Solo pedidos pagados
-    facturas = Pedido.objects.filter(estadoDePago=True).order_by('-fecha')
+    facturas = Pedido.objects.filter(
+        Q(estadoDePago=True, estado_factura='VIGENTE') | 
+        Q(estado_factura='ANULADA')
+    ).order_by('-fecha')
 
     # 2. Prioridad 1: Filtro por Cliente o ID
     if q:
