@@ -97,7 +97,7 @@ def registro(request):
         with connection.cursor() as cursor:
             sql_insert_empleado = """
                 INSERT INTO "Empleado" ("nombre", "apellido", "telefono", "correo", "cedula", "rol", "usuario", "password", "is_active", "is_staff","is_superuser", "date_joined")
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, TRUE, FALSE, FALSE, NOW() AT TIME ZONE 'CST');
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, TRUE, FALSE, FALSE, NOW());
             """
             cursor.execute(sql_insert_empleado, [
                 nombre,
@@ -463,8 +463,14 @@ def eliminar_pedido(request, pedido_id):
     with connection.cursor() as cursor:
         # 1. Verificar si todos los ProductoMenu están en 'Registrado'
         sql_items_no_registrados = """
-            SELECT COUNT(*) FROM "Pedido_ProductoMenu" 
-            WHERE "idPedido_id" = %s AND "estado" NOT IN ('Registrado');
+            SELECT COUNT(*) 
+            FROM "Pedido_ProductoMenu" pp
+            JOIN "ProductoMenu" pm ON pp."idProductoMenu_id" = pm."idProductoMenu"
+            WHERE pp."idPedido_id" = %s 
+            AND NOT (
+                pp."estado" = 'Registrado' 
+                OR (pp."estado" = 'Listo' AND pm."tiempoPreparacion" = 0)
+            );
         """
         cursor.execute(sql_items_no_registrados, [pedido_id])
         items_no_registrados = cursor.fetchone()[0]
@@ -544,7 +550,6 @@ def eliminar_pedido(request, pedido_id):
 @user_passes_test(es_rol("Mesero"), login_url='login')
 def vista_mesero(request):
     # Muestra la cola de pedidos activos y obtiene el estado de facturación/registro para los botones.
-    
     # 1. Obtener los pedidos que tienen ProductoMenu no facturado
     cola_pedidos = Pedido.objects.raw("""
         SELECT p."idPedido", p."fecha", p."metodoPago", c."nombre", p."idMesa_id", p."montoTotal"
@@ -552,7 +557,7 @@ def vista_mesero(request):
         JOIN "Cliente" c ON c."idCliente" = p."idCliente_id"
         JOIN "Empleado_Pedido" ep ON ep."idPedido_id" = p."idPedido"
         WHERE p."idPedido" IN (
-            SELECT pp."idPedido_id" FROM "Pedido_ProductoMenu" pp 
+            SELECT pp."idPedido_id" FROM "Pedido_ProductoMenu" pp
             WHERE pp."estado" IN ('Registrado', 'Listo', 'Servido')
             GROUP BY pp."idPedido_id"
         ) AND ep."idEmpleado_id" = %s
@@ -563,7 +568,6 @@ def vista_mesero(request):
     # 2. Obtener el detalle de platillos para los pedidos
     pedidos_ids = [p.idPedido for p in cola_pedidos]
     ProductoMenu_query = Pedido_ProductoMenu.objects.filter(idPedido__in=pedidos_ids).exclude(estado__in=['Merma', 'Anulado']).select_related('idProductoMenu').order_by('idPedido_id')
-    
     # Pre-procesar platillos en un diccionario para acceso rápido en la plantilla
     ProductoMenu_por_pedido = {}
     for pp in ProductoMenu_query:
@@ -585,17 +589,16 @@ def vista_mesero(request):
     for pedido in cola_pedidos:
         pedido_id = pedido.idPedido
         items = ProductoMenu_por_pedido.get(pedido_id, [])
-        
         # Verificar estado para el botón 'Facturar'
         puede_facturar = (len(items) > 0) and all(item['Estado'] == 'Servido' for item in items)
-        
+
         # --- CONTROL INTELIGENTE DE ELIMINACIÓN ---
         # Un pedido es eliminable si todos sus ítems están 'Registrado' OR si están 'Listo' siendo productos sin tiempo de cocción (bebidas, etc.)
         puede_eliminar = (len(items) > 0) and all(
             item['Estado'] == 'Registrado' or (item['TiempoPreparacion'] == 0 and item['Estado'] == 'Listo')
             for item in items
         )
-        
+
         estado_botones[pedido_id] = {
             'puede_facturar': puede_facturar,
             'puede_eliminar': puede_eliminar,
@@ -603,14 +606,15 @@ def vista_mesero(request):
 
     context = {
         'cola_pedidos': cola_pedidos,
-        'platillos_por_pedido': ProductoMenu_por_pedido, 
+        'platillos_por_pedido': ProductoMenu_por_pedido,
         'estado_botones': estado_botones,
         'rol_empleado': request.user.rol,
         'nombre_mesero': request.user.nombre,
         'apellido_mesero': request.user.apellido,
         'metodos': ['Efectivo', 'Tarjeta', 'Transferencia']
     }
-    return render(request, 'He_Sai_Mali/pedidos.html', context)
+
+    return render(request, 'He_Sai_Mali/pedidos.html', context) 
 
 # Vista para registrar nuevos pedidos y agregar productos a un pedido existente
 @never_cache
@@ -789,7 +793,7 @@ def vista_registrarpedido(request, pedido_id=None):
                     with connection.cursor() as cursor:
                         sql_insert_pedido = """
                             INSERT INTO "Pedido" ("idCliente_id", "idMesa_id", "montoTotal", "fecha", "metodoPago", "estadoDePago", "estado_factura")
-                            VALUES (%s, %s, %s, NOW() AT TIME ZONE 'CST', NULL, False, 'VIGENTE')
+                            VALUES (%s, %s, %s, NOW(), NULL, False, 'VIGENTE')
                             RETURNING "idPedido";
                         """
                         cursor.execute(sql_insert_pedido, [cliente_a_usar_id, mesa_id_para_sql, 0.00])
@@ -797,7 +801,7 @@ def vista_registrarpedido(request, pedido_id=None):
                         
                         sql_insert_empleado_pedido = """
                             INSERT INTO "Empleado_Pedido" ("idEmpleado_id", "idPedido_id", "fechaAsignacion")
-                            VALUES (%s, %s, NOW() AT TIME ZONE 'CST');
+                            VALUES (%s, %s, NOW());
                         """
                         cursor.execute(sql_insert_empleado_pedido, [request.user.idEmpleado, id_pedido_a_usar])
                 
@@ -1001,8 +1005,8 @@ def vista_cocinero(request):
     id_mas_antiguo = pedidos_pendientes.first().id_pedido if pedidos_pendientes.exists() else None
 
     # --- LÓGICA DE ALERTA ---
-    # Usamos timezone.now() directo (es UTC-aware, ideal para comparar con los datos de la BD)
-    ahora = timezone.now() - timedelta(hours=6)
+    # Usamos timezone.now()
+    ahora = timezone.now()
     pedidos_activos = {}
     
     for pp in pedidos_pendientes:
@@ -1764,12 +1768,13 @@ from datetime import datetime
 @never_cache
 @user_passes_test(es_rol("Administrador"), login_url='login')
 def admin_dashboard(request):
+    from datetime import date, datetime
+    
     # --- LÓGICA DE ALERTA DE STOCK PARA MENOS DE 5 PLATOS ---
     ingredientes_insuficientes = VistaAlertasStock.objects.filter(porciones_posibles__lt=5).values(
         'ingrediente', 'stock', 'unidad_de_medida'
     )
     
-    # Renombramos las llaves para que coincidan con lo que espera tu HTML actualmente
     ingredientes_formateados = [
         {
             'nombre': item['ingrediente'],
@@ -1778,30 +1783,48 @@ def admin_dashboard(request):
         } for item in ingredientes_insuficientes
     ]
 
-    # Obtener parámetros de fecha y búsqueda
-    start_date_str = request.GET.get('start_date')
-    end_date_str = request.GET.get('end_date')
-    search_query = request.GET.get('search', '').strip()
+    hoy_str = date.today().isoformat()
+    is_search = bool(request.GET) # Detectamos si es la primera vez que carga o si dio clic en "Buscar"
 
-    today_dt = timezone.now()
-    today_date = today_dt.date()
+    # --- BÚSQUEDA INTELIGENTE ---
+    if not is_search:
+        # Carga inicial: Mostramos solo lo de hoy
+        start_date_str = hoy_str
+        end_date_str = hoy_str
+        search_query = ''
+    else:
+        # Capturamos lo que el usuario envió
+        start_date_str = request.GET.get('start_date', '')
+        end_date_str = request.GET.get('end_date', '')
+        search_query = request.GET.get('search', '').strip()
 
-    # Procesar Fechas
-    try:
-        if start_date_str:
+        # OVERRIDE INTELIGENTE: Si buscó un cliente/ID y dejó las fechas por defecto de hoy, 
+        # asumimos que quiere buscar en toda la historia. Limpiamos las fechas.
+        if search_query and start_date_str == hoy_str and end_date_str == hoy_str:
+            start_date_str = ''
+            end_date_str = ''
+
+    today_dt = timezone.localtime(timezone.now())
+
+    # Procesar Fecha de Inicio
+    if start_date_str:
+        try:
             start_date = timezone.make_aware(datetime.strptime(start_date_str, '%Y-%m-%d'))
-        else:
-            start_date = timezone.make_aware(datetime.combine(today_date, datetime.min.time()))
-    except (ValueError, TypeError):
-        start_date = timezone.make_aware(datetime.combine(today_date, datetime.min.time()))
+        except (ValueError, TypeError):
+            start_date = timezone.make_aware(datetime.combine(date.today(), datetime.min.time()))
+    else:
+        # Si borró la fecha, buscamos desde el año 2000 (todo el historial hacia atrás)
+        start_date = timezone.make_aware(datetime(2000, 1, 1))
 
-    try:
-        if end_date_str:
+    # Procesar Fecha de Fin
+    if end_date_str:
+        try:
             end_date = timezone.make_aware(datetime.strptime(end_date_str, '%Y-%m-%d'))
-        else:
-            end_date = timezone.make_aware(datetime.combine(today_date, datetime.max.time()))
-    except (ValueError, TypeError):
-        end_date = timezone.make_aware(datetime.combine(today_date, datetime.max.time()))
+        except (ValueError, TypeError):
+            end_date = timezone.make_aware(datetime.combine(date.today(), datetime.max.time()))
+    else:
+        # Si borró la fecha, buscamos hasta el futuro
+        end_date = timezone.make_aware(datetime(2100, 1, 1))
 
     start_date = start_date.replace(hour=0, minute=0, second=0, microsecond=0)
     end_date = end_date.replace(hour=23, minute=59, second=59, microsecond=999999)
@@ -1811,9 +1834,6 @@ def admin_dashboard(request):
     
     if start_date > end_date:
         start_date = end_date.replace(hour=0, minute=0, second=0, microsecond=0)
-
-    start_date_input = start_date.strftime('%Y-%m-%d')
-    end_date_input = end_date.strftime('%Y-%m-%d')
 
     # Valores por defecto
     total_sales = 0.00
@@ -1829,11 +1849,8 @@ def admin_dashboard(request):
     # USO DEL PROCEDIMIENTO ALMACENADO
     # =============================================
     try:
-        # ATENCIÓN: Usar transaction.atomic() es vital para que las tablas
-        # temporales ON COMMIT DROP sobrevivan durante todo este bloque.
         with transaction.atomic():
             with connection.cursor() as cursor:
-                # 1. Ejecutar procedimiento principal
                 cursor.execute("""
                     CALL sp_resumen_dashboard(
                         %s::TIMESTAMPTZ, 
@@ -1843,30 +1860,25 @@ def admin_dashboard(request):
                     )
                 """, [start_date, end_date, search_query, None])
                 
-                # 2. Obtener métricas principales
                 cursor.execute("SELECT * FROM temp_metricas_dashboard")
                 metricas = cursor.fetchone()
                 
                 if metricas:
-                    total_sales = float(metricas[0])  # ventas_totales
-                    total_orders = metricas[1]          # total_pedidos
-                    # Los índices 3 y 4 corresponden a mesas y platillos, si hubieras sobreescrito los de la BD
+                    total_sales = float(metricas[0])    
+                    total_orders = metricas[1]          
                     if metricas[3]: total_mesas = metricas[3]
                     if metricas[4]: platillos_en_menu = metricas[4]
                 
-                # 3. Obtener top productos
                 cursor.execute("SELECT nombre_producto, cantidad_total FROM temp_top_productos")
                 productos = cursor.fetchall()
                 top_products_labels = [p[0] for p in productos]
                 top_products_data = [float(p[1]) for p in productos]
                 
-                # 4. Obtener top mesas
                 cursor.execute("SELECT numero_mesa, total_pedidos FROM temp_top_mesas")
                 mesas = cursor.fetchall()
                 top_tables_labels = [f"Mesa {m[0]}" for m in mesas]
                 top_tables_data = [m[1] for m in mesas]
                 
-                # 5. Obtener resultados de búsqueda (solo si se buscó algo)
                 if search_query:
                     cursor.execute("SELECT * FROM temp_busqueda_clientes")
                     columnas = [col[0] for col in cursor.description]
@@ -1888,19 +1900,15 @@ def admin_dashboard(request):
                             
     except Exception as e:
         print(f"Error en procedimiento almacenado: {e}")
-        # En caso de error, el bloque mantendrá los valores por defecto definidos arriba
 
     # =============================================
     # HISTORIAL DE COMPRAS DE INVENTARIO
     # =============================================
     search_compras = request.GET.get('search_compras', '').strip()
-    
-    # Filtrar por el rango de fechas actual del dashboard
     compras_query = ArticuloInventario_Proveedor.objects.select_related(
         'idArticuloInventario', 'idProveedor'
     )
 
-    # Preparar los datos calculando el total por registro
     historial_compras = []
     for compra in compras_query:
         historial_compras.append({
@@ -1908,7 +1916,7 @@ def admin_dashboard(request):
             'ingrediente': compra.idArticuloInventario.nombre,
             'proveedor': compra.idProveedor.nombre,
             'cantidad': compra.cantidadCompra,
-            'unidad': compra.idArticuloInventario.unidad_de_medida,
+            'node': compra.idArticuloInventario.unidad_de_medida,
             'total': compra.precioCompra,
         })
 
@@ -1919,8 +1927,8 @@ def admin_dashboard(request):
         'platillos_en_menu': platillos_en_menu,
         'start_date_obj': start_date,
         'end_date_obj': end_date,
-        'start_date_str': start_date_input,
-        'end_date_str': end_date_input,
+        'start_date_str': start_date_str, # Enviamos la fecha procesada al HTML
+        'end_date_str': end_date_str,
         'top_products_labels': list(top_products_labels),
         'top_products_data': list(top_products_data),
         'top_tables_labels': list(top_tables_labels),
@@ -1933,8 +1941,6 @@ def admin_dashboard(request):
         'historial_compras': historial_compras,
     }
 
-    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-        return render(request, 'He_Sai_Mali/dashboard.html', context)
     return render(request, 'He_Sai_Mali/dashboard.html', context)
 
 @user_passes_test(es_rol("Administrador"), login_url='login')
@@ -2154,7 +2160,6 @@ def temporizador_mesa(request, mesa_id):
         ready_key = f"pedido_ready_{latest_pedido.idPedido}"
         
         # REGLA 5: Solo aplicamos ventana de gracia si ya fue marcado como "Listo" (SERVIDO)
-        # Eliminamos la condición del finished_key
         if ready_key in request.session and (current_ts - request.session[ready_key]) > 300:
             fase = 'ANTES'
             remaining_seconds = 0
@@ -2186,10 +2191,13 @@ def temporizador_mesa(request, mesa_id):
                 tiempo_servicio_segundos = 60
                 tiempo_total_segundos = tiempo_base_segundos + tiempo_logistica_segundos + tiempo_servicio_segundos
 
-                # Tiempo restante teórico original
+                # --- EL CAMBIO ESTÁ AQUÍ ---
+                # Como la BD ya guarda la hora perfecta, simplemente calculamos el tiempo final
+                # y le restamos la hora actual del sistema operativo (timezone.now() directo).
                 end_time = latest_pedido.fecha + timedelta(seconds=tiempo_total_segundos)
-                time_difference = end_time - timezone.localtime(timezone.now()) + timedelta(hours=6)
+                time_difference = end_time - timezone.now()
                 remaining_seconds_teorico = int(time_difference.total_seconds())
+                # ---------------------------
 
                 # Evaluación de escenarios en tiempo real
                 if todos_listos:
@@ -2214,9 +2222,8 @@ def temporizador_mesa(request, mesa_id):
                     
                     if remaining_seconds == 0:
                         # El tiempo se agotó de forma natural pero los platillos NO están listos.
-                        # Se queda bloqueado en este estado de alerta indefinidamente.
                         fase = 'COMPLETADO'
-                        has_active_pedido = True # Lo mantenemos activo para que UI no diga "Esperando pedido"
+                        has_active_pedido = True 
                         tiempo_total_segundos = 0
                         remaining_seconds = 0
                     else:
@@ -2359,65 +2366,126 @@ def logout_view(request):
 # Funcionalidad para ver el historial de facturas (pedidos) en el dashboard del administrador
 @user_passes_test(es_rol("Administrador"), login_url='login')
 def historial_facturas(request):
-    # Consulta NORMAL: Traemos los pedidos ordenados por fecha
-    facturas = Pedido.objects.all().order_by('-fecha')
+    from datetime import date
+    
+    hoy_str = date.today().isoformat()
+    is_search = bool(request.GET) # Detectar si es carga inicial o si buscaron algo
 
-    # --- 1. CAPTURAR DATOS DE LA BARRA DE BÚSQUEDA ---
-    q = request.GET.get('q', '')
-    fecha_inicio = request.GET.get('fecha_inicio', '')
-    fecha_fin = request.GET.get('fecha_fin', '')
+    # --- BÚSQUEDA INTELIGENTE ---
+    q = request.GET.get('q', '').strip()
     estado = request.GET.get('estado', 'TODOS')
 
-    # --- 2. APLICAR FILTROS ---
+    if not is_search:
+        fecha_inicio = hoy_str
+        fecha_fin = hoy_str
+    else:
+        fecha_inicio = request.GET.get('fecha_inicio', '')
+        fecha_fin = request.GET.get('fecha_fin', '')
+        
+        # OVERRIDE INTELIGENTE: Priorizamos el nombre. Si buscaron un nombre y 
+        # dejaron las fechas por defecto en "hoy", las borramos para buscar globalmente.
+        if q and fecha_inicio == hoy_str and fecha_fin == hoy_str:
+            fecha_inicio = ''
+            fecha_fin = ''
+
+    # 1. Consulta base: Solo pedidos pagados
+    facturas = Pedido.objects.filter(
+        Q(estadoDePago=True, estado_factura='VIGENTE') | 
+        Q(estado_factura='ANULADA')
+    ).order_by('-fecha')
+
+    # 2. Prioridad 1: Filtro por Cliente o ID
     if q:
         if q.isdigit():
             facturas = facturas.filter(idPedido=q)
         else:
             facturas = facturas.filter(idCliente__nombre__icontains=q)
 
+    # 3. Prioridad 2: Rango de Fechas (Solo se aplica si las variables no están vacías)
     if fecha_inicio:
         facturas = facturas.filter(fecha__date__gte=fecha_inicio)
     
     if fecha_fin:
         facturas = facturas.filter(fecha__date__lte=fecha_fin)
 
+    # 4. Prioridad 3: Filtro por estado (VIGENTE / ANULADA)
     if estado != 'TODOS':
         facturas = facturas.filter(estado_factura=estado)
 
-    # --- 3. CÁLCULO NORMAL CON MATEMÁTICAS DE PYTHON ---
-    # Sumamos el monto normal de la base de datos
+    # --- CÁLCULO DE MÉTRICAS ---
     suma_base = facturas.filter(estado_factura='VIGENTE').aggregate(Sum('montoTotal'))['montoTotal__sum'] or 0.00
-    
-    # Le aplicamos el 15% de IVA a la suma total para que cuadre con el Dashboard
     ventas_totales = float(suma_base) * 1.15
     
-    # Le agregamos el IVA a cada factura de forma sencilla para mostrarlo en la tabla
     for factura in facturas:
         factura.monto_con_iva = float(factura.montoTotal) * 1.15
 
-    # Contamos facturas y clientes
     total_facturas = facturas.count()
     total_clientes = facturas.values('idCliente').distinct().count()
 
-    # --- 4. ENVIAR AL HTML ---
     context = {
         'facturas': facturas,
         'ventas_totales': ventas_totales,
         'total_facturas': total_facturas,
         'total_clientes': total_clientes,
+        'fecha_inicio': fecha_inicio,
+        'fecha_fin': fecha_fin,
     }
     return render(request, 'He_Sai_Mali/historial_facturas.html', context)
 
-# Vista para anular una factura (pedido)
+
+# Vista para anular una factura (pedido) controlando el impacto en el inventario físico
 @require_POST
 @user_passes_test(es_rol("Administrador"), login_url='login')
 def anular_factura(request, pedido_id):
     pedido = get_object_or_404(Pedido, pk=pedido_id)
+    motivo = request.POST.get('motivo_anulacion')
     
     if pedido.estado_factura == 'VIGENTE':
-        pedido.estado_factura = 'ANULADA'
-        pedido.save()
-        messages.success(request, f'La factura N°{pedido.idPedido} ha sido anulada exitosamente.')
+        try:
+            # transaction.atomic() asegura que si algo falla revierte los cambios evitando datos corruptos
+            with transaction.atomic():
+                # 1. Cambiamos el estado de la factura y la sacamos de caja (estadoDePago = False)
+                pedido.estado_factura = 'ANULADA'
+                pedido.estadoDePago = False
+                pedido.save()
+
+                # 2. Evaluamos los escenarios operativos según el motivo seleccionado
+                if motivo == 'error_cobro':
+                    # Escenario A: Refacturación/Error de cobro. Los platos fueron consumidos.
+                    messages.success(request, f'Factura N°{pedido.idPedido} de {pedido.idCliente.nombre} ha sido anulada por error de cobro. El inventario físico se mantiene intacto.')
+                
+                elif motivo == 'rechazo':
+                    # Escenario B: Comida devuelta/Desperdicio. Se preparó pero fue a la basura.
+                    messages.warning(request, f'Factura N°{pedido.idPedido} de {pedido.idCliente.nombre} ha sido anulada. Los insumos consumidos se registran contablemente como merma.')
+                
+                elif motivo == 'duplicado':
+                    # Escenario C: Pedido duplicado por error. La cocina nunca preparó los platos falsos. Revertimos stock.
+                    platillos_vendidos = Pedido_ProductoMenu.objects.filter(idPedido=pedido)
+                    
+                    for item_pedido in platillos_vendidos:
+                        cantidad_pedida = item_pedido.cantidad
+                        producto = item_pedido.idProductoMenu
+                        
+                        # Buscamos la receta del producto en el mapa de relaciones correspondientes
+                        receta_ingredientes = ProductoMenu_ArticuloInventario.objects.filter(idProductoMenu=producto)
+                        
+                        for ingrediente in receta_ingredientes:
+                            # cantidad_usada (en la receta) * cantidad_pedida (número de platos ingresados por error)
+                            cantidad_a_devolver = ingrediente.cantidad_usada * cantidad_pedida
+                            articulo = ingrediente.idArticuloInventario
+                            
+                            # Usamos F() para actualizar de forma segura directamente en el motor de la base de datos
+                            articulo.stock = F('stock') + cantidad_a_devolver
+                            articulo.save()
+
+                    messages.success(request, f'Factura N°{pedido.idPedido} de {pedido.idCliente.nombre} ha sido anulada por orden duplicada. Los insumos regresaron correctamente al stock.')
+                
+                else:
+                    messages.success(request, f'La factura N°{pedido.idPedido} ha sido anulada.')
+
+        except Exception as e:
+            messages.error(request, f'Ocurrió un error inesperado al procesar la anulación de la factura: {str(e)}')
+            
     else:
         messages.warning(request, f'La factura N°{pedido.idPedido} ya se encuentra anulada.')
         
