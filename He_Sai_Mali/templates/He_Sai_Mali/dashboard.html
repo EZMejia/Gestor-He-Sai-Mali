@@ -290,6 +290,13 @@
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
         }
+
+        .btn-disabled {
+            pointer-events: none; /* Bloquea cualquier clic */
+            opacity: 0.5; /* Lo hace semitransparente */
+            cursor: not-allowed !important;
+            background-color: #6c757d !important; /* Lo pinta de gris */
+        }
     </style>
 {% endblock %}
 
@@ -299,109 +306,63 @@
     <div id="app">
         <main class="main-content" id="main-content">         
             <div class="contenido">
-                {% if ingredientes_insuficientes %}
-                    <div class="accordion mb-4 shadow-sm" id="acordeonInventario">
-                        <div class="accordion-item bg-warning border-warning-subtle border-2">
-                            
-                            <h2 class="accordion-header" id="headingStock">
-                                <button class="accordion-button d-flex align-items-center bg-light text-dark shadow-none" 
-                                        type="button" 
-                                        data-bs-toggle="collapse" 
-                                        data-bs-target="#collapseStock" 
-                                        aria-expanded="true" 
-                                        aria-controls="collapseStock">
-                                    
-                                    <i class="fa-solid fa-triangle-exclamation fs-4 me-3 text-warning"></i>
-                                    <div>
-                                        <h5 class="fw-bold mb-0">Alerta de stock insuficiente</h5>
-                                    </div>
-                                    
-                                </button>
-                            </h2>
-
-                            <div id="collapseStock" class="accordion-collapse collapse show" aria-labelledby="headingStock" data-bs-parent="#acordeonInventario">
-                                <div class="accordion-body bg-white">
-                                    
-                                    <ul class="mb-0 row row-cols-1 row-cols-md-2 g-2 ps-3">
-                                        {% for item in ingredientes_insuficientes %}
-                                            <ul class="col text-dark">
-                                                <strong>{{ item.nombre }}</strong> 
-                                                <span class="badge bg-warning-subtle text-secondary ms-0">
-                                                    {{ item.cantidad_actual }} {{ item.unidad_medida }} en existencia
-                                                </span>
-                                            </ul>
-                                        {% endfor %}
-                                    </ul>
-
-                                </div>
+                
+                <!-- ALERTA DE STOCK (Controlada dinámicamente por JS) -->
+                <div class="accordion mb-4 shadow-sm" id="acordeonInventario" style="display: none;">
+                    <div class="accordion-item bg-warning border-warning-subtle border-2">
+                        <h2 class="accordion-header" id="headingStock">
+                            <button class="accordion-button d-flex align-items-center bg-light text-dark shadow-none" 
+                                    type="button" data-bs-toggle="collapse" data-bs-target="#collapseStock" aria-expanded="true">
+                                <i class="fa-solid fa-triangle-exclamation fs-4 me-3 text-warning"></i>
+                                <div><h5 class="fw-bold mb-0">Alerta de stock insuficiente</h5></div>
+                            </button>
+                        </h2>
+                        <div id="collapseStock" class="accordion-collapse collapse show" aria-labelledby="headingStock">
+                            <div class="accordion-body bg-white">
+                                <ul id="lista-stock-insuficiente" class="mb-0 row row-cols-1 row-cols-md-2 g-2 ps-3">
+                                    <!-- JS insertará los elementos aquí -->
+                                </ul>
                             </div>
-
                         </div>
                     </div>
-                {% endif %}
-
-                <div class="toast-container position-fixed top-0 end-0 p-4" style="z-index: 1080;">
-                    {% if messages %}
-                        {% for message in messages %}
-                            <div class="alert alert-{% if message.tags == 'error' %}danger{% else %}{{ message.tags }}{% endif %} alert-dismissible fade show shadow-lg pe-auto" role="alert">
-                                <div class="d-flex align-items-center">
-                                    <i class="fa {% if message.tags == 'error' %}fa-exclamation-circle{% else %}fa-check-circle{% endif %} me-2"></i>
-                                    <span>{{ message }}</span>
-                                </div>
-                                <button type="button" class="btn-close shadow-none" data-bs-dismiss="alert" aria-label="Close"></button>
-                            </div>
-                        {% endfor %}
-                    {% endif %}
                 </div>
-                
-                <!-- 1. FILTRO DE FECHAS (INICIO - FIN) -->
+
+                <!-- FILTRO DE FECHAS (No requiere recargar la página) -->
                 <div class="date-filter-section">
-                    <form id="dateFilterForm" method="GET" action="{% url 'admin_dashboard' %}" style="display: contents;" onsubmit="return validarFechas()">
-                        <div class="date-input-group">
-                            <div>
-                                <label for="start_date">Fecha Inicio:</label>
-                                <input type="date" id="start_date" name="start_date" value="{{ start_date_str|default:'' }}" onchange="validarYEnviar()" required>
-                            </div>
-                            <div>
-                            <label for="end_date">Fecha Fin:</label>
-                            <input type="date" id="end_date" name="end_date" value="{{ end_date_str|default:'' }}" onchange="validarYEnviar()" required>
-                            </div>
-                            <button type="submit" class="btn-aplicar-filtro">
-                                <i class="fas fa-filter"></i> Aplicar Filtro
-                            </button>
+                    <div class="date-input-group">
+                        <div>
+                            <label for="start_date">Fecha Inicio:</label>
+                            <input type="date" id="start_date" name="start_date" required>
                         </div>
-                        <!-- Mantener término de búsqueda si existe -->
-                        {% if search_query %}
-                            <input type="hidden" name="search" value="{{ search_query }}">
-                        {% endif %}
-                    </form>
+                        <div>
+                            <label for="end_date">Fecha Fin:</label>
+                            <input type="date" id="end_date" name="end_date" required>
+                        </div>
+                        <button type="button" class="btn-aplicar-filtro" onclick="cargarDashboard()">
+                            <i class="fas fa-filter"></i> Aplicar Filtro
+                        </button>
+                    </div>
                     <div>
-                        <a id="generatePdfButton" 
-                            href="{% url 'generate_dashboard_pdf' %}?start_date={{ start_date_str|default:'' }}&end_date={{ end_date_str|default:'' }}{% if search_query %}&search={{ search_query }}{% endif %}" 
-                            target="_blank"
-                            style="background-color: var(--primary-color); color: white; padding: 8px 15px; border-radius: 5px; text-decoration: none; font-weight: bold;">
+                        <a id="generatePdfButton" href="#" target="_blank" style="background-color: var(--primary-color); color: white; padding: 8px 15px; border-radius: 5px; text-decoration: none; font-weight: bold;">
                             <i class="fas fa-file-pdf"></i> Generar PDF
                         </a>
                     </div>
                 </div>
 
-                <!-- 2. MÉTRICAS CLAVE -->
+                <!-- ENCABEZADO DE MÉTRICAS -->
                 <h2 style="color: var(--secondary-color); margin-bottom: 10px; margin-top: 0; border-bottom: 2px solid var(--primary-color); padding-bottom: 10px;">
-                    Métricas Clave: {{ start_date_obj|date:"d/m/Y" }} al {{ end_date_obj|date:"d/m/Y" }}
-                    {% if search_query %}
-                        <span style="font-size: 0.9rem; margin-left: 15px; color: var(--text-accent);">
-                            (Filtrado por cliente: "{{ search_query }}")
-                        </span>
-                    {% endif %}
+                    Métricas Clave: <span id="rango-fechas-texto">---</span>
+                    <span id="filtro-cliente-aviso" style="font-size: 0.9rem; margin-left: 15px; color: var(--text-accent); display: none;"></span>
                 </h2>
 
+                <!-- CONTENEDORES DE MÉTRICAS CLAVE -->
                 <div class="dashboard-container">
                     <div class="card" style="border-left: 5px solid var(--success-color);">
                         <div class="card-header">
                             <h3>Ventas Totales</h3>
                             <i class="fas fa-dollar-sign card-icon" style="color: var(--success-color);"></i>
                         </div>
-                        <div class="card-value">C${{ total_sales|floatformat:2 }}</div>
+                        <div class="card-value" id="val-sales">C$0.00</div>
                         <p style="color: #6c757d; font-size: 0.9rem;">Total facturado en el periodo.</p>
                     </div>
 
@@ -410,7 +371,7 @@
                             <h3>Pedidos Facturados</h3>
                             <i class="fas fa-receipt card-icon" style="color: var(--info-color);"></i>
                         </div>
-                        <div class="card-value">{{ total_orders }}</div>
+                        <div class="card-value" id="val-orders">0</div>
                         <p style="color: #6c757d; font-size: 0.9rem;">Órdenes completadas y pagadas.</p>
                     </div>
 
@@ -419,7 +380,7 @@
                             <h3>Mesas Registradas</h3>
                             <i class="fas fa-chair card-icon" style="color: var(--warning-color);"></i>
                         </div>
-                        <div class="card-value">{{ total_mesas }}</div>
+                        <div class="card-value" id="val-tables">0</div>
                         <p style="color: #6c757d; font-size: 0.9rem;">Capacidad total del restaurante.</p>
                     </div>
                     
@@ -428,49 +389,33 @@
                             <h3>Productos en el Menú</h3>
                             <i class="fas fa-list-alt card-icon" style="color: var(--primary-color);"></i>
                         </div>
-                        <div class="card-value">{{ platillos_en_menu }}</div>
+                        <div class="card-value" id="val-menu">0</div>
                         <p style="color: #6c757d; font-size: 0.9rem;">Variedad de productos activos.</p>
                     </div>
                 </div>
 
-                <!-- 3. BUSCADOR POR CLIENTE (ANCHO COMPLETO) -->
+                <!-- BUSCADOR POR CLIENTE -->
                 <div class="client-search-section">
                     <label for="clienteBuscador" style="font-weight: bold; display: block; margin-bottom: 10px; margin-top: 15px; color: var(--secondary-color); font-size: 1.1rem;">
                         <i class="fas fa-user-search" style="margin-right: 8px;"></i>Filtrar por cliente:
                     </label>
                     <div class="client-search-box">
-                        <span class="search-icon">
-                            <i class="fas fa-search"></i>
-                        </span>
-                        <input type="text" 
-                                id="clienteBuscador" 
-                                name="search" 
-                                placeholder="Escribe el nombre del cliente..." 
-                                value="{{ search_query }}"
-                                autocomplete="off">
-                        {% if search_query %}
-                        <span id="btn-limpiar" class="clear-icon" onclick="limpiarBusqueda()">
-                            <i class="fas fa-times-circle"></i>
-                        </span>
-                        {% else %}
+                        <span class="search-icon"><i class="fas fa-search"></i></span>
+                        <input type="text" id="clienteBuscador" placeholder="Escribe el nombre del cliente..." autocomplete="off">
                         <span id="btn-limpiar" class="clear-icon" onclick="limpiarBusqueda()" style="display: none;">
                             <i class="fas fa-times-circle"></i>
                         </span>
-                        {% endif %}
                     </div>
-                    <!-- Mensaje de ayuda eliminado -->
                 </div>
 
-                <!-- Resultados de Búsqueda (se muestra solo si hay término) -->
-                <div id="resultados-busqueda" class="search-results-section" style="display: {% if search_query %}block{% else %}none{% endif %};">
+                <!-- SECCIÓN DE RESULTADOS DE BÚSQUEDA DE CLIENTES -->
+                <div id="resultados-busqueda" class="search-results-section" style="display: none;">
                     <h3 class="results-header">
-                        <i class="fas fa-list"></i> 
-                        Pedidos de "<span id="search-term-display">{{ search_query }}</span>"
+                        <i class="fas fa-list"></i> Pedidos de "<span id="search-term-display"></span>"
                         <span style="font-size: 0.9rem; margin-left: 10px; color: #666;">
-                            (<span id="results-count-display">{{ search_results_count }}</span> <span id="results-text-display">{% if search_results_count == 1 %}resultado{% else %}resultados{% endif %}</span>)
+                            (<span id="results-count-display">0</span> <span id="results-text-display">resultados</span>)
                         </span>
                     </h3>
-                    
                     <div class="results-table-container">
                         <table class="results-table">
                             <thead>
@@ -485,83 +430,45 @@
                                 </tr>
                             </thead>
                             <tbody id="tabla-resultados-body">
-                                {% if search_results %}
-                                    {% for pedido in search_results %}
-                                    <tr class="fila-pedido">
-                                        <td><strong>#{{ pedido.idPedido }}</strong></td>
-                                        <td class="nombre-cliente">{{ pedido.idCliente.nombre }}</td>
-                                        <td>{{ pedido.fecha|date:"d/m/Y H:i" }}</td>
-                                        <td>
-                                            {% if pedido.idMesa %}
-                                                Mesa {{ pedido.idMesa.idMesa }}
-                                            {% else %}
-                                                <span style="color: #888;">Sin mesa</span>
-                                            {% endif %}
-                                        </td>
-                                        <td><strong>C${{ pedido.montoTotal|floatformat:2 }}</strong></td>
-                                        <td>{{ pedido.metodoPago|default:"N/A" }}</td>
-                                        <td>
-                                            {% if pedido.estadoDePago %}
-                                                <span class="badge-pagado"><i class="fas fa-check-circle"></i> Pagado</span>
-                                            {% else %}
-                                                <span class="badge-pendiente"><i class="fas fa-clock"></i> Pendiente</span>
-                                            {% endif %}
-                                        </td>
-                                    </tr>
-                                    {% endfor %}
-                                {% endif %}
+                                <!-- JS inyectará las filas -->
                             </tbody>
                         </table>
                     </div>
                 </div>
 
+                <!-- FILTROS DE HISTORIAL DE COMPRAS -->
                 <div style="margin-top: 40px;">
-                    
                     <h3 style="color: var(--secondary-color); margin-bottom: 12px; font-size: 1.1rem; font-weight: 500;">
                         Filtrar compras por ingredientes o proveedores:
                     </h3>
-
                     <div style="display: flex; gap: 15px; margin-bottom: 20px; flex-wrap: wrap;">
-                        
                         <div class="client-search-section" style="flex: 1; min-width: 220px; margin-bottom: 0;">
                             <div class="client-search-box" style="width: 100%;">
                                 <span class="search-icon"><i class="fas fa-search"></i></span>
                                 <input type="text" id="fx-ingrediente" placeholder="Escribe el ingrediente..." autocomplete="off">
-                                <span id="btn-limpiar-ingrediente" class="clear-icon" style="display: none;">
-                                    <i class="fas fa-times-circle"></i>
-                                </span>
+                                <span id="btn-limpiar-ingrediente" class="clear-icon" style="display: none;"><i class="fas fa-times-circle"></i></span>
                             </div>
                         </div>
-
                         <div class="client-search-section" style="flex: 1; min-width: 220px; margin-bottom: 0;">
                             <div class="client-search-box" style="width: 100%;">
                                 <span class="search-icon"><i class="fas fa-truck"></i></span>
                                 <input type="text" id="fx-proveedor" placeholder="Escribe el proveedor..." autocomplete="off">
-                                <span id="btn-limpiar-proveedor" class="clear-icon" style="display: none;">
-                                    <i class="fas fa-times-circle"></i>
-                                </span>
+                                <span id="btn-limpiar-proveedor" class="clear-icon" style="display: none;"><i class="fas fa-times-circle"></i></span>
                             </div>
                         </div>
-
                         <div class="client-search-section" style="flex: 1; min-width: 220px; margin-bottom: 0;">
                             <div class="client-search-box" style="width: 100%;">
-                                <input type="date" id="fx-fecha-local" 
-                                    style="padding: 14px 40px 14px 12px;
-                                        border-radius: 8px;
-                                        border: 2px solid var(--secondary-color);
-                                        background-color: white;
-                                        color: #888888;
-                                        font-size: 1rem;"
-                                    title="Filtrar por un día específico">
-                                <span id="btn-limpiar-fecha" class="clear-icon" style="display: none;">
-                                    <i class="fas fa-times-circle"></i>
-                                </span>
+                                <input type="date" id="fx-fecha-local" style="padding: 14px 40px 14px 12px; border-radius: 8px; border: 2px solid var(--secondary-color); background-color: white; color: #888888; font-size: 1rem;" title="Filtrar por un día específico">
+                                <span id="btn-limpiar-fecha" class="clear-icon" style="display: none;"><i class="fas fa-times-circle"></i></span>
                             </div>
                         </div>
                     </div>
 
                     <h3 id="compras-titulo-resultados" class="results-header" style="display: none;">
-                        <i class="fas fa-boxes" style="margin-right: 2px;"></i> Historial de compras <span style="font-size: 0.9rem; margin-left: 10px; color: #666;">(<span id="compras-contador">0</span> <span id="compras-texto-plural">resultados</span>)</span>
+                        <i class="fas fa-boxes" style="margin-right: 2px;"></i> Historial de compras 
+                        <span style="font-size: 0.9rem; margin-left: 10px; color: #666;">
+                            (<span id="compras-contador">0</span> <span id="compras-texto-plural">resultados</span>)
+                        </span>
                     </h3>
 
                     <div id="compras-tabla-container" class="results-table-container" style="display: none;">
@@ -576,50 +483,24 @@
                                 </tr>
                             </thead>
                             <tbody id="tabla-compras-body">
-                                {% if historial_compras %}
-                                    {% for compra in historial_compras %}
-                                    <tr class="compra-row" 
-                                        data-ingrediente="{{ compra.ingrediente|lower }}" 
-                                        data-proveedor="{{ compra.proveedor|lower }}"
-                                        data-fecha="{{ compra.fecha|date:'Y-m-d' }}">
-                                        <td>{{ compra.fecha|date:"d/m/Y" }}</td>
-                                        <td><strong>{{ compra.ingrediente }}</strong></td>
-                                        <td>{{ compra.proveedor }}</td>
-                                        <td>{{ compra.cantidad|floatformat:2 }} {{ compra.unidad }}</td>
-                                        <td><strong style="color: var(--primary-color);">C${{ compra.total|floatformat:2 }}</strong></td>
-                                    </tr>
-                                    {% endfor %}
-                                {% endif %}
-                                
-                                <tr id="compras-vacio" style="display: none;">
-                                    <td colspan="6">
-                                        <div class="empty-results">
-                                            <i class="fas fa-box-open"></i>
-                                            <p>No se encontraron compras que coincidan con los filtros aplicados.</p>
-                                        </div>
-                                    </td>
-                                </tr>
+                                <!-- Se alimenta dinámicamente de los datos descargados por el API -->
                             </tbody>
                         </table>
                     </div>
                 </div>
 
-                <!-- 4 y 5. GRÁFICOS -->
+                <!-- GRÁFICOS -->
                 <div class="chart-grid">
                     <div class="card">
-                        <div class="card-header">
-                            <h3>Productos más Vendidos</h3>
-                        </div>
+                        <div class="card-header"><h3>Productos más Vendidos</h3></div>
                         <canvas id="popularProductsChart"></canvas>
                     </div>
-
                     <div class="card">
-                        <div class="card-header">
-                            <h3>Mesas más Usadas (Órdenes)</h3>
-                        </div>
+                        <div class="card-header"><h3>Mesas más Usadas (Órdenes)</h3></div>
                         <canvas id="popularTablesChart"></canvas>
                     </div>
                 </div>
+
             </div>
         </main>
     </div>
@@ -629,336 +510,331 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js"></script>
 
     <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            const inputIngrediente = document.getElementById('fx-ingrediente');
-            const inputProveedor = document.getElementById('fx-proveedor');
-            const inputFechaLocal = document.getElementById('fx-fecha-local');
-            
-            // Referencias a los nuevos botones de limpiar
-            const btnLimpiarIngrediente = document.getElementById('btn-limpiar-ingrediente');
-            const btnLimpiarProveedor = document.getElementById('btn-limpiar-proveedor');
-            const btnLimpiarFecha = document.getElementById('btn-limpiar-fecha');
-            
-            const tituloResultados = document.getElementById('compras-titulo-resultados');
-            const tablaContainer = document.getElementById('compras-tabla-container');
-            const contador = document.getElementById('compras-contador');
-            const textoPlural = document.getElementById('compras-texto-plural'); 
-            const filaVacio = document.getElementById('compras-vacio');
-            const filasCompras = document.querySelectorAll('.compra-row');
+        // Variables globales para la persistencia de datos y gráficos
+        let cacheCompras = [];
+        let chartProductsInstance = null;
+        let chartTablesInstance = null;
+        let timeoutId = null;
 
-            function filtrarCompras() {
-                const qIngrediente = inputIngrediente.value.toLowerCase().trim();
-                const qProveedor = inputProveedor.value.toLowerCase().trim();
-                const qFecha = inputFechaLocal.value;
-
-                // Mostrar u ocultar botones de limpiar dinámicamente
-                if (btnLimpiarIngrediente) btnLimpiarIngrediente.style.display = qIngrediente !== '' ? 'block' : 'none';
-                if (btnLimpiarProveedor) btnLimpiarProveedor.style.display = qProveedor !== '' ? 'block' : 'none';
-                if (btnLimpiarFecha) btnLimpiarFecha.style.display = qFecha !== '' ? 'block' : 'none';
-
-                // Verificar si hay interacción
-                const tieneFiltroActivo = qIngrediente !== '' || qProveedor !== '' || qFecha !== '';
-
-                if (!tieneFiltroActivo) {
-                    tituloResultados.style.display = 'none';
-                    tablaContainer.style.display = 'none';
-                    return;
-                }
-
-                tituloResultados.style.display = 'block';
-                tablaContainer.style.display = 'block';
-
-                let coincidencias = 0;
-
-                filasCompras.forEach(row => {
-                    const dIngrediente = row.getAttribute('data-ingrediente');
-                    const dProveedor = row.getAttribute('data-proveedor');
-                    const dFecha = row.getAttribute('data-fecha');
-
-                    const matchIngrediente = dIngrediente.includes(qIngrediente);
-                    const matchProveedor = dProveedor.includes(qProveedor);
-                    const matchFecha = (qFecha === '') || (dFecha === qFecha);
-
-                    if (matchIngrediente && matchProveedor && matchFecha) {
-                        row.style.display = '';
-                        coincidencias++;
-                    } else {
-                        row.style.display = 'none';
-                    }
-                });
-
-                // Actualizar el número del contador
-                contador.textContent = coincidencias;
-
-                // Manejo de la pluralización dinámica
-                if (coincidencias === 1) {
-                    textoPlural.textContent = 'resultado';
-                } else {
-                    textoPlural.textContent = 'resultados';
-                }
-
-                // Mostrar u ocultar mensaje vacío
-                if (coincidencias === 0) {
-                    filaVacio.style.display = 'table-row';
-                } else {
-                    filaVacio.style.display = 'none';
-                }
-            }
-
-            // Eventos para detectar la escritura/cambios
-            if (inputIngrediente && inputProveedor && inputFechaLocal) {
-                inputIngrediente.addEventListener('input', filtrarCompras);
-                inputProveedor.addEventListener('input', filtrarCompras);
-                inputFechaLocal.addEventListener('change', filtrarCompras);
-            }
-
-            // Funcionalidad de los botones de limpiar (Vaciar input y re-filtrar)
-            if (btnLimpiarIngrediente) {
-                btnLimpiarIngrediente.addEventListener('click', function() {
-                    inputIngrediente.value = '';
-                    filtrarCompras();
-                });
-            }
-            if (btnLimpiarProveedor) {
-                btnLimpiarProveedor.addEventListener('click', function() {
-                    inputProveedor.value = '';
-                    filtrarCompras();
-                });
-            }
-            if (btnLimpiarFecha) {
-                btnLimpiarFecha.addEventListener('click', function() {
-                    inputFechaLocal.value = '';
-                    filtrarCompras();
-                });
-            }
-        });
-    </script>
-
-    {{ top_products_labels|json_script:"top-products-labels" }}
-    {{ top_products_data|json_script:"top-products-data" }}
-    {{ top_tables_labels|json_script:"top-tables-labels" }}
-    {{ top_tables_data|json_script:"top-tables-data" }}
-
-    <script>
-        // Datos para gráficos
-        const topProductsLabels = JSON.parse(document.getElementById('top-products-labels').textContent);
-        const topProductsData = JSON.parse(document.getElementById('top-products-data').textContent);
-        const topTablesLabels = JSON.parse(document.getElementById('top-tables-labels').textContent);
-        const topTablesData = JSON.parse(document.getElementById('top-tables-data').textContent);
-        
+        // Colores del tema extraídos del DOM
         const primaryColor = getComputedStyle(document.documentElement).getPropertyValue('--primary-color').trim();
         const secondaryColor = getComputedStyle(document.documentElement).getPropertyValue('--secondary-color').trim();
         const infoColor = getComputedStyle(document.documentElement).getPropertyValue('--info-color').trim();
         const dangerColor = getComputedStyle(document.documentElement).getPropertyValue('--danger-color').trim();
 
-        // Gráfico Productos
-        const ctxProducts = document.getElementById('popularProductsChart').getContext('2d');
-        new Chart(ctxProducts, {
-            type: 'bar',
-            data: {
-                // TRUCO: .map(label => label.split(' ')) rompe el texto por palabras creando saltos de línea
-                labels: topProductsLabels.map(label => label.split(' ')), 
-                datasets: [{
-                    label: 'Cantidad Vendida',
-                    data: topProductsData,
-                    backgroundColor: [primaryColor, secondaryColor, infoColor, dangerColor, '#6c757d'],
-                    borderColor: [primaryColor, secondaryColor, infoColor, dangerColor, '#6c757d'],
-                    borderWidth: 1
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false, // Mantiene la mejora para móvil del paso anterior
-                scales: {
-                    y: {
-                        beginAtZero: true,
-                        title: { display: true, text: 'Unidades Vendidas', color: secondaryColor },
-                        ticks: { color: secondaryColor }
-                    },
-                    x: { 
-                        ticks: { 
-                            color: secondaryColor,
-                            maxRotation: 0, // Forzar a que NUNCA se ponga en diagonal
-                            minRotation: 0  // Garantiza que permanezca completamente horizontal
-                        } 
-                    }
-                },
-                plugins: { legend: { display: false } }
-            }
+        document.addEventListener('DOMContentLoaded', function() {
+            // Inicializar las fechas por defecto de hoy al cargar la página por primera vez
+            const hoy = new Date().toISOString().split('T')[0];
+            document.getElementById('start_date').value = hoy;
+            document.getElementById('end_date').value = hoy;
+
+            // === REINSTALACIÓN DEL DISPARO AUTOMÁTICO ===
+            document.getElementById('start_date').addEventListener('input', validarYFiltrar);
+            document.getElementById('end_date').addEventListener('input', validarYFiltrar);
+
+            // Escuchadores de eventos para el buscador en tiempo real
+            document.getElementById('clienteBuscador').addEventListener('input', manejarBusquedaCliente);
+            
+            // Escuchadores para los filtros de compras del inventario
+            document.getElementById('fx-ingrediente').addEventListener('input', filtrarComprasLocales);
+            document.getElementById('fx-proveedor').addEventListener('input', filtrarComprasLocales);
+            document.getElementById('fx-fecha-local').addEventListener('change', filtrarComprasLocales);
+
+            // Carga inicial de datos desde la API
+            cargarDashboard();
         });
 
-        // Gráfico Mesas
-        const ctxTables = document.getElementById('popularTablesChart').getContext('2d');
-        new Chart(ctxTables, {
-            type: 'bar',
-            data: {
-                labels: topTablesLabels,
-                datasets: [{
-                    label: 'Número de Órdenes',
-                    data: topTablesData,
-                    backgroundColor: infoColor,
-                    borderColor: infoColor,
-                    borderWidth: 1
-                }]
-            },
-            options: {
-                indexAxis: 'y',
-                responsive: true,
-                maintainAspectRatio: false, // <-- CAMBIAR A FALSE
-                // aspectRatio: 4,           // <-- ELIMINAR O COMENTAR ESTA LÍNEA
-                scales: {
-                    x: {
-                        beginAtZero: true,
-                        title: { display: true, text: 'Número de Órdenes', color: secondaryColor },
-                        ticks: { color: secondaryColor }
-                    },
-                    y: { ticks: { color: secondaryColor } }
-                },
-                plugins: { legend: { display: false } }
-            }
-        });
-
-        // ========== VALIDACIÓN DE FECHAS ==========
-        function validarYEnviar() {
+        // ========================================================
+        // VALIDACIÓN Y FILTRADO AUTOMÁTICO DE FECHAS
+        // ========================================================
+        function validarYFiltrar() {
             const startInput = document.getElementById('start_date');
             const endInput = document.getElementById('end_date');
-            const form = document.getElementById('dateFilterForm');
+            const pdfBtn = document.getElementById('generatePdfButton');
 
-            // Solo enviamos si ambos campos tienen valor
-            if (startInput.value && endInput.value) {
-                const startDate = new Date(startInput.value + 'T00:00:00');
-                const endDate = new Date(endInput.value + 'T00:00:00');
-                const today = new Date();
-                today.setHours(0, 0, 0, 0);
-
-                // Reutilizamos tu lógica de validación actual
-                if (startDate > endDate) {
-                    startInput.value = endInput.value;
-                    return;
-                }
-
-                if (endDate > today) {
-                    endInput.value = today.toISOString().split('T')[0];;
-                    return;
-                }
-
-                // Si pasa las validaciones, enviamos el formulario
-                form.submit();
+            // Si alguno de los campos de fecha está vacío
+            if (!startInput.value || !endInput.value) {
+                pdfBtn.classList.add('btn-disabled'); // Pinta el botón de gris y bloquea clics
+                pdfBtn.removeAttribute('href'); // Elimina la ruta de descarga
+                return; // Detiene la ejecución para no lanzar la petición a la API
             }
+
+            // Si ambos tienen valor, rehabilitamos el botón visualmente
+            pdfBtn.classList.remove('btn-disabled');
+
+            const startDate = new Date(startInput.value + 'T00:00:00');
+            const endDate = new Date(endInput.value + 'T00:00:00');
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+
+            // Validaciones de lógica de fechas
+            if (startDate > endDate) {
+                startInput.value = endInput.value;
+            }
+            if (endDate > today) {
+                endInput.value = today.toISOString().split('T')[0];
+            }
+
+            // Ejecuta la consulta asíncrona hacia la API
+            cargarDashboard();
         }
 
-
-        // ========== LÓGICA DE BÚSQUEDA EN TIEMPO REAL (SOLO POR CLIENTE) ==========
-        let timeoutId = null;
-        
-        function actualizarEnlacePDF(termino) {
-            const pdfBtn = document.getElementById('generatePdfButton');
-            if (!pdfBtn) return;
+        // ========================================================
+        // CONSUMO PRINCIPAL DE LA API REST
+        // ========================================================
+        function cargarDashboard() {
             const startDate = document.getElementById('start_date').value;
             const endDate = document.getElementById('end_date').value;
-            let href = `/dashboard/pdf/?start_date=${startDate}&end_date=${endDate}`;
-            if (termino && termino.trim().length > 0) {
-                href += `&search=${encodeURIComponent(termino.trim())}`;
+            const search = document.getElementById('clienteBuscador').value.trim();
+
+            // Actualizar la URL de descarga del PDF de manera reactiva
+            let pdfUrl = `{% url 'generate_dashboard_pdf' %}?start_date=${startDate}&end_date=${endDate}`;
+            if (search) pdfUrl += `&search=${encodeURIComponent(search)}`;
+            document.getElementById('generatePdfButton').href = pdfUrl;
+
+            if(search) {
+                document.getElementById('tabla-resultados-body').innerHTML = `<tr><td colspan="7"><div class="empty-results"><i class="fas fa-spinner fa-spin"></i><p>Buscando pedidos...</p></div></td></tr>`;
             }
-            pdfBtn.href = href;
+
+            fetch(`/api/dashboard/metrics/?start_date=${startDate}&end_date=${endDate}&search=${encodeURIComponent(search)}`)
+                .then(response => {
+                    if (!response.ok) throw new Error('Error de comunicación con la API.');
+                    return response.json();
+                })
+                .then(data => {
+                    renderizarMetricas(data.metricas, data.fechas_filtro, data.busqueda_clientes);
+                    renderizarStockInsuficiente(data.ingredientes_insuficientes);
+                    renderizarGraficos(data.graficos);
+                    
+                    cacheCompras = data.compras.historial_compras || [];
+                    filtrarComprasLocales(); 
+                })
+                .catch(error => console.error('Error:', error));
         }
 
-        function filtrarClientes() {
-            const input = document.getElementById('clienteBuscador');
-            const termino = input.value.trim();
+        // ========================================================
+        // RENDERIZADO DE COMPONENTES EN EL DOM
+        // ========================================================
+        function renderizarMetricas(metricas, fechas, busqueda) {
+            // Inyectar tarjetas básicas
+            document.getElementById('val-sales').textContent = `C$${metricas.total_sales.toFixed(2)}`;
+            document.getElementById('val-orders').textContent = metricas.total_orders;
+            document.getElementById('val-tables').textContent = metricas.total_mesas;
+            document.getElementById('val-menu').textContent = metricas.platillos_en_menu;
+
+            // Formatear fechas del encabezado
+            const fInicio = new Date(fechas.start_date_obj).toLocaleDateString('es-NI');
+            const fFin = new Date(fechas.end_date_obj).toLocaleDateString('es-NI');
+            document.getElementById('rango-fechas-texto').textContent = `${fInicio} al ${fFin}`;
+
+            // Sección de clientes buscados
+            const avisoCliente = document.getElementById('filtro-cliente-aviso');
             const resultadosSection = document.getElementById('resultados-busqueda');
-            const btnLimpiar = document.getElementById('btn-limpiar');
             
-            if (btnLimpiar) {
-                btnLimpiar.style.display = termino.length > 0 ? 'block' : 'none';
-            }
-            
-            if (!resultadosSection) return;
-            
-            if (termino.length === 0) {
+            if (busqueda.search_query) {
+                avisoCliente.style.display = 'inline';
+                avisoCliente.textContent = `(Filtrado por cliente: "${busqueda.search_query}")`;
+                resultadosSection.style.display = 'block';
+                document.getElementById('search-term-display').textContent = busqueda.search_query;
+                document.getElementById('results-count-display').textContent = busqueda.search_results_count;
+                document.getElementById('results-text-display').textContent = busqueda.search_results_count === 1 ? 'resultado' : 'resultados';
+                
+                const tbody = document.getElementById('tabla-resultados-body');
+                if (busqueda.search_results.length === 0) {
+                    tbody.innerHTML = `<tr><td colspan="7"><div class="empty-results"><i class="fas fa-user-slash"></i><p>No se encontraron pedidos para "${busqueda.search_query}"</p></div></td></tr>`;
+                } else {
+                    tbody.innerHTML = busqueda.search_results.map(pedido => {
+                        const fechaPed = new Date(pedido.fecha).toLocaleString('es-NI', {hour12: false});
+                        return `
+                            <tr class="fila-pedido">
+                                <td><strong>#${pedido.idPedido}</strong></td>
+                                <td class="nombre-cliente">${pedido.idCliente.nombre}</td>
+                                <td>${fechaPed}</td>
+                                <td>${pedido.idMesa ? 'Mesa ' + pedido.idMesa.idMesa : '<span style="color: #888;">Sin mesa</span>'}</td>
+                                <td><strong>C$${pedido.montoTotal.toFixed(2)}</strong></td>
+                                <td>${pedido.metodoPago || 'N/A'}</td>
+                                <td>
+                                    ${pedido.estadoDePago 
+                                        ? `<span class="badge-pagado"><i class="fas fa-check-circle"></i> Pagado</span>` 
+                                        : `<span class="badge-pendiente"><i class="fas fa-clock"></i> Pendiente</span>`}
+                                </td>
+                            </tr>
+                        `;
+                    }).join('');
+                }
+            } else {
+                avisoCliente.style.display = 'none';
                 resultadosSection.style.display = 'none';
-                actualizarEnlacePDF('');
+            }
+        }
+
+        function renderizarStockInsuficiente(ingredientes) {
+            const acordeon = document.getElementById('acordeonInventario');
+            const lista = document.getElementById('lista-stock-insuficiente');
+            
+            if (!ingredientes || ingredientes.length === 0) {
+                acordeon.style.display = 'none';
                 return;
             }
-            
-            resultadosSection.style.display = 'block';
-            document.getElementById('search-term-display').textContent = termino;
-            
-            if (timeoutId) clearTimeout(timeoutId);
-            timeoutId = setTimeout(() => realizarBusqueda(termino), 300);
+
+            acordeon.style.display = 'block';
+            lista.innerHTML = ingredientes.map(item => `
+                <ul class="col text-dark">
+                    <strong>${item.nombre}</strong> 
+                    <span class="badge bg-warning-subtle text-secondary ms-0">
+                        ${item.cantidad_actual} ${item.unidad_medida} en existencia
+                    </span>
+                </ul>
+            `).join('');
         }
 
-        function realizarBusqueda(termino) {
-            const startDate = document.getElementById('start_date').value;
-            const endDate = document.getElementById('end_date').value;
-            const tbody = document.getElementById('tabla-resultados-body');
+        // ========================================================
+        // GESTIÓN DINÁMICA DE GRÁFICOS (CHART.JS)
+        // ========================================================
+        function renderizarGraficos(graficos) {
+            // Gráfico Productos más Vendidos
+            const ctxProducts = document.getElementById('popularProductsChart').getContext('2d');
+            if (chartProductsInstance) chartProductsInstance.destroy(); // Evitar superposiciones fantasmas de Canvas
             
-            actualizarEnlacePDF(termino);
-            
-            if (tbody) {
-                tbody.innerHTML = `<tr><td colspan="7"><div class="empty-results"><i class="fas fa-spinner fa-spin"></i><p>Buscando pedidos...</p></div></td></tr>`;
-            }
-            
-            fetch(`/dashboard/?start_date=${startDate}&end_date=${endDate}&search=${encodeURIComponent(termino)}`, {
-                headers: { 'X-Requested-With': 'XMLHttpRequest' }
-            })
-            .then(response => response.text())
-            .then(html => {
-                const parser = new DOMParser();
-                const doc = parser.parseFromString(html, 'text/html');
-                const nuevaTabla = doc.getElementById('tabla-resultados-body');
-                if (nuevaTabla && tbody) {
-                    tbody.innerHTML = nuevaTabla.innerHTML;
-                    const filas = tbody.querySelectorAll('.fila-pedido');
-                    const count = filas.length;
-                    document.getElementById('results-count-display').textContent = count;
-                    document.getElementById('results-text-display').textContent = count === 1 ? 'resultado' : 'resultados';
-                    if (count === 0) {
-                        const emptyRow = document.createElement('tr');
-                        emptyRow.id = 'empty-results-row';
-                        emptyRow.innerHTML = `<td colspan="7"><div class="empty-results"><i class="fas fa-user-slash"></i><p>No se encontraron pedidos para "<span>${termino}</span>"</p></div></td>`;
-                        tbody.appendChild(emptyRow);
-                    }
+            chartProductsInstance = new Chart(ctxProducts, {
+                type: 'bar',
+                data: {
+                    labels: graficos.top_products.labels.map(label => label.split(' ')), 
+                    datasets: [{
+                        label: 'Cantidad Vendida',
+                        data: graficos.top_products.data,
+                        backgroundColor: [primaryColor, secondaryColor, infoColor, dangerColor, '#6c757d'],
+                        borderColor: [primaryColor, secondaryColor, infoColor, dangerColor, '#6c757d'],
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: { beginAtZero: true, title: { display: true, text: 'Unidades Vendidas', color: secondaryColor }, ticks: { color: secondaryColor } },
+                        x: { ticks: { color: secondaryColor, maxRotation: 0, minRotation: 0 } }
+                    },
+                    plugins: { legend: { display: false } }
                 }
-            })
-            .catch(error => {
-                console.error('Error en búsqueda:', error);
-                if (tbody) {
-                    tbody.innerHTML = `<tr><td colspan="7"><div class="empty-results"><i class="fas fa-exclamation-triangle"></i><p>Error al buscar.</p></div></td></tr>`;
+            });
+
+            // Gráfico de Ocupación de Mesas
+            const ctxTables = document.getElementById('popularTablesChart').getContext('2d');
+            if (chartTablesInstance) chartTablesInstance.destroy();
+
+            chartTablesInstance = new Chart(ctxTables, {
+                type: 'bar',
+                data: {
+                    labels: graficos.top_tables.labels,
+                    datasets: [{
+                        label: 'Número de Órdenes',
+                        data: graficos.top_tables.data,
+                        backgroundColor: infoColor,
+                        borderColor: infoColor,
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    indexAxis: 'y',
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        x: { beginAtZero: true, title: { display: true, text: 'Número de Órdenes', color: secondaryColor }, ticks: { color: secondaryColor } },
+                        y: { ticks: { color: secondaryColor } }
+                    },
+                    plugins: { legend: { display: false } }
                 }
-                document.getElementById('results-count-display').textContent = '0';
-                document.getElementById('results-text-display').textContent = 'resultados';
             });
         }
 
-        function limpiarBusqueda() {
-            const startDate = document.getElementById('start_date').value;
-            const endDate = document.getElementById('end_date').value;
-            actualizarEnlacePDF('');
-            window.location.href = `/dashboard/?start_date=${startDate}&end_date=${endDate}`;
+        // ========================================================
+        // FILTRADO IN-MEMORY (COMPRAS E INVENTARIO)
+        // ========================================================
+        function filtrarComprasLocales() {
+            const qIngrediente = document.getElementById('fx-ingrediente').value.toLowerCase().trim();
+            const qProveedor = document.getElementById('fx-proveedor').value.toLowerCase().trim();
+            const qFecha = document.getElementById('fx-fecha-local').value;
+
+            // Manejo estético de los botones individuales de limpiar campos
+            document.getElementById('btn-limpiar-ingrediente').style.display = qIngrediente ? 'block' : 'none';
+            document.getElementById('btn-limpiar-proveedor').style.display = qProveedor ? 'block' : 'none';
+            document.getElementById('btn-limpiar-fecha').style.display = qFecha ? 'block' : 'none';
+
+            const tituloResultados = document.getElementById('compras-titulo-resultados');
+            const tablaContainer = document.getElementById('compras-tabla-container');
+            const tbody = document.getElementById('tabla-compras-body');
+
+            if (!qIngrediente && !qProveedor && !qFecha) {
+                tituloResultados.style.display = 'none';
+                tablaContainer.style.display = 'none';
+                return;
+            }
+
+            tituloResultados.style.display = 'block';
+            tablaContainer.style.display = 'block';
+
+            // Filtrar los datos cacheados de la API
+            const comprasFiltradas = cacheCompras.filter(compra => {
+                const matchIngrediente = compra.ingrediente.toLowerCase().includes(qIngrediente);
+                const matchProveedor = compra.proveedor.toLowerCase().includes(qProveedor);
+                const matchFecha = !qFecha || compra.fecha.split('T')[0] === qFecha;
+                return matchIngrediente && matchProveedor && matchFecha;
+            });
+
+            document.getElementById('compras-contador').textContent = comprasFiltradas.length;
+            document.getElementById('compras-texto-plural').textContent = comprasFiltradas.length === 1 ? 'resultado' : 'resultados';
+
+            if (comprasFiltradas.length === 0) {
+                tbody.innerHTML = `
+                    <tr id="compras-vacio">
+                        <td colspan="5">
+                            <div class="empty-results">
+                                <i class="fas fa-box-open"></i>
+                                <p>No se encontraron compras que coincidan con los filtros aplicados.</p>
+                            </div>
+                        </td>
+                    </tr>`;
+            } else {
+                tbody.innerHTML = comprasFiltradas.map(compra => {
+                    const fCompra = new Date(compra.fecha).toLocaleDateString('es-NI');
+                    return `
+                        <tr class="compra-row">
+                            <td>${fCompra}</td>
+                            <td><strong>${compra.ingrediente}</strong></td>
+                            <td>${compra.proveedor}</td>
+                            <td>${compra.cantidad.toFixed(2)} ${compra.unidad}</td>
+                            <td><strong style="color: var(--primary-color);">C$${compra.total.toFixed(2)}</strong></td>
+                        </tr>
+                    `;
+                }).join('');
+            }
         }
 
-        document.addEventListener('DOMContentLoaded', function() {
-            const buscador = document.getElementById('clienteBuscador');
-            if (buscador) {
-                buscador.addEventListener('input', filtrarClientes);
-                buscador.addEventListener('keypress', function(e) {
-                    if (e.key === 'Enter') {
-                        e.preventDefault();
-                        const termino = this.value.trim();
-                        const startDate = document.getElementById('start_date').value;
-                        const endDate = document.getElementById('end_date').value;
-                        actualizarEnlacePDF(termino);
-                        if (termino) {
-                            window.location.href = `/dashboard/?start_date=${startDate}&end_date=${endDate}&search=${encodeURIComponent(termino)}`;
-                        }
-                    }
-                });
-            }
-            // Si hay término inicial, actualizar enlace PDF
-            {% if search_query %}
-            actualizarEnlacePDF('{{ search_query }}');
-            {% endif %}
-        });
+        // ========================================================
+        // UTILIDADES Y REQUISITOS DE INTERFAZ ACTIVA
+        // ========================================================
+        function manejarBusquedaCliente() {
+            const input = document.getElementById('clienteBuscador');
+            const termino = input.value.trim();
+            document.getElementById('btn-limpiar').style.display = termino.length > 0 ? 'block' : 'none';
+
+            // Anti-rebote (Debounce) de 300ms para evitar saturar de peticiones fetch a tu procedimiento almacenado
+            if (timeoutId) clearTimeout(timeoutId);
+            timeoutId = setTimeout(() => {
+                cargarDashboard();
+            }, 300);
+        }
+
+        function limpiarBusqueda() {
+            document.getElementById('clienteBuscador').value = '';
+            document.getElementById('btn-limpiar').style.display = 'none';
+            cargarDashboard();
+        }
+
+        // Escuchadores de limpieza para campos de compras individuales
+        document.getElementById('btn-limpiar-ingrediente').addEventListener('click', () => { document.getElementById('fx-ingrediente').value = ''; filtrarComprasLocales(); });
+        document.getElementById('btn-limpiar-proveedor').addEventListener('click', () => { document.getElementById('fx-proveedor').value = ''; filtrarComprasLocales(); });
+        document.getElementById('btn-limpiar-fecha').addEventListener('click', () => { document.getElementById('fx-fecha-local').value = ''; filtrarComprasLocales(); });
     </script>
 {% endblock %}

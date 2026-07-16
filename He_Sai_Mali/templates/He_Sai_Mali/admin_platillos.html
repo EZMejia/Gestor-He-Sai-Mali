@@ -1,6 +1,5 @@
 {% extends "He_Sai_Mali/base.html" %}
 {% load static %}
-{% load custom_filters %}
 
 {% block title %}Admin - Productos del Menu{% endblock %}
 
@@ -8,25 +7,20 @@
     <style>
         :root {
             /* Colores del diseño de la APP (He Sai Mali) */
-            --primary-color: #981a28; /* Rojo Oscuro (Header) */
-            --secondary-color: #f3bb67; /* Amarillo (Acento/Border) */
-            --sidebar-bg: #2b3543; /* Gris Oscuro (Usado para el menú lateral) */
-            --bg-page: #2c3038; /* Gris Oscuro (Fondo de página) */
+            --primary-color: #981a28; 
+            --secondary-color: #f3bb67; 
+            --sidebar-bg: #2b3543; 
+            --bg-page: #2c3038; 
             --text-light: #ffffff;
             --text-accent: #dacfb7;
-            --menu-item-hover: #b12131; /* Rojo más claro para hover */
+            --menu-item-hover: #b12131; 
         }
 
         body { height: 100%; overflow: hidden; }
 
-        /* ---------------------------------------------------- */
-        /* --- Contenido Principal (MAIN CONTENT) --- */
-        /* ---------------------------------------------------- */
         .main-content { height: calc(100dvh - 60px); display: flex; flex-direction: column; overflow: hidden; transition: margin-left 0.3s ease;}
-
         .contenido { flex-grow: 1; padding: 20px 20px; overflow-y: auto;}
 
-        /* Estilos principales para el contenido de la administración */
         .container_admin {
             background-color: white;
             box-shadow: 0 0 50px 10px rgba(0, 0, 0, 0.3);
@@ -43,18 +37,15 @@
             box-shadow: 0 2px 4px rgba(0,0,0,0.1);
         }
         .card-header-custom {
-            background-color: #981a28; /* Color principal del diseño */
+            background-color: #981a28; 
             color: white;
             padding: 10px 15px;
-            border-bottom: 3px solid #981a28; /* Color de acento */
+            border-bottom: 3px solid #981a28; 
             border-radius: 5px 5px 0 0;
             font-weight: bold;
         }
-        .card-body-custom {
-            padding: 15px;
-        }
+        .card-body-custom { padding: 15px; }
 
-        /* Estilos para el botón Guardar */
         .btn-custom-success {
             text-decoration: none;
             color: white;
@@ -65,61 +56,23 @@
             border: none;
             cursor: pointer;
         }
-        .btn-custom-success:hover {
-            background-color: #274e13;
-        }
+        .btn-custom-success:hover { background-color: #274e13; }
         
-        .form-label-custom {
-            display: block;
-            margin-bottom: 5px;
-            font-weight: bold;
-        }
-
-        .form-control {
+        .form-label-custom { display: block; margin-bottom: 5px; font-weight: bold; }
+        .form-control, .form-control-custom {
             width: 100%;
             padding: 8px;
-            margin-bottom: 10px;
             border: 1px solid #ccc;
             border-radius: 4px;
             box-sizing: border-box;
         }
 
-        .form-control-custom {
-            width: 100%;
-            padding: 8px;
-            margin-bottom: 10px;
-            border: 1px solid #ccc;
-            border-radius: 4px;
-            box-sizing: border-box;
-        }
-        textarea.form-control-custom {
-            resize: vertical;
-        }
-
-        /* Estilos para la tabla */
-        .table-custom {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 0px;
-            color: #333; /* Color de texto para la tabla */
-        }
-        .table-custom thead tr {
-            background-color: #ddd; /* Color claro del diseño */
-        }
-        .table-custom th, .table-custom td {
-            padding: 10px;
-            text-align: left;
-            border-bottom: 1px solid #eee;
-        }
-        .table-custom tbody tr:nth-child(odd) {
-            background-color: #F8F8F8;
-        }
-        .table-custom tbody tr:nth-child(even) {
-            background-color: #EEEEEE;
-        }
-        .table-custom tbody tr:hover {
-            background-color: #e0e0e0;
-        }
+        .table-custom { width: 100%; border-collapse: collapse; margin-top: 0px; color: #333; }
+        .table-custom thead tr { background-color: #ddd; }
+        .table-custom th, .table-custom td { padding: 10px; text-align: left; border-bottom: 1px solid #eee; }
+        .table-custom tbody tr:nth-child(odd) { background-color: #F8F8F8; }
+        .table-custom tbody tr:nth-child(even) { background-color: #EEEEEE; }
+        .table-custom tbody tr:hover { background-color: #e0e0e0; }
 
         .btn-toggle-disponible {
             padding: 5px 10px;
@@ -130,20 +83,11 @@
             font-weight: bold;
             transition: background-color 0.2s;
         }
-        .btn-disponible-true {
-            background-color: #4CAF50; /* Verde */
-        }
-        .btn-disponible-true:hover {
-            background-color: #38761d;
-        }
-        .btn-disponible-false {
-            background-color: #f44336; /* Rojo */
-        }
-        .btn-disponible-false:hover {
-            background-color: #b12131;
-        }
+        .btn-disponible-true { background-color: #4CAF50; }
+        .btn-disponible-true:hover { background-color: #38761d; }
+        .btn-disponible-false { background-color: #f44336; }
+        .btn-disponible-false:hover { background-color: #b12131; }
 
-        /* Estilos para el campo de Ingredientes Dinámicos */
         .ingrediente-item {
             display: flex;
             align-items: center;
@@ -154,12 +98,6 @@
             border-radius: 4px;
             background-color: #f9f9f9;
         }
-        .ingrediente-item select, .ingrediente-item input {
-            flex-grow: 1;
-            padding: 8px;
-            border: 1px solid #ccc;
-            border-radius: 4px;
-        }
         .btn-remover {
             background-color: #f44336;
             color: white;
@@ -169,12 +107,10 @@
             cursor: pointer;
             transition: background-color 0.2s;
         }
-        .btn-remover:hover {
-            background-color: #b12131;
-        }
+        .btn-remover:hover { background-color: #b12131; }
 
         .btn-custom-danger {
-            background-color: #f44336; /* Rojo */
+            background-color: #f44336;
             color: white;
             padding: 10px 15px;
             border: none;
@@ -183,21 +119,9 @@
             font-weight: bold;
             transition: background-color 0.2s;
         }
-
-        .btn-custom-danger:hover {
-            background-color: #d32f2f;
-            color: white;
-        }
-
+        .btn-custom-danger:hover { background-color: #d32f2f; color: white; }
+        .btn-custom-edit { background-color: #007bff; color: white; padding: 5px 10px; border-radius: 5px; text-decoration: none; font-weight: bold; display: inline-block; margin-right: 5px; border: none; cursor: pointer;}
         .btn-custom-edit:hover { background-color: #0056b3; }
-        .btn-custom-edit { background-color: #007bff; }
-
-        .card-custom {
-            border: 1px solid #ddd;
-            border-radius: 5px;
-            margin-bottom: 20px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        }
     </style>
 {% endblock %}
 
@@ -210,77 +134,53 @@
                 <div class="container_admin">
                     <h1 style="color: #981a28; margin-bottom: 20px;">Administración de Productos</h1>
 
-                    <div class="toast-container position-fixed top-0 end-0 p-4" style="z-index: 1080;">
-                        {% if messages %}
-                            {% for message in messages %}
-                                <div class="alert alert-{% if message.tags == 'error' %}danger{% else %}{{ message.tags }}{% endif %} alert-dismissible fade show shadow-lg pe-auto" role="alert">
-                                    <div class="d-flex align-items-center">
-                                        <i class="fa {% if message.tags == 'error' %}fa-exclamation-circle{% else %}fa-check-circle{% endif %} me-2"></i>
-                                        <span>{{ message }}</span>
-                                    </div>
-                                    <button type="button" class="btn-close shadow-none" data-bs-dismiss="alert" aria-label="Close"></button>
-                                </div>
-                            {% endfor %}
-                        {% endif %}
-                    </div>
+                    <!-- Contenedor de Notificaciones Dinámicas -->
+                    <div id="toast-container" class="position-fixed top-0 end-0 p-4" style="z-index: 1080;"></div>
 
+                    <!-- Formulario de Producto (Alta y Edición) -->
                     <div class="card-custom">
-                        <div class="card-header-custom">
-                            {% if platillo_a_editar %}Editar Producto: {{ platillo_a_editar.nombre }}{% else %}Agregar Nuevo Producto{% endif %}
-                        </div>
+                        <div id="form-card-header" class="card-header-custom">Agregar Nuevo Producto</div>
                         <div class="card-body-custom">
-                            <form method="post" action="{% if platillo_a_editar %}{% url 'editar_platillo' platillo_a_editar.idProductoMenu %}{% else %}{% url 'admin_platillos' %}{% endif %}">
-                                {% csrf_token %}
+                            <form id="form-producto" onsubmit="guardarProducto(event)">
                                 <div style="display: flex; flex-wrap: wrap; gap: 15px;">
                                     <div style="flex: 1 1 40%; min-width: 200px;">
                                         <label for="nombre" class="form-label-custom">Nombre</label>
-                                        <input type="text" class="form-control-custom" id="nombre" name="nombre" required autocomplete="off" value="{% if platillo_a_editar %}{{ platillo_a_editar.nombre }}{% endif %}">
+                                        <input type="text" class="form-control-custom" id="nombre" required autocomplete="off">
                                     </div>
                                     <div style="flex: 1 1 30%; min-width: 200px;">
                                         <label for="precio" class="form-label-custom">Precio (C$)</label>
-                                        <input type="number" step="1" class="form-control-custom" id="precio" name="precio" min="0" required value="{% if platillo_a_editar %}{{ platillo_a_editar.precio }}{% endif %}">
+                                        <input type="number" step="1" class="form-control-custom" id="precio" min="0" required>
                                     </div>
                                     <div style="flex: 1 1 25%; min-width: 200px;">
                                         <label for="categoria" class="form-label-custom">Categoría</label>
-                                        <input list="categorias-list" class="form-control-custom" id="categoria" name="categoria" required value="{% if platillo_a_editar %}{{ platillo_a_editar.categoria }}{% endif %}">
-                                        <datalist id="categorias-list">
-                                            {% for cat in categorias %}
-                                                <option value="{{ cat }}">
-                                            {% endfor %}
-                                        </datalist>
+                                        <input list="categorias-list" class="form-control-custom" id="categoria" required>
+                                        <datalist id="categorias-list"></datalist>
+
+                                        <datalist id="articulos-inventario-list"></datalist>
                                     </div>
 
                                     <div style="flex: 1 1 100%;">
                                         <label for="tiempoPreparacion" class="form-label-custom">Tiempo de preparación (segundos)</label>
-                                        <input type="number" step="10" class="form-control-custom" id="tiempoPreparacion" name="tiempoPreparacion" min="0" required value="{% if platillo_a_editar %}{{ platillo_a_editar.tiempoPreparacion }}{% endif %}">
+                                        <input type="number" step="1" class="form-control-custom" id="tiempoPreparacion" min="0" required>
                                     </div>
 
                                     <div style="flex: 1 1 100%; border-top: 1px dashed #ccc; padding-top: 15px;">
                                         <label class="form-label-custom" style="margin-bottom: 10px;">Artículos de Inventario</label>
-                                        
-                                        <div id="ingredientes-container">
-                                        </div>
-
+                                        <div id="ingredientes-container"></div>
                                         <button type="button" class="btn-custom-success" onclick="agregarIngrediente()">
                                             + Añadir Ingrediente
                                         </button>
                                     </div>
                                     
                                     <div style="flex: 1 1 100%; margin-top: 20px;">
-                                        {% if platillo_a_editar %}
                                         <div style="display: flex; gap: 5px;">
-                                            <button type="submit" class="btn-custom-success" style="flex-grow: 1;">
-                                                Actualizar Producto
+                                            <button type="submit" id="btn-submit-form" class="btn-custom-success" style="flex-grow: 1;">
+                                                Guardar Producto
                                             </button>
-                                            <a href="{% url 'admin_platillos' %}" class="btn-custom-danger" style="text-align: center; text-decoration: none; padding: 9px 20px; font-weight: normal;">
+                                            <button type="button" id="btn-cancelar-edicion" class="btn-custom-danger" style="display: none; padding: 9px 20px; font-weight: normal;" onclick="cancelarEdicion()">
                                                 Cancelar
-                                            </a>
+                                            </button>
                                         </div>
-                                    {% else %}
-                                        <button type="submit" class="btn-custom-success" style="width: 100%;">
-                                            Guardar Producto
-                                        </button>
-                                    {% endif %}
                                     </div>
                                 </div>
                             </form>
@@ -289,6 +189,7 @@
 
                     <h2 style="color: #981a28; margin-top: 30px; border-bottom: 2px solid #981a28; padding-bottom: 5px; margin-bottom: 10px;">Listado de Productos</h2>
                     
+                    <!-- Buscador -->
                     <div style="margin-bottom: 20px;">
                         <label for="buscador" style="font-weight: bold; display: block; margin-bottom: 5px;">Buscar producto:</label>
                         <div style="position: relative; display: flex; align-items: center;">
@@ -299,7 +200,7 @@
                                 placeholder="Escribe el nombre del producto..." 
                                 style="padding-left: 35px; padding-right: 35px; margin-bottom: 0;" 
                                 autocomplete="off"
-                                onkeyup="filtrarProductos()">
+                                onkeyup="filtrarProductosLocal()">
                             <span id="btn-limpiar" onclick="limpiarBusqueda()" 
                                 style="position: absolute; right: 10px; color: #888; cursor: pointer; display: none;">
                                 <i class="fas fa-times-circle"></i>
@@ -307,6 +208,7 @@
                         </div>
                     </div>
 
+                    <!-- Tabla del CRUD -->
                     <div class="card-custom" style="padding: 0; overflow-x: auto;">
                         <table class="table-custom">
                             <thead>
@@ -317,46 +219,18 @@
                                     <th>Precio</th>
                                     <th>Tiempo de preparación</th>
                                     <th>Disponibilidad</th>
-                                    <th></th>
+                                    <th>Acciones</th>
                                 </tr>
                             </thead>
                             <tbody id="tabla-productos-body">
-                                {% for platillo in platillos %}
-                                <tr class="fila-producto">
-                                    <td>{{ platillo.idProductoMenu }}</td>
-                                    <td>{{ platillo.categoria|default:"N/A" }}</td>
-                                    <td class="nombre-producto">{{ platillo.nombre }}</td>
-                                    <td>C$ {{ platillo.precio|floatformat:2 }}</td>
-                                    <td>{{ platillo.tiempoPreparacion }}s</td>
-                                    <td>
-                                        <form method="post" action="{% url 'toggle_disponibilidad_platillo' platillo.idProductoMenu %}" style="margin: 0;">
-                                            {% csrf_token %}
-                                            <button type="submit" 
-                                                    class="btn-toggle-disponible {% if platillo.disponible %}btn-disponible-true{% else %}btn-disponible-false{% endif %}">
-                                                {% if platillo.disponible %}Disponible{% else %}No Disponible{% endif %}
-                                            </button>
-                                        </form>
-                                    </td>
-                                    <td style="white-space: nowrap;">
-                                        <a href="{% url 'editar_platillo' platillo.idProductoMenu %}" class='btn-custom-edit' style="color: white; padding: 5px 10px; border-radius: 5px; text-decoration: none; font-weight: bold; display: inline-block; margin-right: 5px;">
-                                            <i class="fas fa-edit"></i> Editar
-                                        </a>
-                                        <button type="button" class="btn-custom-danger" style="padding: 5px 10px;" 
-                                            onclick="prepararModalEliminarPlatillo('{{ platillo.idProductoMenu }}', '{{ platillo.nombre|escapejs }}', '{% url 'eliminar_platillo' platillo.idProductoMenu %}')">
-                                            <i class="fas fa-trash-alt"></i> Eliminar
-                                        </button>
-                                    </td>
-                                </tr>
-                                {% empty %}
-                                <tr>
-                                    <td colspan="6" style="text-align: center;">No hay productos registrados.</td>
-                                </tr>
-                                {% endfor %}
+                                <!-- Se llena dinámicamente con JS -->
                             </tbody>
                         </table>
                     </div>
                 </div>
             </div>
+
+            <!-- Modal de Confirmación de Eliminación -->
             <div class="modal fade" id="modalEliminarPlatillo" tabindex="-1" aria-labelledby="modalEliminarPlatilloLabel" aria-hidden="true">
                 <div class="modal-dialog modal-dialog-centered">
                     <div class="modal-content">
@@ -374,11 +248,7 @@
                         </div>
                         <div class="modal-footer">
                             <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                            <form id="form-eliminar-platillo" method="POST" action="">
-                                {% csrf_token %}
-                                <button type="submit" class="btn"
-                                style="background-color: var(--primary-color); color: white;">Sí, Eliminar Producto</button>
-                            </form>
+                            <button type="button" class="btn" style="background-color: var(--primary-color); color: white;" onclick="ejecutarEliminacionPlatillo()">Sí, Eliminar Producto</button>
                         </div>
                     </div>
                 </div>
@@ -389,156 +259,346 @@
 
 {% block extra_js %}
     <script>
-        function filtrarProductos() {
-            const input = document.getElementById('buscador');
-            const btnLimpiar = document.getElementById('btn-limpiar');
-            const tbody = document.querySelector('.table-custom tbody');
-            const filtro = input.value.toLowerCase();
-            const filas = document.querySelectorAll('.fila-producto');
+        // --- Estado Global de la Interfaz ---
+        let productosData = [];
+        let articulosInventarioData = [];
+        let idProductoEditando = null;
+        let idProductoEliminarTarget = null;
+        
+        // CSRF Token requerido por Django para llamadas mutables (POST, PUT, DELETE)
+        const csrfToken = '{{ csrf_token }}';
 
-            btnLimpiar.style.display = filtro.length > 0 ? "block" : "none";
+        // --- Endpoints de la API REST ---
+        const ENDPOINTS = {
+            platillos: '/api/platillos-admin/',
+            categorias: '/api/platillos-admin/categorias/',
+            articulos: '/api/articulos-inventario/'
+        };
 
-            let coincidencias = 0;
+        document.addEventListener('DOMContentLoaded', function() {
+            inicializarApp();
+        });
 
-            filas.forEach(fila => {
-                const nombreEmpleado = fila.querySelector('.nombre-producto').textContent.toLowerCase();
-                
-                if (nombreEmpleado.includes(filtro)) {
-                    fila.style.display = "";
-                    coincidencias++;
-                } else {
-                    fila.style.display = "none";
-                }
-            });
+        async function inicializarApp() {
+            const container = document.getElementById('ingredientes-container');
+            if (!idProductoEditando && container.children.length === 0) {
+                agregarIngrediente();
+            }
 
-            const filaVaciaPrevia = document.getElementById('empty-results-row');
-            if (filaVaciaPrevia) filaVaciaPrevia.remove();
+            await cargarArticulosInventario();
+            await cargarCategorias();
+            await cargarProductos();
+        }
 
-            if (coincidencias === 0) {
-                const emptyRow = document.createElement('tr');
-                emptyRow.id = 'empty-results-row';
-                emptyRow.innerHTML = `
-                    <td colspan="7">
-                        <div class="empty-results" style="padding: 20px; text-align: center; color: #666;">
-                            <i class="fas fa-ban fa-2x"></i>
-                            <p class="mb-0">No se encontraron productos que coincidan con "<span>${input.value}</span>"</p>
-                        </div>
-                    </td>`;
-                tbody.appendChild(emptyRow);
+        // --- Funciones de Consumo de API (Fetch) ---
+
+        async function cargarProductos() {
+            try {
+                const response = await fetch(ENDPOINTS.platillos);
+                if (!response.ok) throw new Error("Error al obtener los productos.");
+                productosData = await response.json();
+                renderizarTablaProductos(productosData);
+            } catch (err) {
+                mostrarAlerta(err.message, 'danger');
             }
         }
 
-        function limpiarBusqueda() {
-            const input = document.getElementById('buscador');
-            input.value = ""; // Vaciar input
-            filtrarProductos(); // Resetear el filtrado para mostrar todo
-            input.focus(); // Devolver el foco al buscador
+        async function cargarArticulosInventario() {
+            try {
+                const response = await fetch(ENDPOINTS.articulos);
+                if (!response.ok) throw new Error("Error al obtener artículos de inventario.");
+                articulosInventarioData = await response.json();
+                
+                // Poblar el datalist global
+                const datalist = document.getElementById('articulos-inventario-list');
+                datalist.innerHTML = articulosInventarioData.map(art => 
+                    `<option value="${art.nombre} (${art.unidad_de_medida})" data-id="${art.idArticuloInventario}"></option>`
+                ).join('');
+            } catch (err) {
+                mostrarAlerta(err.message, 'danger');
+            }
         }
-        
-        // --- Funciones para Ingredientes Dinámicos ---
-        
-        // 1. Declarar los ingredientes iniciales si existen (para edición)
-        {% if ingredientes_actuales %}
-        const ingredientes_iniciales = [
-            {% for ingrediente in ingredientes_actuales %}
-            {
-                id: '{{ ingrediente.idArticuloInventario.idArticuloInventario }}',
-                // CAMBIO: Se agrega la unidad de medida para el valor del input y se cumple el formato de edición
-                nombre: '{{ ingrediente.idArticuloInventario.nombre|escapejs }} ({{ ingrediente.idArticuloInventario.unidad_de_medida|escapejs }})', 
-                cantidad: '{{ ingrediente.cantidad_usada }}',
-                // NUEVO: Se pasa la unidad por separado para establecer el placeholder inicial
-                unidad: '{{ ingrediente.idArticuloInventario.unidad_de_medida|escapejs }}' 
-            },
-            {% endfor %}
-        ];
-        {% else %}
-        const ingredientes_iniciales = [];
-        {% endif %}
-        // FIN: Declarar ingredientes iniciales
 
-        // Función para crear un nuevo campo de ingrediente
-        // CAMBIO: Se agrega 'initialUnidad' al argumento
+        async function cargarCategorias() {
+            try {
+                const response = await fetch(ENDPOINTS.categorias);
+                if (!response.ok) throw new Error("Error al obtener las categorías.");
+                const categorias = await response.json();
+                const datalist = document.getElementById('categorias-list');
+                datalist.innerHTML = categorias.map(cat => `<option value="${cat}">`).join('');
+            } catch (err) {
+                console.error("No se pudieron cargar las categorías previas:", err);
+            }
+        }
+
+        // --- Renderizadores del DOM ---
+
+        function renderizarTablaProductos(lista) {
+            const tbody = document.getElementById('tabla-productos-body');
+            tbody.innerHTML = '';
+
+            if (lista.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="7" style="text-align: center;">No hay productos registrados.</td></tr>`;
+                return;
+            }
+
+            lista.forEach(p => {
+                const tr = document.createElement('tr');
+                tr.className = 'fila-producto';
+                tr.innerHTML = `
+                    <td>${p.idProductoMenu}</td>
+                    <td>${p.categoria || 'N/A'}</td>
+                    <td class="nombre-producto">${p.nombre}</td>
+                    <td>C$ ${parseFloat(p.precio).toFixed(2)}</td>
+                    <td>${p.tiempoPreparacion}s</td>
+                    <td>
+                        <button type="button" class="btn-toggle-disponible ${p.disponible ? 'btn-disponible-true' : 'btn-disponible-false'}" onclick="toggleDisponibilidad(${p.idProductoMenu})">
+                            ${p.disponible ? 'Disponible' : 'No Disponible'}
+                        </button>
+                    </td>
+                    <td style="white-space: nowrap;">
+                        <button type="button" class="btn-custom-edit" onclick="cargarFormularioEdicion(${p.idProductoMenu})">
+                            <i class="fas fa-edit"></i> Editar
+                        </button>
+                        <button type="button" class="btn-custom-danger" style="padding: 5px 10px;" onclick="prepararModalEliminar('${p.idProductoMenu}', '${p.nombre.replace(/'/g, "\\'")}')">
+                            <i class="fas fa-trash-alt"></i> Eliminar
+                        </button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        // --- Acciones de Formulario (Guardar / Editar / Cancelar) ---
+
+        async function guardarProducto(event) {
+            event.preventDefault();
+
+            // Construir el payload JSON mapeado según la estructura requerida por el Serializer
+            const ingredientesItems = document.querySelectorAll('.ingrediente-item');
+            const ingredientesPayload = [];
+
+            for (let item of ingredientesItems) {
+                const hiddenInput = item.querySelector('input[type="hidden"]');
+                const qtyInput = item.querySelector('input[type="number"]');
+                
+                if (!hiddenInput.value || !qtyInput.value) {
+                    mostrarAlerta("Por favor, asegúrese de seleccionar ingredientes válidos de la lista.", "warning");
+                    return;
+                }
+                ingredientesPayload.push({
+                    idArticuloInventario: parseInt(hiddenInput.value),
+                    cantidad_usada: parseFloat(qtyInput.value)
+                });
+            }
+
+            const payload = {
+                nombre: document.getElementById('nombre').value,
+                precio: parseFloat(document.getElementById('precio').value),
+                categoria: document.getElementById('categoria').value,
+                tiempoPreparacion: parseInt(document.getElementById('tiempoPreparacion').value),
+                disponible: true, // Por defecto en creaciones
+                ingredientes: ingredientesPayload
+            };
+
+            const url = idProductoEditando ? `${ENDPOINTS.platillos}${idProductoEditando}/` : ENDPOINTS.platillos;
+            const metodo = idProductoEditando ? 'PUT' : 'POST';
+
+            try {
+                const response = await fetch(url, {
+                    method: metodo,
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': csrfToken
+                    },
+                    body: JSON.stringify(payload)
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    // Manejar errores de validación específicos enviados desde DRF
+                    if(data.nombre) throw new Error(data.nombre);
+                    if(data.detail) throw new Error(data.detail);
+                    throw new Error("Ocurrió un error al procesar el platillo.");
+                }
+
+                mostrarAlerta(`Producto "${payload.nombre}" guardado con éxito.`, "success");
+                resetearFormulario();
+                inicializarApp();
+            } catch (err) {
+                mostrarAlerta(err.message, "danger");
+            }
+        }
+
+        function cargarFormularioEdicion(id) {
+            const producto = productosData.find(p => p.idProductoMenu === id);
+            if (!producto) return;
+
+            idProductoEditando = id;
+            document.getElementById('form-card-header').textContent = `Editar Producto: ${producto.nombre}`;
+            document.getElementById('btn-submit-form').textContent = "Actualizar Producto";
+            document.getElementById('btn-cancelar-edicion').style.display = "inline-block";
+
+            // Llenar campos de texto
+            document.getElementById('nombre').value = producto.nombre;
+            document.getElementById('precio').value = producto.precio;
+            document.getElementById('categoria').value = producto.categoria;
+            document.getElementById('tiempoPreparacion').value = producto.tiempoPreparacion;
+
+            // Cargar ingredientes asociados devueltos en la relación anidada
+            const container = document.getElementById('ingredientes-container');
+            container.innerHTML = '';
+
+            if (producto.ingredientes && producto.ingredientes.length > 0) {
+                producto.ingredientes.forEach(ing => {
+                    agregarIngrediente(
+                        ing.idArticuloInventario, 
+                        `${ing.nombre} (${ing.unidad_de_medida})`, 
+                        ing.cantidad_usada, 
+                        ing.unidad_de_medida
+                    );
+                });
+            } else {
+                agregarIngrediente();
+            }
+            
+            document.getElementById('form-card-header').scrollIntoView({ behavior: 'smooth' });
+        }
+
+        function cancelarEdicion() {
+            resetearFormulario();
+        }
+
+        function resetearFormulario() {
+            idProductoEditando = null;
+            document.getElementById('form-producto').reset();
+            document.getElementById('form-card-header').textContent = "Agregar Nuevo Producto";
+            document.getElementById('btn-submit-form').textContent = "Guardar Producto";
+            document.getElementById('btn-cancelar-edicion').style.display = "none";
+            document.getElementById('ingredientes-container').innerHTML = '';
+            agregarIngrediente();
+        }
+
+        // --- Acciones de Cambio de Estado y Borrado de la API ---
+
+        async function toggleDisponibilidad(id) {
+            try {
+                const response = await fetch(`${ENDPOINTS.platillos}${id}/toggle-disponibilidad/`, {
+                    method: 'POST',
+                    headers: { 'X-CSRFToken': csrfToken }
+                });
+                const data = await response.json();
+                if (!response.ok) throw new Error(data.detail || "No se pudo cambiar el estado.");
+                
+                mostrarAlerta(data.detail, "success");
+                cargarProductos();
+            } catch (err) {
+                mostrarAlerta(err.message, "danger");
+            }
+        }
+
+        function prepararModalEliminar(id, nombre) {
+            idProductoEliminarTarget = id;
+            document.getElementById('modal-id-platillo-texto').textContent = id;
+            document.getElementById('modal-nombre-platillo-texto').textContent = nombre;
+            
+            const modal = new bootstrap.Modal(document.getElementById('modalEliminarPlatillo'));
+            modal.show();
+        }
+
+        async function ejecutarEliminacionPlatillo() {
+            if (!idProductoEliminarTarget) return;
+            
+            try {
+                const response = await fetch(`${ENDPOINTS.platillos}${idProductoEliminarTarget}/`, {
+                    method: 'DELETE',
+                    headers: { 'X-CSRFToken': csrfToken }
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.detail || "Error al intentar eliminar el elemento.");
+                }
+
+                mostrarAlerta(data.detail, "success");
+                
+                // Cerrar modal programáticamente
+                const modalElement = document.getElementById('modalEliminarPlatillo');
+                const modalInstance = bootstrap.Modal.getInstance(modalElement);
+                if (modalInstance) modalInstance.hide();
+
+                idProductoEliminarTarget = null;
+                inicializarApp();
+            } catch (err) {
+                // Captura el mensaje detallado de ProtectedError enviado por la API
+                mostrarAlerta(err.message, "danger");
+                const modalElement = document.getElementById('modalEliminarPlatillo');
+                const modalInstance = bootstrap.Modal.getInstance(modalElement);
+                if (modalInstance) modalInstance.hide();
+            }
+        }
+
+        // --- Inserción Dinámica de Filas de Ingredientes ---
+
         function agregarIngrediente(initialId = '', initialNombre = '', initialCantidad = '', initialUnidad = '') { 
             const container = document.getElementById('ingredientes-container');
             const wrapper = document.createElement('div');
             wrapper.className = 'ingrediente-item';
             
-            // 1. Selector de Artículo de Inventario (con Datalist para filtro)
             const inputArticulo = document.createElement('input');
             inputArticulo.type = 'text';
             inputArticulo.className = 'form-control-custom';
             inputArticulo.setAttribute('list', 'articulos-inventario-list');
             inputArticulo.setAttribute('placeholder', 'Buscar Artículo de Inventario');
             inputArticulo.setAttribute('required', 'required');
-            inputArticulo.setAttribute('data-id-target', 'idArticuloInventario[]');
             
-            // 2. Input oculto para enviar el ID real del artículo seleccionado
             const hiddenInput = document.createElement('input');
             hiddenInput.type = 'hidden';
-            hiddenInput.name = 'idArticuloInventario[]';
             hiddenInput.setAttribute('required', 'required'); 
             
-            // 3. Input para la Cantidad Usada
             const inputCantidad = document.createElement('input');
             inputCantidad.type = 'number';
-            inputCantidad.step = '0.1';
-            inputCantidad.min = '0.1';
-            inputCantidad.name = 'cantidad_usada[]';
+            inputCantidad.step = '0.01';
+            inputCantidad.min = '0.01';
             inputCantidad.className = 'form-control-custom';
-            // CAMBIO: Se elimina el placeholder estático. Se asignará dinámicamente.
             inputCantidad.setAttribute('required', 'required');
             
-            // NUEVO: Función para establecer el placeholder de la cantidad
             function setCantidadPlaceholder(unidad) {
                 inputCantidad.setAttribute('placeholder', unidad ? `Cantidad usada (${unidad})` : 'Cantidad usada');
             }
 
-            // 4. Botón de Remover
             const btnRemover = document.createElement('button');
             btnRemover.type = 'button';
             btnRemover.className = 'btn-remover';
             btnRemover.textContent = 'X';
             btnRemover.style.padding = '5px 12px';
-            btnRemover.style.marginBottom = '10px';
             btnRemover.onclick = function() {
                 container.removeChild(wrapper);
             };
 
-            // 5. Lógica para manejar la selección del datalist y actualizar el hidden input y el placeholder
             inputArticulo.addEventListener('input', function() {
-                const datalist = document.getElementById('articulos-inventario-list');
-                const selectedOption = Array.from(datalist.options).find(option => option.value === this.value);
+                const options = document.getElementById('articulos-inventario-list').options;
+                const selectedOption = Array.from(options).find(option => option.value === this.value);
                 
                 if (selectedOption) {
-                    // Si se selecciona una opción válida, actualiza el valor del input oculto
                     hiddenInput.value = selectedOption.getAttribute('data-id');
-                    
-                    // LÓGICA CLAVE: Extraer la unidad de medida del valor seleccionado: "Nombre (Unidad)"
                     const match = this.value.match(/\(([^)]+)\)$/); 
                     const unidad = match ? match[1] : '';
-                    setCantidadPlaceholder(unidad); // Establece el placeholder con la unidad
-                    
+                    setCantidadPlaceholder(unidad);
                 } else {
-                    // Si el texto no coincide con una opción, vacía el input oculto y el placeholder
                     hiddenInput.value = '';
                     setCantidadPlaceholder(''); 
                 }
             });
 
-            // 6. Asignar valores iniciales para edición
+            // Seteo de los estados iniciales
             hiddenInput.value = initialId;
-            inputArticulo.value = initialNombre; // Este valor ahora incluye la unidad
+            inputArticulo.value = initialNombre; 
             inputCantidad.value = initialCantidad;
-            
-            // NUEVO: Asignar placeholder inicial si se está editando
-            if (initialUnidad) {
-                setCantidadPlaceholder(initialUnidad);
-            } else {
-                setCantidadPlaceholder(''); // Placeholder por defecto
-            }
-            // FIN: Asignar valores iniciales
+            setCantidadPlaceholder(initialUnidad);
 
-            // Ensamblar el elemento
             wrapper.appendChild(inputArticulo);
             wrapper.appendChild(hiddenInput);
             wrapper.appendChild(inputCantidad);
@@ -546,45 +606,46 @@
             container.appendChild(wrapper);
         }
 
-        // 7. Ejecutar la carga de ingredientes iniciales
-        document.addEventListener('DOMContentLoaded', function() {
-            if (ingredientes_iniciales.length > 0) {
-                // Limpiar y cargar los iniciales
-                const container = document.getElementById('ingredientes-container');
-                container.innerHTML = ''; // Asegurar que está limpio
+        // --- Controladores Locales de Búsqueda y Alertas ---
 
-                ingredientes_iniciales.forEach(function(ingrediente) {
-                    // CAMBIO: Se añade ingrediente.unidad al llamado de la función
-                    agregarIngrediente(ingrediente.id, ingrediente.nombre, ingrediente.cantidad, ingrediente.unidad);
-                });
-            } 
-            // Si no hay ingredientes iniciales (no estamos editando), asegurarse de que haya al menos un campo vacío 
-            else if (document.getElementById('ingredientes-container').children.length === 0) {
-                agregarIngrediente(); 
-            }
-        });
-        // FIN: Carga de ingredientes iniciales
-
-    </script>
-
-    <datalist id="articulos-inventario-list">
-        {% for articulo in articulos_inventario %}
-            <option value="{{ articulo.nombre }} ({{ articulo.unidad_de_medida }})" data-id="{{ articulo.idArticuloInventario }}">
-        {% endfor %}
-    </datalist>
-
-    <script>
-        function prepararModalEliminarPlatillo(idPlatillo, nombrePlatillo, urlEliminar) {
-            // 1. Actualizar los textos dentro del modal
-            document.getElementById('modal-id-platillo-texto').textContent = idPlatillo;
-            document.getElementById('modal-nombre-platillo-texto').textContent = nombrePlatillo;
+        function filtrarProductosLocal() {
+            const input = document.getElementById('buscador');
+            const btnLimpiar = document.getElementById('btn-limpiar');
+            const filtro = input.value.toLowerCase();
             
-            // 2. Actualizar la acción (action) del formulario dentro del modal
-            document.getElementById('form-eliminar-platillo').action = urlEliminar;
+            btnLimpiar.style.display = filtro.length > 0 ? "block" : "none";
+
+            const filtrados = productosData.filter(p => p.nombre.toLowerCase().includes(filtro));
+            renderizarTablaProductos(filtrados);
+        }
+
+        function limpiarBusqueda() {
+            const input = document.getElementById('buscador');
+            input.value = "";
+            document.getElementById('btn-limpiar').style.display = "none";
+            renderizarTablaProductos(productosData);
+            input.focus();
+        }
+
+        function mostrarAlerta(mensaje, tipo) {
+            const container = document.getElementById('toast-container');
+            const alertHtml = document.createElement('div');
+            alertHtml.className = `alert alert-${tipo === 'error' ? 'danger' : tipo} alert-dismissible fade show shadow-lg`;
+            alertHtml.role = 'alert';
+            alertHtml.innerHTML = `
+                <div class="d-flex align-items-center">
+                    <i class="fa ${tipo === 'danger' ? 'fa-exclamation-circle' : 'fa-check-circle'} me-2"></i>
+                    <span>${mensaje}</span>
+                </div>
+                <button type="button" class="btn-close shadow-none" data-bs-dismiss="alert" aria-label="Close"></button>
+            `;
+            container.appendChild(alertHtml);
             
-            // 3. Mostrar el modal usando la API de Bootstrap 5
-            var modalEliminar = new bootstrap.Modal(document.getElementById('modalEliminarPlatillo'));
-            modalEliminar.show();
+            // Auto-eliminar alerta a los 5 segundos
+            setTimeout(() => {
+                alertHtml.classList.remove('show');
+                setTimeout(() => alertHtml.remove(), 150);
+            }, 5000);
         }
     </script>
 {% endblock %}

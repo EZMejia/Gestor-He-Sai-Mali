@@ -184,12 +184,9 @@
         .modal-input-group {
             margin-bottom: 15px;
         }
-        /* Fin de Estilos del Modal/Overlay */
         
         .btn-custom-edit:hover { background-color: #0056b3; }
         .btn-custom-edit { background-color: #007bff; }
-
-        /* TODO: agregar por perdida en ingredientes */
     </style>
 {% endblock %}
 
@@ -226,7 +223,7 @@
                                     </h5>
                                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
                                 </div>
-                                <form method="POST" action="{% url 'comprar_ingrediente' %}">
+                                <form id="form-comprar-ingrediente">
                                     {% csrf_token %}
                                     <div class="modal-body" style="color: #333;">
                                         <input type="hidden" id="idIngredienteInput" name="id_ingrediente" required>
@@ -235,9 +232,6 @@
                                             <label for="idProveedorInput" class="form-label" style="font-weight: bold;">Proveedor:</label>
                                             <select class="form-select" id="idProveedorInput" name="id_proveedor_fk" required>
                                                 <option value="" disabled selected>Seleccione un proveedor...</option>
-                                                {% for proveedor in proveedores %}
-                                                    <option value="{{ proveedor.idProveedor }}">{{ proveedor.nombre }}</option>
-                                                {% endfor %}
                                             </select>
                                         </div>
 
@@ -267,65 +261,57 @@
                             </div>
                         </div>
                     </div>
-                    {# FIN DE MODAL / FORMULARIO FLOTANTE DE COMPRA #}
+                    {# FIN DE MODAL COMPRA #}
 
-                    {# Formulario Agregar Nuevo Ingrediente #}
+                    {# Formulario Agregar/Editar Artículo #}
                     <div class="card-custom">
-                        <div class="card-header-custom">
-                            {% if articulo_a_editar %}Editar Artículo de Inventario: {{ articulo_a_editar.nombre }}{% else %}Agregar Nuevo Artículo de Inventario{% endif %}
+                        <div class="card-header-custom" id="card-header-titulo">
+                            Agregar Nuevo Artículo de Inventario
                         </div>
                         <div class="card-body-custom">
-                            <form method="post" action="{% if articulo_a_editar %}{% url 'editar_ingrediente' articulo_a_editar.idArticuloInventario %}{% else %}{% url 'agregar_ingrediente' %}{% endif %}">
+                            <form id="form-ingrediente">
                                 {% csrf_token %}
+                                
+                                <input type="hidden" id="action-field" value="add">
+                                <input type="hidden" id="idArticulo" value="">
                                 
                                 <div style="flex-grow: 1; min-width: 200px;">
                                     <label for="nombre" class="form-label-custom">Nombre del Artículo:</label>
-                                    <input type="text" name="nombre" id="nombre" class="form-control-custom" required autocomplete="off"
-                                        value="{{ articulo_a_editar.nombre|default:'' }}">
+                                    <input type="text" name="nombre" id="nombre" class="form-control-custom" required autocomplete="off">
                                 </div>
                                 
                                 <div style="flex-grow: 0; min-width: 150px;">
                                     <label for="tipo_articulo" class="form-label-custom">Tipo de Artículo:</label>
                                     <select name="tipo_articulo" id="tipo_articulo" class="form-control-custom" required>
                                         <option value="">Seleccione el Tipo</option>
-                                            <option value="{{ 'Ingrediente' }}"{% if articulo_a_editar.tipoArticulo == 'Ingrediente' %}selected{% endif %}>Ingrediente</option>
-                                            <option value="{{ 'Bebida' }}"{% if articulo_a_editar.tipoArticulo == 'Bebida' %}selected{% endif %}>Bebida</option>
+                                        <option value="Ingrediente">Ingrediente</option>
+                                        <option value="Bebida">Bebida</option>
                                     </select>
                                 </div>
                                 
                                 <div style="flex-grow: 0; min-width: 100px;">
                                     <label for="stock" class="form-label-custom">Stock Inicial:</label>
-                                    <input type="number" step="0.01" min="0" name="stock" id="stock" class="form-control-custom" {% if articulo_a_editar %}disabled{% else %}required{% endif %}>
+                                    <input type="number" step="0.01" min="0" name="stock" id="stock" class="form-control-custom" required>
                                 </div>
                                 
                                 <div style="flex-grow: 0; min-width: 150px;">
                                     <label for="unidad_de_medida" class="form-label-custom">Unidad de Medida (ej. lb, ml, unidad):</label>
-                                    <input type="text" name="unidad_de_medida" id="unidad_de_medida" class="form-control-custom" required autocomplete="off"
-                                        value="{{ articulo_a_editar.unidad_de_medida|default:'' }}">
+                                    <input type="text" name="unidad_de_medida" id="unidad_de_medida" class="form-control-custom" required autocomplete="off">
                                 </div>
                                 
                                 <div style="flex-grow: 1; min-width: 200px;">
                                     <label for="ubicacion" class="form-label-custom">Ubicación:</label>
-                                    <input type="text" name="ubicacion" id="ubicacion" class="form-control-custom" autocomplete="off"
-                                        value="{{ articulo_a_editar.ubicacion|default:'' }}">
+                                    <input type="text" name="ubicacion" id="ubicacion" class="form-control-custom" autocomplete="off">
                                     <small class="form-text-custom">Opcional. Deja en blanco si no aplica.</small>
                                 </div>
                                 
-                                <div style="flex: 1 1 100%;">
-                                    {% if articulo_a_editar %}
-                                        <div style="display: flex; gap: 5px;">
-                                            <button type="submit" class="btn-custom-success" style="flex-grow: 1;">
-                                                Actualizar Artículo
-                                            </button>
-                                            <a href="{% url 'admin_ingredientes' %}" class="btn-custom-danger" style="text-align: center; text-decoration: none; padding: 9px 20px; font-weight: normal;">
-                                                Cancelar
-                                            </a>
-                                        </div>
-                                    {% else %}
-                                        <button type="submit" class="btn-custom-success" style="width: 100%;">
-                                            Guardar Artículo
-                                        </button>
-                                    {% endif %}
+                                <div style="flex: 1 1 100%; display: flex; gap: 5px;">
+                                    <button type="submit" class="btn-custom-success" style="width: 100%;" id="btn-submit-ingrediente">
+                                        Guardar Artículo
+                                    </button>
+                                    <button type="button" class="btn-custom-danger" style="display: none; padding: 9px 20px;" id="btn-cancelar-edicion" onclick="resetFormulario()">
+                                        Cancelar
+                                    </button>
                                 </div>
                             </form>
                         </div>
@@ -367,47 +353,13 @@
                                 </tr>
                             </thead>
                             <tbody id="tabla-articulos-body">
-                                {% for articulo in ingredientes %}
-                                    <tr class="fila-articulo">
-                                        <td>{{ articulo.idArticuloInventario }}</td>
-                                        <td class="nombre-articulo">{{ articulo.nombre }}</td>
-                                        <td>{{ articulo.tipoArticulo|default:"N/A" }}</td>
-                                        <td>{{ articulo.stock }}</td>
-                                        <td>{{ articulo.unidad_de_medida }}</td>
-                                        <td>{{ articulo.ubicacion|default:"-" }}</td> 
-                                        <td style="white-space: nowrap;">
-                                            <button type="button" style="font-weight: bold; padding: 5px 10px;" class="btn-custom-success" 
-                                                onclick="abrirFormularioComprar('{{ articulo.idArticuloInventario }}', '{{ articulo.unidad_de_medida }}', '{{ articulo.nombre }}')">
-                                                <i class="fas fa-shopping-cart"></i> Comprar
-                                            </button>
-                                        </td>
-                                        <td style="white-space: nowrap;">
-                                            <button type="button" style="font-weight: bold; padding: 5px 10px; background-color: #ff9800; color: white; border: none; border-radius: 5px; cursor: pointer; margin-top: 5px; margin-right: 5px;" 
-                                                onclick="abrirFormularioMerma('{{ articulo.idArticuloInventario }}', '{{ articulo.unidad_de_medida }}', '{{ articulo.nombre|escapejs }}')">
-                                                <i class="fas fa-minus-circle"></i> Merma
-                                            </button>
-
-                                            <a href="{% url 'editar_ingrediente' articulo.idArticuloInventario %}" class='btn-custom-edit'
-                                            style="color: white; padding: 5px 10px; border-radius: 5px; text-decoration: none; font-weight: bold; display: inline-block; margin-right: 5px;">
-                                                <i class="fas fa-edit"></i> Editar
-                                            </a>
-                                            <button type="button" class="btn-custom-danger" style="padding: 5px 10px; font-weight: bold;" 
-                                                onclick="prepararModalEliminarIngrediente('{{ articulo.idArticuloInventario }}', '{{ articulo.nombre|escapejs }}', '{% url 'eliminar_ingrediente' articulo.idArticuloInventario %}')">
-                                                <i class="fas fa-trash-alt"></i> Eliminar
-                                            </button>
-                                        </td>
-                                    </tr>
-                                {% empty %}
-                                    <tr>
-                                        <td colspan="7" style="text-align: center;">No hay artículos registrados.</td>
-                                    </tr>
-                                {% endfor %}
                             </tbody>
                         </table>
                     </div>
-                    {# Fin de Listado de Ingredientes / Tabla #}
                 </div>
             </div>
+
+            {# MODAL / FORMULARIO FLOTANTE DE ELIMINACIÓN PURE REST #}
             <div class="modal fade" id="modalEliminarIngrediente" tabindex="-1" aria-labelledby="modalEliminarIngredienteLabel" aria-hidden="true">
                 <div class="modal-dialog modal-dialog-centered">
                     <div class="modal-content">
@@ -417,20 +369,19 @@
                             </h5>
                             <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
                         </div>
-                        <div class="modal-body">
-                            <p>¿Está seguro de que desea eliminar el ingrediente <strong><span id="modal-nombre-ingrediente-texto"></span></strong> (ID: <span id="modal-id-ingrediente-texto"></span>)?</p>
-                            <p class="text-muted" style="font-size: 0.9em;">
-                                Esta acción no se puede deshacer y fallará si el ingrediente forma parte de la receta de algún platillo activo.
-                            </p>
-                        </div>
-                        <div class="modal-footer">
-                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                            <form id="form-eliminar-ingrediente" method="POST" action="">
-                                {% csrf_token %}
-                                <button type="submit" class="btn"
-                                style="background-color: var(--primary-color); color: white;">Sí, Eliminar</button>
-                            </form>
-                        </div>
+                        <form id="form-eliminar-ingrediente">
+                            <div class="modal-body">
+                                <input type="hidden" id="modal-delete-id">
+                                <p>¿Está seguro de que desea eliminar el ingrediente <strong><span id="modal-nombre-ingrediente-texto"></span></strong> (ID: <span id="modal-id-ingrediente-texto"></span>)?</p>
+                                <p class="text-muted" style="font-size: 0.9em;">
+                                    Esta acción no se puede deshacer y fallará si el ingrediente forma parte de la receta de algún platillo activo.
+                                </p>
+                            </div>
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                                <button type="submit" class="btn" style="background-color: var(--primary-color); color: white;">Sí, Eliminar</button>
+                            </div>
+                        </form>
                     </div>
                 </div>
             </div>
@@ -445,7 +396,7 @@
                             </h5>
                             <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
                         </div>
-                        <form method="POST" action="{% url 'registrar_merma_ingrediente' %}">
+                        <form id="form-merma-ingrediente">
                             {% csrf_token %}
                             <div class="modal-body" style="color: #333;">
                                 <input type="hidden" id="idIngredienteMermaInput" name="id_ingrediente" required>
@@ -456,11 +407,6 @@
                                         onkeydown="if(event.key === '-') event.preventDefault();" oninput="if(this.value < 0) this.value = '';">
                                     <small id="unidadMedidaMermaTexto" class="text-secondary" style="margin: 0px; padding: 0;"></small>
                                 </div>
-                                <!--
-                                <div class="mb-3">
-                                    <label for="motivoMerma" class="form-label" style="font-weight: bold;">Motivo / Justificación:</label>
-                                    <textarea class="form-control-custom" id="motivoMerma" name="motivo" rows="2" placeholder="Ej: Producto caducado, derrame, etc." required></textarea>
-                                </div>-->
                             </div>
                             <div class="modal-footer">
                                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
@@ -470,24 +416,174 @@
                     </div>
                 </div>
             </div>
-            {# FIN DE MODAL / FORMULARIO FLOTANTE DE MERMA #}
         </main>
     </div>
 {% endblock %}
 
 {% block extra_js %}
     <script>
-        function abrirFormularioMerma(idIngrediente, unidadMedida, nombreIngrediente) {
-            // 1. Resetear/Limpiar campos del formulario antes de mostrarlo
-            document.getElementById('idIngredienteMermaInput').value = idIngrediente;
-            document.getElementById('cantidadMerma').value = "";
-            //document.getElementById('motivoMerma').value = "";
-            document.getElementById('nombreMermaTexto').textContent = nombreIngrediente;
-            document.getElementById('unidadMedidaMermaTexto').textContent = `Medida del artículo: ${unidadMedida}`;
+        const API_ARTICULOS_URL = '/api/articulos-inventario/';
+        const API_PROVEEDORES_URL = '/api/proveedores-admin/';
+
+        function getCSRFToken() {
+            return document.querySelector('[name=csrfmiddlewaretoken]')?.value || '';
+        }
+
+        // ==========================================
+        // SISTEMA DE NOTIFICACIONES (TOASTS)
+        // ==========================================
+        function mostrarToast(mensaje, tipo = 'success') {
+            const container = document.querySelector('.toast-container');
+            if (!container) return;
+
+            const iconClass = tipo === 'danger' ? 'fa-exclamation-circle' : 'fa-check-circle';
+            const alertDiv = document.createElement('div');
+            alertDiv.className = `alert alert-${tipo} alert-dismissible fade show shadow-lg pe-auto`;
+            alertDiv.role = 'alert';
+            alertDiv.style.marginBottom = '10px';
+            alertDiv.innerHTML = `
+                <div class="d-flex align-items-center">
+                    <i class="fas ${iconClass} me-2"></i>
+                    <span>${mensaje}</span>
+                </div>
+                <button type="button" class="btn-close shadow-none" data-bs-dismiss="alert" aria-label="Close"></button>
+            `;
+            container.appendChild(alertDiv);
+
+            setTimeout(() => {
+                if (document.body.contains(alertDiv)) {
+                    const bsAlert = new bootstrap.Alert(alertDiv);
+                    bsAlert.close();
+                }
+            }, 5000); // 5 segundos de duración
+        }
+
+        document.addEventListener("DOMContentLoaded", function() {
+            // Carga inicial por API REST
+            cargarArticulos();
+            cargarProveedoresSelect();
+
+            const toastMsg = sessionStorage.getItem('toastMessage');
+            const toastType = sessionStorage.getItem('toastType');
+            if (toastMsg) {
+                mostrarToast(toastMsg, toastType || 'success');
+                sessionStorage.removeItem('toastMessage');
+                sessionStorage.removeItem('toastType');
+            }
+        });
+
+        // ==========================================
+        // CARGA DE DATOS ASÍNCRONA (GET)
+        // ==========================================
+        async function cargarArticulos() {
+            try {
+                const res = await fetch(API_ARTICULOS_URL);
+                const data = await res.json();
+                const tbody = document.getElementById('tabla-articulos-body');
+                tbody.innerHTML = '';
+
+                if (data.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="8" style="text-align: center;">No hay artículos registrados.</td></tr>';
+                    return;
+                }
+
+                data.forEach(articulo => {
+                    const tr = document.createElement('tr');
+                    tr.className = 'fila-articulo';
+                    tr.innerHTML = `
+                        <td>${articulo.idArticuloInventario}</td>
+                        <td class="nombre-articulo">${articulo.nombre}</td>
+                        <td>${articulo.tipoArticulo || "N/A"}</td>
+                        <td>${articulo.stock}</td>
+                        <td>${articulo.unidad_de_medida}</td>
+                        <td>${articulo.ubicacion || "-"}</td> 
+                        <td style="white-space: nowrap;">
+                            <button type="button" style="font-weight: bold; padding: 5px 10px;" class="btn-custom-success" 
+                                onclick="abrirFormularioComprar('${articulo.idArticuloInventario}', '${articulo.unidad_de_medida}', '${articulo.nombre}')">
+                                <i class="fas fa-shopping-cart"></i> Comprar
+                            </button>
+                        </td>
+                        <td style="white-space: nowrap;">
+                            <button type="button" style="font-weight: bold; padding: 5px 10px; background-color: #ff9800; color: white; border: none; border-radius: 5px; cursor: pointer; margin-top: 5px; margin-right: 5px;" 
+                                onclick="abrirFormularioMerma('${articulo.idArticuloInventario}', '${articulo.unidad_de_medida}', '${articulo.nombre}')">
+                                <i class="fas fa-minus-circle"></i> Merma
+                            </button>
+
+                            <button type="button" class="btn-custom-edit" 
+                                    onclick="cargarIngrediente('${articulo.idArticuloInventario}', '${articulo.nombre}', '${articulo.unidad_de_medida}', '${articulo.tipoArticulo}', '${articulo.ubicacion}')"
+                                    style="color: white; padding: 5px 10px; border-radius: 5px; text-decoration: none; font-weight: bold; display: inline-block; margin-right: 5px; border: none; cursor: pointer;">
+                                <i class="fas fa-edit"></i> Editar
+                            </button>
+                            
+                            <button type="button" class="btn-custom-danger" style="padding: 5px 10px; font-weight: bold;" 
+                                    onclick="prepararModalEliminarIngrediente('${articulo.idArticuloInventario}', '${articulo.nombre}')">
+                                <i class="fas fa-trash-alt"></i> Eliminar
+                            </button>
+                        </td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+                
+                // Si había una búsqueda activa, reaplicarla a los nuevos datos
+                filtrarArticulos();
+            } catch (error) {
+                console.error("Error al cargar artículos:", error);
+                mostrarToast("Error de conexión con la API de inventario.", "danger");
+            }
+        }
+
+        async function cargarProveedoresSelect() {
+            try {
+                const res = await fetch(API_PROVEEDORES_URL);
+                const data = await res.json();
+                const select = document.getElementById('idProveedorInput');
+                
+                select.innerHTML = '<option value="" disabled selected>Seleccione un proveedor...</option>';
+
+                data.forEach(p => {
+                    const option = document.createElement('option');
+                    option.value = p.idProveedor;
+                    option.textContent = p.nombre;
+                    select.appendChild(option);
+                });
+            } catch (error) {
+                console.error("Error al cargar proveedores:", error);
+            }
+        }
+
+        // ==========================================
+        // FUNCIONES DE CONTROL DE LA INTERFAZ
+        // ==========================================
+        function cargarIngrediente(id, nombre, unidad, tipo, ubicacion) {
+            document.getElementById('idArticulo').value = id;
+            document.getElementById('action-field').value = 'edit';
+            document.getElementById('nombre').value = nombre;
+            document.getElementById('tipo_articulo').value = tipo;
+            document.getElementById('unidad_de_medida').value = unidad;
+            document.getElementById('ubicacion').value = (ubicacion !== 'None' && ubicacion !== 'null') ? ubicacion : '';
             
-            // 2. Desplegar el modal con Bootstrap 5
-            var modalMerma = new bootstrap.Modal(document.getElementById('modalMermaIngrediente'));
-            modalMerma.show();
+            document.getElementById('stock').value = '';
+            document.getElementById('stock').disabled = true;
+            document.getElementById('stock').required = false;
+
+            document.getElementById('card-header-titulo').textContent = `Editar Artículo de Inventario: ${nombre}`;
+            document.getElementById('btn-submit-ingrediente').textContent = 'Actualizar Artículo';
+            document.getElementById('btn-cancelar-edicion').style.display = 'inline-block';
+            
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        function resetFormulario() {
+            document.getElementById('form-ingrediente').reset();
+            document.getElementById('action-field').value = 'add';
+            document.getElementById('idArticulo').value = '';
+            
+            document.getElementById('stock').disabled = false;
+            document.getElementById('stock').required = true;
+
+            document.getElementById('card-header-titulo').textContent = 'Agregar Nuevo Artículo de Inventario';
+            document.getElementById('btn-submit-ingrediente').textContent = 'Guardar Artículo';
+            document.getElementById('btn-cancelar-edicion').style.display = 'none';
         }
 
         function filtrarArticulos() {
@@ -502,9 +598,8 @@
             let coincidencias = 0;
 
             filas.forEach(fila => {
-                const nombreEmpleado = fila.querySelector('.nombre-articulo').textContent.toLowerCase();
-                
-                if (nombreEmpleado.includes(filtro)) {
+                const nombreArticulo = fila.querySelector('.nombre-articulo').textContent.toLowerCase();
+                if (nombreArticulo.includes(filtro)) {
                     fila.style.display = "";
                     coincidencias++;
                 } else {
@@ -515,7 +610,7 @@
             const filaVaciaPrevia = document.getElementById('empty-results-row');
             if (filaVaciaPrevia) filaVaciaPrevia.remove();
 
-            if (coincidencias === 0) {
+            if (coincidencias === 0 && filas.length > 0) {
                 const emptyRow = document.createElement('tr');
                 emptyRow.id = 'empty-results-row';
                 emptyRow.innerHTML = `
@@ -531,43 +626,194 @@
 
         function limpiarBusqueda() {
             const input = document.getElementById('buscador');
-            input.value = ""; // Vaciar input
-            filtrarArticulos(); // Resetear el filtrado para mostrar todo
-            input.focus(); // Devolver el foco al buscador
+            input.value = "";
+            filtrarArticulos(); 
+            input.focus();
         }
 
-        // ==========================================
-        // FUNCIONALIDAD: MODAL ELIMINAR INGREDIENTE
-        // ==========================================
-        function prepararModalEliminarIngrediente(idIngrediente, nombreIngrediente, urlEliminar) {
+        function abrirFormularioMerma(idIngrediente, unidadMedida, nombreIngrediente) {
+            document.getElementById('idIngredienteMermaInput').value = idIngrediente;
+            document.getElementById('cantidadMerma').value = "";
+            document.getElementById('nombreMermaTexto').textContent = nombreIngrediente;
+            document.getElementById('unidadMedidaMermaTexto').textContent = `Medida del artículo: ${unidadMedida}`;
+            
+            var modalMerma = new bootstrap.Modal(document.getElementById('modalMermaIngrediente'));
+            modalMerma.show();
+        }
+
+        function abrirFormularioComprar(idIngrediente, unidadMedida, nombreIngrediente) {
+            document.getElementById('idIngredienteInput').value = idIngrediente;
+            document.getElementById('idProveedorInput').value = ""; 
+            document.getElementById('precioCompra').value = "";
+            document.getElementById('cantidadComprada').value = "";
+            document.getElementById('nombreIngredienteTexto').textContent = nombreIngrediente;
+            document.getElementById('unidadMedidaTexto').textContent = `Medida del artículo: ${unidadMedida}`;
+            
+            var modalComprar = new bootstrap.Modal(document.getElementById('modalComprarIngrediente'));
+            modalComprar.show();
+        }
+
+        function prepararModalEliminarIngrediente(idIngrediente, nombreIngrediente) {
             document.getElementById('modal-id-ingrediente-texto').textContent = idIngrediente;
             document.getElementById('modal-nombre-ingrediente-texto').textContent = nombreIngrediente;
-            document.getElementById('form-eliminar-ingrediente').action = urlEliminar;
+            document.getElementById('modal-delete-id').value = idIngrediente;
             
             var modalEliminar = new bootstrap.Modal(document.getElementById('modalEliminarIngrediente'));
             modalEliminar.show();
         }
 
         // ==========================================
-        // FUNCIONALIDAD: MODAL COMPRAR INGREDIENTE
+        // LLAMADAS FETCH A LA API REST (POST/PUT/DELETE)
         // ==========================================
-        function abrirFormularioComprar(idIngrediente, unidadMedida, nombreIngrediente) {
-            // 1. Resetear/Limpiar campos del formulario antes de mostrarlo
-            document.getElementById('idIngredienteInput').value = idIngrediente;
-            document.getElementById('idProveedorInput').value = ""; // Resetea el combobox
-            document.getElementById('precioCompra').value = "";
-            document.getElementById('cantidadComprada').value = "";
-            document.getElementById('nombreIngredienteTexto').textContent = nombreIngrediente;
-            document.getElementById('unidadMedidaTexto').textContent = `Medida del artículo: ${unidadMedida}`;
-            // 2. Desplegar el modal con Bootstrap 5
-            var modalComprar = new bootstrap.Modal(document.getElementById('modalComprarIngrediente'));
-            modalComprar.show();
+        function formatearError(errorData) {
+            if (typeof errorData === 'string') return errorData;
+            for (let key in errorData) {
+                if (Array.isArray(errorData[key])) {
+                    return errorData[key][0];
+                }
+            }
+            return JSON.stringify(errorData);
         }
-    </script>
 
-    <datalist id="proveedores-list">
-        {% for proveedor in proveedores %}
-            <option value="{{ proveedor.nombre }}" data-id="{{ proveedor.idProveedor }}">
-        {% endfor %}
-    </datalist>
+        // 1. GUARDAR / EDITAR INGREDIENTE
+        document.getElementById('form-ingrediente')?.addEventListener('submit', function(e) {
+            e.preventDefault();
+            const formData = new FormData(this);
+            const idArticulo = document.getElementById('idArticulo').value; 
+            const action = document.getElementById('action-field').value; 
+
+            const data = {
+                nombre: formData.get('nombre'),
+                unidad_de_medida: formData.get('unidad_de_medida'),
+                tipoArticulo: formData.get('tipo_articulo'),
+                ubicacion: formData.get('ubicacion')
+            };
+
+            if (action === 'add') {
+                data.stock = parseFloat(formData.get('stock')) || 0;
+            }
+
+            const url = action === 'edit' ? `/api/articulos-inventario/${idArticulo}/` : '/api/articulos-inventario/';
+            const method = action === 'edit' ? 'PUT' : 'POST';
+
+            fetch(url, {
+                method: method,
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCSRFToken()
+                },
+                body: JSON.stringify(data)
+            })
+            .then(response => response.json().then(json => ({ ok: response.ok, json })))
+            .then(({ ok, json }) => {
+                if (ok) {
+                    mostrarToast(action === 'edit' ? "Artículo actualizado con éxito." : "Artículo guardado con éxito.", "success");
+                    resetFormulario();
+                    cargarArticulos(); // Actualizamos DOM sin recargar
+                } else {
+                    mostrarToast(formatearError(json.error || json), "danger");
+                }
+            });
+        });
+
+        // 2. ELIMINAR INGREDIENTE
+        document.getElementById('form-eliminar-ingrediente')?.addEventListener('submit', function(e) {
+            e.preventDefault();
+            const idIngrediente = document.getElementById('modal-delete-id').value;
+            
+            const modalElement = document.getElementById('modalEliminarIngrediente');
+            const modalInstance = bootstrap.Modal.getInstance(modalElement);
+            if (modalInstance) modalInstance.hide();
+
+            fetch(`/api/articulos-inventario/${idIngrediente}/`, {
+                method: 'DELETE',
+                headers: {
+                    'X-CSRFToken': getCSRFToken()
+                }
+            })
+            .then(response => {
+                if (response.status === 204 || response.ok) {
+                    mostrarToast("Artículo eliminado correctamente.", "success");
+                    cargarArticulos(); // Actualizamos DOM sin recargar
+                } else {
+                    mostrarToast("No se pudo eliminar el artículo debido a dependencias activas.", "danger");
+                }
+            })
+            .catch(error => {
+                console.error("Error al eliminar:", error);
+                mostrarToast("Ocurrió un error al intentar comunicarse con el servidor.", "danger");
+            });
+        });
+
+        // 3. COMPRAR INGREDIENTE
+        document.getElementById('form-comprar-ingrediente')?.addEventListener('submit', function(e) {
+            e.preventDefault();
+            const form = this;
+            const formData = new FormData(form);
+            const idIngrediente = document.getElementById('idIngredienteInput').value;
+
+            const data = {
+                id_proveedor_fk: parseInt(formData.get('id_proveedor_fk')),
+                precio_compra: parseFloat(formData.get('precio_compra')),
+                cantidad_comprada: parseFloat(formData.get('cantidad_comprada')),
+                fecha_compra: formData.get('fecha_compra')
+            };
+
+            fetch(`/api/articulos-inventario/${idIngrediente}/comprar/`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCSRFToken()
+                },
+                body: JSON.stringify(data)
+            })
+            .then(response => response.json().then(json => ({ ok: response.ok, json })))
+            .then(({ ok, json }) => {
+                if (ok && json.success) {
+                    const modalInstance = bootstrap.Modal.getInstance(document.getElementById('modalComprarIngrediente'));
+                    if (modalInstance) modalInstance.hide();
+                    
+                    form.reset(); // Limpiamos formulario de compra
+                    mostrarToast(json.message, "success");
+                    cargarArticulos(); // Actualizamos DOM sin recargar
+                } else {
+                    mostrarToast(formatearError(json.error || json), "danger");
+                }
+            });
+        });
+
+        // 4. REGISTRO DE MERMA
+        document.getElementById('form-merma-ingrediente')?.addEventListener('submit', function(e) {
+            e.preventDefault();
+            const form = this;
+            const formData = new FormData(form);
+            const idIngrediente = document.getElementById('idIngredienteMermaInput').value;
+
+            const data = {
+                cantidad_merma: parseFloat(formData.get('cantidad_merma'))
+            };
+
+            fetch(`/api/articulos-inventario/${idIngrediente}/registrar-merma/`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCSRFToken()
+                },
+                body: JSON.stringify(data)
+            })
+            .then(response => response.json().then(json => ({ ok: response.ok, json })))
+            .then(({ ok, json }) => {
+                if (ok && json.success) {
+                    const modalInstance = bootstrap.Modal.getInstance(document.getElementById('modalMermaIngrediente'));
+                    if (modalInstance) modalInstance.hide();
+                    
+                    form.reset(); // Limpiamos formulario de merma
+                    mostrarToast(json.message, "warning"); 
+                    cargarArticulos(); // Actualizamos DOM sin recargar
+                } else {
+                    mostrarToast(formatearError(json.error || json), "danger");
+                }
+            });
+        });
+    </script>
 {% endblock %}

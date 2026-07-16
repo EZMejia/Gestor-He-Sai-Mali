@@ -1,6 +1,5 @@
 {% extends "He_Sai_Mali/base.html" %}
 {% load static %}
-{% load custom_filters %}
 
 {% block title %}Cocina - Cola de Productos{% endblock %}
 
@@ -137,64 +136,21 @@
         <main class="main-content" id="main-content">
             <div class="contenido">
                 
+                <!-- El contenedor de alertas ahora está vacío y se llena con JS -->
                 <div id="contenedor-mensajes" class="toast-container position-fixed top-0 end-0 p-4" style="z-index: 1080;">
-                    {% if messages %}
-                        {% for message in messages %}
-                            <div class="alert alert-{% if message.tags == 'error' %}danger{% else %}{{ message.tags }}{% endif %} alert-dismissible fade show shadow-lg pe-auto" role="alert">
-                                <div class="d-flex align-items-center">
-                                    <i class="fa {% if message.tags == 'error' %}fa-exclamation-circle{% else %}fa-check-circle{% endif %} me-2"></i>
-                                    <span>{{ message }}</span>
-                                </div>
-                                <button type="button" class="btn-close shadow-none" data-bs-dismiss="alert" aria-label="Close"></button>
-                            </div>
-                        {% endfor %}
-                    {% endif %}
                 </div>
                 
                 <h2 style="color: #dacfb7; text-align: center; padding: 20px 0;">Productos Pendientes por Elaborar</h2>
                 
+                <!-- El contenedor de la cola se vacía. El JS lo llenará al cargar. -->
                 <div id="lista-pedidos" class="cola-cocina">
-                    {% if pedidos_en_cola %}
-                        {% for pedido in pedidos_en_cola %}
-                            <div class="pedido-card {% if forloop.first %}pedido-mas-antiguo{% endif %}" data-id="{{ pedido.id }}">
-                                <div class="card-header">
-                                    <span style="font-size: 18px;"><b>Pedido N° {{ pedido.id }}</b></span>
-                                    <span style="font-size: 14px;">{{ pedido.mesa }}</span>
-                                </div>
-                                <div class="card-body">
-                                    <p style="margin-bottom: 5px;">Cliente: {{ pedido.cliente }}</p>
-                                    <p style="font-size: 0.85em; color: #666;">Hora: {{ pedido.hora|date:"H:i:s" }}</p>
-                                    
-                                    <h6>Productos a Preparar:</h6>
-                                    
-                                    {% for platillo in pedido.platillos %}
-                                        <div class="platillo-item">
-                                            <div style="font-weight: bold;">
-                                                {{ platillo.cantidad }}x {{ platillo.nombre }}
-                                            </div>
-                                            <form method="post" action="{% url 'platillo_listo' platillo.id_pp %}" style="display:inline;" class="ajax-form estado-form">
-                                                {% csrf_token %}
-                                                <button type="button" class="btn-listo btn-cambio-estado" 
-                                                        data-id="{{ platillo.id_pp }}"
-                                                        data-original-color="#4CAF50"
-                                                        title="Doble clic para marcar como listo" 
-                                                        data-original-html="Marcar como listo">
-                                                    Marcar como listo
-                                                </button>
-                                            </form>
-                                        </div>
-                                    {% endfor %}
-                                </div>
-                            </div>
-                        {% endfor %}
-                        
-                    {% else %}
-                        <div class="alert-info-custom" style="width: 100%;">
-                            ¡No hay productos pendientes!
+                    <div class="d-flex justify-content-center w-100 mt-5">
+                        <div class="spinner-border" style="color: var(--secondary-color);" role="status">
+                            <span class="visually-hidden">Cargando pedidos...</span>
                         </div>
-                    {% endif %}
-                    
+                    </div>
                 </div>
+            </div>
         </main>
     </div>
 {% endblock %}
@@ -202,13 +158,15 @@
 {% block extra_js %}
     <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
     <script>
+        // Obtenemos el token CSRF para las peticiones POST de la API
+        const csrfToken = '{{ csrf_token }}';
+
         document.addEventListener('DOMContentLoaded', function() {
             // --- VARIABLES GLOBALES ---
             let estaArrastrando = false;
-            // Diccionario para rastrear contadores activos: { 'id-platillo': { tiempo: 10, intervalo: ID, ... } }
             let countdowns = {};
 
-            // --- 1. CONFIGURACIÓN DE SORTABLE JS (Drag & Drop) ---
+            // --- 1. CONFIGURACIÓN DE SORTABLE JS ---
             var el = document.getElementById('lista-pedidos');
             if (el) {
                 var sortable = Sortable.create(el, {
@@ -251,25 +209,98 @@
                 mapaTarjetas.forEach(tarjeta => contenedor.appendChild(tarjeta));
             }
 
-            // --- 3. PROCESAMIENTO Y RECONCILIACIÓN EN TIEMPO REAL ---
-            function procesarHTML(html) {
-                const parser = new DOMParser();
-                const doc = parser.parseFromString(html, 'text/html');
+            // --- 3. RENDERIZADO DEL JSON A HTML ---
+            function generarHTMLDeJSON(pedidos) {
+                if (!pedidos || pedidos.length === 0) {
+                    return `<div class="alert-info-custom" style="width: 100%;">¡No hay productos pendientes!</div>`;
+                }
 
-                const nuevoContenido = doc.getElementById('lista-pedidos');
-                const actualContenido = document.getElementById('lista-pedidos');
+                let html = '';
+                pedidos.forEach(pedido => {
+                    // Procesamiento seguro de fecha para evitar errores de "Invalid Date"
+                    let dateObj = new Date(pedido.hora);
+                    let horaStr = isNaN(dateObj.getTime()) ? "00:00" : dateObj.toLocaleTimeString('es-NI', { hour: '2-digit', minute:'2-digit', second:'2-digit' });
 
-                if (nuevoContenido && actualContenido) {
-                    // Sincronización inteligente: Validar si el mesero cambió algo en el servidor
+                    let claseMasAntiguo = pedido.es_mas_antiguo ? 'pedido-mas-antiguo' : '';
+                    
+                    html += `
+                    <div class="pedido-card ${claseMasAntiguo}" data-id="${pedido.id}">
+                        <div class="card-header">
+                            <span style="font-size: 18px;"><b>Pedido N° ${pedido.id}</b></span>
+                            <span style="font-size: 14px;">${pedido.mesa}</span>
+                        </div>
+                        <div class="card-body">
+                            <p style="margin-bottom: 5px;">Cliente: ${pedido.cliente}</p>
+                            <p style="font-size: 0.85em; color: #666;">Hora: ${horaStr}</p>
+                            <h6>Productos a Preparar:</h6>`;
+                    
+                    pedido.platillos.forEach(platillo => {
+                        html += `
+                            <div class="platillo-item">
+                                <div style="font-weight: bold;">
+                                    ${platillo.cantidad}x ${platillo.nombre}
+                                </div>
+                                <form action="/api/cocina/platillo_listo/${platillo.id_pp}/" style="display:inline;" class="ajax-form estado-form">
+                                    <button type="button" class="btn-listo btn-cambio-estado" 
+                                            data-id="${platillo.id_pp}"
+                                            data-original-color="#4CAF50"
+                                            title="Doble clic para marcar como listo" 
+                                            data-original-html="Marcar como listo">
+                                        Marcar como listo
+                                    </button>
+                                </form>
+                            </div>`;
+                    });
+                    
+                    html += `</div></div>`;
+                });
+                return html;
+            }
+
+            function renderizarAlertas(alertas) {
+                const contenedor = document.getElementById('contenedor-mensajes');
+                contenedor.innerHTML = ''; // Limpiamos para no duplicar si es polling constante
+                
+                alertas.forEach(alerta => {
+                    contenedor.innerHTML += `
+                    <div class="alert alert-warning alert-dismissible fade show shadow-lg pe-auto" role="alert">
+                        <div class="d-flex align-items-center">
+                            <i class="fa fa-exclamation-circle me-2"></i>
+                            <span>${alerta}</span>
+                        </div>
+                        <button type="button" class="btn-close shadow-none" data-bs-dismiss="alert" aria-label="Close"></button>
+                    </div>`;
+                });
+            }
+
+            // --- 4. CONSUMO DE API PARA RENDERIZADO ---
+            function actualizarVista(forzar = false) {
+                // Bloqueamos la recarga SOLO si el cocinero está moviendo una tarjeta.
+                if (!forzar && estaArrastrando) return;
+
+                fetch('/api/cocina/', {
+                    headers: { 
+                        'Accept': 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest' 
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    const nuevoHTML = generarHTMLDeJSON(data.pedidos_en_cola);
+                    const contenedorReal = document.getElementById('lista-pedidos');
+                    
+                    // Usamos un elemento temporal para sincronizar los botones que están en "cuenta regresiva"
+                    const divTemporal = document.createElement('div');
+                    divTemporal.innerHTML = nuevoHTML;
+
+                    // Sincronización inteligente
                     Object.keys(countdowns).forEach(id => {
-                        let btnNuevo = nuevoContenido.querySelector(`.btn-cambio-estado[data-id="${id}"]`);
+                        let btnNuevo = divTemporal.querySelector(`.btn-cambio-estado[data-id="${id}"]`);
                         
-                        // Si el platillo ya no está en cocina (porque se despachó) o su estado cambió en el servidor:
                         if (!btnNuevo || btnNuevo.dataset.originalHtml !== countdowns[id].htmlOriginal) {
                             clearInterval(countdowns[id].intervalo);
-                            delete countdowns[id]; // Cancelamos la cuenta atrás local porque el servidor cambió
+                            delete countdowns[id]; 
                         } else {
-                            // Si todo sigue igual, le inyectamos los estilos de cuenta regresiva al nuevo HTML para que no parpadee
                             btnNuevo.classList.add('counting-down');
                             btnNuevo.style.backgroundColor = 'var(--secondary-color)';
                             btnNuevo.style.color = '#333';
@@ -277,65 +308,50 @@
                         }
                     });
 
-                    actualContenido.innerHTML = nuevoContenido.innerHTML;
-                    aplicarOrdenManual(); // Reaplicamos el orden de las tarjetas arrastradas
-                }
+                    contenedorReal.innerHTML = divTemporal.innerHTML;
+                    aplicarOrdenManual();
 
-                const nuevosMensajes = doc.getElementById('contenedor-mensajes');
-                const actualesMensajes = document.getElementById('contenedor-mensajes');
-                if (nuevosMensajes && actualesMensajes) {
-                    actualesMensajes.innerHTML += nuevosMensajes.innerHTML;
-                }
-            }
-
-            function actualizarVista(forzar = false) {
-                // Bloqueamos la recarga SOLO si el cocinero está moviendo una tarjeta.
-                // NO la bloqueamos por las cuentas regresivas para poder enterarnos de lo que hace el mesero.
-                if (!forzar && estaArrastrando) return;
-
-                fetch(window.location.href, {
-                    headers: { 'X-Requested-With': 'XMLHttpRequest' }
+                    if(data.alertas) renderizarAlertas(data.alertas);
                 })
-                .then(response => response.text())
-                .then(html => procesarHTML(html))
-                .catch(error => console.error('Error de sincronización:', error));
+                .catch(error => console.error('Error de sincronización con la API:', error));
             }
 
-            // --- 4. ENVÍO DE FORMULARIOS POR AJAX ---
+            // --- 5. ENVÍO DE FORMULARIOS POR AJAX A LA API ---
             function enviarFormularioAjax(form) {
                 const submitBtn = form.querySelector('button');
                 if (submitBtn) submitBtn.disabled = true;
 
                 fetch(form.action, {
                     method: 'POST',
-                    body: new FormData(form),
-                    headers: { 'X-Requested-With': 'XMLHttpRequest' }
+                    headers: { 
+                        'X-Requested-With': 'XMLHttpRequest',
+                        'X-CSRFToken': csrfToken,
+                        'Accept': 'application/json'
+                    }
                 })
-                .then(response => response.text())
-                .then(html => procesarHTML(html))
-                .catch(error => console.error('Error al procesar:', error))
+                .then(response => {
+                    if (!response.ok) throw new Error('Error en la transacción de la API');
+                    return response.json();
+                })
+                .then(data => {
+                    // Forzamos actualización de la vista tras cambiar un estado exitosamente
+                    actualizarVista(true); 
+                })
+                .catch(error => console.error('Error al procesar el cambio de estado:', error))
                 .finally(() => {
                     if (submitBtn) submitBtn.disabled = false;
                 });
             }
 
-            // Intercepta otros formularios que usen la clase ajax-form (que no sean de estado)
-            document.body.addEventListener('submit', function(e) {
-                if (e.target.classList.contains('ajax-form') && !e.target.classList.contains('estado-form')) {
-                    e.preventDefault(); 
-                    enviarFormularioAjax(e.target);
-                }
-            });
-
-            // --- 5. LÓGICA DE DOBLE TAP (Manejo de estados) ---
+            // --- 6. LÓGICA DE DOBLE TAP (Manejo de estados) ---
+            // Se mantiene la lógica original idéntica
             document.body.addEventListener('dblclick', function(e) {
                 let btn = e.target.closest('.btn-cambio-estado');
                 if (!btn || btn.disabled || btn.classList.contains('counting-down')) return;
                 
                 let id = btn.dataset.id;
-                if (countdowns[id]) return; // Evita duplicar el temporizador si ya existe
+                if (countdowns[id]) return; 
 
-                // Registrar el temporizador en el diccionario global
                 countdowns[id] = {
                     tiempo: 5,
                     colorOriginal: btn.dataset.originalColor || '#4CAF50',
@@ -344,7 +360,6 @@
 
                 function tick() {
                     countdowns[id].tiempo--;
-                    // Buscamos el botón en el DOM actual (por si el polling reemplazó el HTML en el camino)
                     let botonVivo = document.querySelector(`.btn-cambio-estado[data-id="${id}"]`);
 
                     if (countdowns[id].tiempo > 0) {
@@ -355,7 +370,6 @@
                             botonVivo.innerHTML = `<i class="fas fa-undo"></i> Deshacer (${countdowns[id].tiempo}s)`;
                         }
                     } else {
-                        // El tiempo llegó a 0, enviamos la petición al servidor
                         clearInterval(countdowns[id].intervalo);
                         delete countdowns[id];
 
@@ -373,10 +387,10 @@
                 }
 
                 countdowns[id].intervalo = setInterval(tick, 1000);
-                tick(); // Ejecución inmediata para evitar retraso visual de 1s
+                tick(); 
             });
 
-            // --- 6. UN CLIC PARA CANCELAR ---
+            // --- 7. UN CLIC PARA CANCELAR ---
             document.body.addEventListener('click', function(e) {
                 let btn = e.target.closest('.btn-cambio-estado.counting-down');
                 if (!btn) return;
@@ -393,8 +407,8 @@
                 }
             });
 
-            // --- 7. INICIALIZACIÓN ---
-            aplicarOrdenManual(); // Ordenar al cargar la página por primera vez
+            // --- 8. INICIALIZACIÓN ---
+            actualizarVista(true); // Carga inicial desde la API
             setInterval(() => actualizarVista(false), 5000); // Polling activo cada 5 segundos
         });
     </script>

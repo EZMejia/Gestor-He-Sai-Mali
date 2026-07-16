@@ -28,78 +28,169 @@
 </head>
 <body>
     <div class="factura-container">
-        <div class="header-factura">
-            <h2>Hê Sãî Mãlî - Factura</h2>
-            <p><strong>Pedido N°:</strong> {{ pedido.idPedido }}</p>
-            <p><strong>Fecha:</strong> {{ pedido.fecha|date:"d/m/Y H:i" }}</p>
-        </div>
+        <div id="loading-msg">Cargando datos de la factura...</div>
         
-        <p><strong>Cliente:</strong> {{ cliente.nombre }} {{ cliente.apellido }}</p>
-        {% if cliente.tipoCliente == "empresa" %}
-            <p><strong>RUC:</strong> {{ cliente.identificacion }}</p>
-        {% endif %}
-            <p><strong>Método de Pago:</strong> {% if pedido.metodoPago %}{{ pedido.metodoPago }}{% else %}Por definir{% endif %}</p>        <hr>
-        <table>
-            <thead>
-                <tr>
-                    <th>Producto</th>
-                    <th>Cant.</th>
-                    <th>Precio Unit.</th>
-                    <th>Total</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for item in platillos_pedido %}
-                <tr>
-                    <td>{{ item.idProductoMenu.nombre }}</td>
-                    <td>{{ item.cantidad }}</td>
-                    <td>${{ item.idProductoMenu.precio|floatformat:2 }}</td>
-                    <td>${{ item.cantidad|mul:item.idProductoMenu.precio|floatformat:2 }}</td> 
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-        
-        <div class="totales-container">
-            <p>Subtotal: ${{ subtotal|floatformat:2 }}</p>
-            <p>Impuesto (IVA 15%): ${{ impuesto|floatformat:2 }}</p>
+        <div id="contenido-factura">
+            <div class="header-factura">
+                <h2>Hê Sãî Mãlî - Factura</h2>
+                <p><strong>Pedido N°:</strong> <span id="lbl-pedido-id"></span></p>
+                <p><strong>Fecha:</strong> <span id="lbl-fecha"></span></p>
+            </div>
+            
+            <p><strong>Cliente:</strong> <span id="lbl-cliente-nombre"></span></p>
+            <p id="contenedor-ruc" style="display:none;"><strong>RUC:</strong> <span id="lbl-cliente-ruc"></span></p>
+            <p><strong>Método de Pago:</strong> <span id="lbl-metodo-pago"></span></p>
             <hr>
-            <h3>Total a Pagar: ${{ monto_total|floatformat:2 }}</h3>
+            
+            <table>
+                <thead>
+                    <tr>
+                        <th>Producto</th>
+                        <th>Cant.</th>
+                        <th>Precio Unit.</th>
+                        <th>Total</th>
+                    </tr>
+                </thead>
+                <tbody id="tabla-platillos">
+                    <!-- JS inyectará los <tr> aquí -->
+                </tbody>
+            </table>
+            
+            <div class="totales-container">
+                <p>Subtotal: $<span id="lbl-subtotal"></span></p>
+                <p>Impuesto (IVA 15%): $<span id="lbl-impuesto"></span></p>
+                <hr>
+                <h3>Total a Pagar: $<span id="lbl-total-pagar"></span></h3>
+            </div>
         </div>
-        
     </div>
     
-        <div style="text-align: center; margin-top: 20px;">
-        {% if not pedido.estadoDePago %}
-            <a href="{% url 'pedidos' %}" class="btn-accion btn-cancelar">Volver a pedidos</a>
-            
-            <button type="button" 
-                    class="btn-accion btn-pagada" 
-                    onclick="marcarYDescargar({{ pedido.idPedido }})">
-                Marcar como pagada y descargar PDF
-            </button>
-
-            <form id="form-pagar" 
-                  method="POST" 
-                  action="{% url 'pagar_factura' pedido.idPedido %}" 
-                  style="display:none;">
-                {% csrf_token %}
-            </form>
-            
-            <script>
-                function marcarYDescargar(pedidoId) {
-                    // 1. Iniciar la descarga del PDF en una nueva pestaña
-                    window.open('{% url "descargar_pdf_factura" 0 %}'.replace('0', pedidoId), '_blank');
-                    
-                    // 2. Enviar el formulario POST para marcar como pagada
-                    document.getElementById('form-pagar').submit();
-                }
-            </script>
-
-        {% else %}
-            <p><strong>Factura pagada y cerrada.</strong></p>
-            <a href="{% url 'pedidos' %}" class="btn-accion btn-pagada">Volver a Pedidos</a>
-        {% endif %}
+    <div style="text-align: center; margin-top: 20px; display: none;" id="seccion-acciones">
+        <a href="{% url 'pedidos' %}" class="btn-accion btn-cancelar">Volver a pedidos</a>
+        
+        <!-- Botón para pagar (solo se muestra si está pendiente) -->
+        <button type="button" 
+                id="btn-pagar"
+                class="btn-accion btn-pagada" 
+                onclick="marcarYDescargar()">
+            Marcar como pagada y descargar PDF
+        </button>
+        
+        <!-- Mensaje de factura pagada -->
+        <p id="msg-pagada" style="display: none; margin-top: 15px;"><strong>Factura pagada y cerrada.</strong></p>
     </div>
+
+    <script>
+        // Obtenemos el ID del pedido que nos pasó la vista simple de Django
+        const pedidoId = {{ pedido_id }};
+        
+        // Función auxiliar para obtener el CSRF Token
+        function getCookie(name) {
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i].trim();
+                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
+        }
+
+        // Cargar los datos de la API al iniciar
+        document.addEventListener("DOMContentLoaded", () => {
+            fetch(`/api/pedidos/facturar/${pedidoId}/`)
+                .then(response => {
+                    if (!response.ok) throw new Error("Error al obtener la factura");
+                    return response.json();
+                })
+                .then(data => {
+                    // Ocultar mensaje de carga y mostrar contenido
+                    document.getElementById('loading-msg').style.display = 'none';
+                    document.getElementById('contenido-factura').style.display = 'block';
+                    document.getElementById('seccion-acciones').style.display = 'block';
+
+                    // Llenar datos de la factura
+                    document.getElementById('lbl-pedido-id').textContent = data.factura.id_pedido;
+                    
+                    // Formatear fecha
+                    const fecha = new Date(data.factura.fecha);
+                    document.getElementById('lbl-fecha').textContent = fecha.toLocaleString('es-ES');
+                    
+                    document.getElementById('lbl-metodo-pago').textContent = data.factura.metodo_pago || 'Por definir';
+
+                    // Llenar datos del cliente
+                    document.getElementById('lbl-cliente-nombre').textContent = data.cliente.nombre_completo;
+                    if (data.cliente.tipo_cliente === 'empresa') {
+                        document.getElementById('contenedor-ruc').style.display = 'block';
+                        document.getElementById('lbl-cliente-ruc').textContent = data.cliente.identificacion;
+                    }
+
+                    // Llenar tabla de platillos
+                    const tbody = document.getElementById('tabla-platillos');
+                    data.platillos.forEach(item => {
+                        const tr = document.createElement('tr');
+                        tr.innerHTML = `
+                            <td>${item.producto}</td>
+                            <td>${item.cantidad}</td>
+                            <td>$${item.precio_unitario.toFixed(2)}</td>
+                            <td>$${item.total_platillo.toFixed(2)}</td>
+                        `;
+                        tbody.appendChild(tr);
+                    });
+
+                    // Llenar totales
+                    document.getElementById('lbl-subtotal').textContent = data.totales.subtotal.toFixed(2);
+                    document.getElementById('lbl-impuesto').textContent = data.totales.impuesto.toFixed(2);
+                    document.getElementById('lbl-total-pagar').textContent = data.totales.monto_total.toFixed(2);
+
+                    // Controlar la vista de los botones si ya está pagada
+                    if (data.factura.estado_pago === 'Pagada') {
+                        document.getElementById('btn-pagar').style.display = 'none';
+                        document.getElementById('msg-pagada').style.display = 'block';
+                    }
+                })
+                .catch(error => {
+                    document.getElementById('loading-msg').textContent = "Ocurrió un error al cargar la factura.";
+                    console.error(error);
+                });
+        });
+
+        // Función para procesar el pago consultando la API POST
+        function marcarYDescargar() {
+            // Deshabilitar botón para evitar dobles clics
+            const btnPagar = document.getElementById('btn-pagar');
+            btnPagar.disabled = true;
+            btnPagar.textContent = "Procesando...";
+
+            fetch(`/api/pedidos/pagar/${pedidoId}/`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCookie('csrftoken')
+                }
+            })
+            .then(response => {
+                if (!response.ok) throw new Error("Error al registrar el pago");
+                return response.json();
+            })
+            .then(data => {
+                // 1. Abrir PDF en una nueva pestaña
+                const urlDescargaBase = "{% url 'descargar_pdf_factura' 0 %}";
+                window.open(urlDescargaBase.replace('0', pedidoId), '_blank');
+                
+                // 2. Redirigir a la vista de pedidos
+                window.location.href = "{% url 'pedidos' %}";
+            })
+            .catch(error => {
+                alert("Hubo un error al intentar pagar la factura.");
+                btnPagar.disabled = false;
+                btnPagar.textContent = "Marcar como pagada y descargar PDF";
+            });
+        }
+    </script>
 </body>
 </html>

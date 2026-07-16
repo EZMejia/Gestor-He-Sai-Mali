@@ -1,7 +1,6 @@
 {% extends "He_Sai_Mali/base.html" %}
 
 {% load static %}
-{% load custom_filters %}
 
 {% block title %}Admin - Empleados{% endblock %}
 
@@ -149,119 +148,99 @@
                     
                     <h1 style="color: #981a28; margin-bottom: 20px;">Administración de Empleados</h1>
 
-                    <div class="toast-container position-fixed top-0 end-0 p-4" style="z-index: 1080;">
-                        {% if messages %}
-                            {% for message in messages %}
-                                <div class="alert alert-{% if message.tags == 'error' %}danger{% else %}{{ message.tags }}{% endif %} alert-dismissible fade show shadow-lg pe-auto" role="alert">
-                                    <div class="d-flex align-items-center">
-                                        <i class="fa {% if message.tags == 'error' %}fa-exclamation-circle{% else %}fa-check-circle{% endif %} me-2"></i>
-                                        <span>{{ message }}</span>
-                                    </div>
-                                    <button type="button" class="btn-close shadow-none" data-bs-dismiss="alert" aria-label="Close"></button>
-                                </div>
-                            {% endfor %}
-                        {% endif %}
-                    </div>
+                    <div id="alert-container" class="toast-container position-fixed top-0 end-0 p-4" style="z-index: 1080;"></div>
                     
-                    {% if empleado_a_editar %}
-                    <div class="card-custom">
+                    <div class="card-custom" id="contenedor-editar" style="display: none;">
                         <div class="card-header-custom">
-                            <h2>Editar Empleado: {{ empleado_a_editar.nombre }} {{ empleado_a_editar.apellido }}</h2>
+                            <h2 id="titulo-editar">Editar Empleado</h2>
                         </div>
                         <div class="card-body-custom">
-                            <form method="post" action="{% url 'editar_empleado' empleado_a_editar.idEmpleado %}">
-                                {% csrf_token %}
+                            <form id="form-editar-empleado">
+                                <input type="hidden" id="edit-id">
                                 <div style="display: flex; gap: 15px; flex-wrap: wrap;">
                                     
                                     <div style="flex: 1 1 30%; min-width: 200px;">
                                         <label for="nombre" class="form-label-custom">Nombre</label>
-                                        <input type="text" class="form-control-custom" id="nombre" name="nombre" required
+                                        <input type="text" class="form-control-custom" id="edit-nombre" required
                                         pattern="[A-Za-zÁéíóúÁÉÍÓÚñÑüÜ\s]+"
-                                        oninput="this.value = this.value.replace(/[^A-Za-zÁéíóúÁÉÍÓÚñÑüÜ\s]/g, '');"
-                                        value="{{ empleado_a_editar.nombre|default:'' }}" autocomplete="off">
+                                        oninput="this.value = this.value.replace(/[^A-Za-zÁéíóúÁÉÍÓÚñÑüÜ\s]/g, '');" autocomplete="off">
                                     </div>
                                     
                                     <div style="flex: 1 1 30%; min-width: 200px;">
                                         <label for="apellido" class="form-label-custom">Apellido</label>
-                                        <input type="text" class="form-control-custom" id="apellido" name="apellido" required
+                                        <input type="text" class="form-control-custom" id="edit-apellido" required
                                         pattern="[A-Za-zÁéíóúÁÉÍÓÚñÑüÜ\s]+"
-                                        oninput="this.value = this.value.replace(/[^A-Za-zÁéíóúÁÉÍÓÚñÑüÜ\s]/g, '');"
-                                        value="{{ empleado_a_editar.apellido|default:'' }}" autocomplete="off">
+                                        oninput="this.value = this.value.replace(/[^A-Za-zÁéíóúÁÉÍÓÚñÑüÜ\s]/g, '');" autocomplete="off">
                                     </div>
                                     
                                     <div style="flex: 1 1 30%; min-width: 200px;">
                                         <label for="rol" class="form-label-custom">Rol</label>
-                                        <select class="form-control-custom" id="rol" name="rol" required>
+                                        <select class="form-control-custom" id="edit-rol" required>
                                             {% for rol_opcion in roles_disponibles %}
-                                                <option value="{{ rol_opcion }}" {% if empleado_a_editar.rol == rol_opcion %}selected{% endif %}>
-                                                    {{ rol_opcion }}
-                                                </option>
+                                                <option value="{{ rol_opcion }}">{{ rol_opcion }}</option>
                                             {% endfor %}
                                         </select>
                                     </div>
                                     
                                     <div style="flex: 1 1 30%; min-width: 200px;">
                                         <label for="telefono" class="form-label-custom">Teléfono</label>
-                                        <input type="text" class="form-control-custom" id="telefono" name="telefono"
+                                        <input type="text" class="form-control-custom" id="edit-telefono"
                                         pattern="[0-9]{8}" title="El teléfono debe contener exactamente 8 dígitos numéricos."
-                                        oninput="this.value = this.value.replace(/[^0-9]/g, '').slice(0, 8);"
-                                        value="{{ empleado_a_editar.telefono|default:'' }}" autocomplete="off">
+                                        oninput="this.value = this.value.replace(/[^0-9]/g, '').slice(0, 8);" autocomplete="off">
                                     </div>
 
                                     <div style="flex: 1 1 30%; min-width: 200px;">
                                         <label for="correo" class="form-label-custom">Correo</label>
-                                        <input type="email" class="form-control-custom" id="correo" name="correo" required
-                                        value="{{ empleado_a_editar.correo|default:'' }}">
+                                        <input type="email" class="form-control-custom" id="edit-correo" required>
                                     </div>
 
                                     <div style="flex: 1 1 30%; min-width: 200px;">
                                         <label for="cedula" class="form-label-custom">Cédula</label>
-                                        <input type="text" class="form-control-custom" id="cedula" name="cedula" required
-                                        value="{{ empleado_a_editar.cedula|default:'' }}">
+                                        <input type="text" class="form-control-custom" id="edit-cedula" required>
                                     </div>
 
                                     <div style="flex: 1 1 50%; min-width: 200px;">
                                             <label class="form-label-custom">Nueva Contraseña (dejar en blanco para no cambiar):</label>
-                                            <input type="password" name="nueva_password" class="form-control-custom" placeholder="********">
+                                            <input type="password" id="edit-password" class="form-control-custom" placeholder="********">
                                     </div>
                                     <div style="flex: 1 1 50%; min-width: 200px;">
                                             <label class="form-label-custom">Confirmar Nueva Contraseña:</label>
-                                            <input type="password" name="confirmar_password" class="form-control-custom" placeholder="********">
+                                            <input type="password" id="edit-confirm-password" class="form-control-custom" placeholder="********">
                                     </div>
                                     
                                     <div style="flex: 1 1 100%; display: flex; align-items: flex-end; min-width: 250px;">
                                         <button type="submit" class="btn-custom-success" style="flex-grow: 1; margin-bottom: 12px;">
                                             Actualizar Empleado
                                         </button>
-                                        <a href="{% url 'admin_empleados' %}" class="btn-custom-danger" style="margin-bottom: 12px; flex-grow: 1; text-align: center; text-decoration: none; margin-left: 5px; padding: 9px; font-weight: normal;">
+                                        <button type="button" onclick="cerrarEdicion()" class="btn-custom-danger" style="margin-bottom: 12px; flex-grow: 1; text-align: center; margin-left: 5px; padding: 9px; font-weight: normal;">
                                             Cancelar
-                                        </a>
+                                        </button>
                                     </div>
                                 </div>
                             </form>
                         </div>
                     </div>
-                    {% endif %}
+
                     <h2 style="color: #981a28; margin-top: 30px; border-bottom: 2px solid #981a28; padding-bottom: 5px; margin-bottom: 10px;">Listado de Empleados</h2>
                     
                     <label for="buscador" style="font-weight: bold; display: block; margin-bottom: 5px;">Buscar empleado:</label>
-                        <div style="position: relative; display: flex; align-items: center; margin-bottom: 20px;">
-                            <span style="position: absolute; left: 10px; color: #888;">
-                                <i class="fas fa-search"></i>
-                            </span>
-                            <input type="text" id="buscador" class="form-control" 
-                                placeholder="Escribe el nombre del empleado..." 
-                                style="padding-left: 35px; padding-right: 35px; margin-bottom: 0;" 
-                                autocomplete="off"
-                                onkeyup="filtrarEmpleado()">
-                            <span id="btn-limpiar" onclick="limpiarBusqueda()" 
-                                style="position: absolute; right: 10px; color: #888; cursor: pointer; display: none;">
-                                <i class="fas fa-times-circle"></i>
-                            </span>
-                        </div>
+                    <div style="position: relative; display: flex; align-items: center; margin-bottom: 20px;">
+                        <span style="position: absolute; left: 10px; color: #888;">
+                            <i class="fas fa-search"></i>
+                        </span>
+                        <input type="text" id="buscador" class="form-control" 
+                            placeholder="Escribe el nombre del empleado..." 
+                            style="padding-left: 35px; padding-right: 35px; margin-bottom: 0;" 
+                            autocomplete="off"
+                            onkeyup="filtrarEmpleado()">
+                        <span id="btn-limpiar" onclick="limpiarBusqueda()" 
+                            style="position: absolute; right: 10px; color: #888; cursor: pointer; display: none;">
+                            <i class="fas fa-times-circle"></i>
+                        </span>
+                    </div>
 
                     <div class="card-custom" style="padding: 0; overflow-x: auto;">
-                        <table class="table-custom">
+                        <table class="table-custom" id="tabla-empleados">
                             <thead>
                                 <tr>
                                     <th>ID</th>
@@ -275,37 +254,12 @@
                                 </tr>
                             </thead>
                             <tbody>
-                                {% for empleado in empleados %}
-                                <tr class="fila-empleado">
-                                    <td>{{ empleado.idEmpleado }}</td>
-                                    <td class="nombre-empleado">{{ empleado.nombre }} {{ empleado.apellido }}</td>
-                                    <td>{{ empleado.usuario }}</td>
-                                    <td>{{ empleado.rol }}</td>
-                                    <td>{{ empleado.telefono|default:"N/A" }}</td>
-                                    <td>{{ empleado.correo }}</td>
-                                    <td>{{ empleado.cedula }}</td>
-                                    <td style="white-space: nowrap;">
-                                        <a href="{% url 'editar_empleado' empleado.idEmpleado %}" class='btn-custom-edit'
-                                            style="color: white; padding: 5px 10px; border-radius: 5px; text-decoration: none; font-weight: bold; display: inline-block; margin-right: 5px;">
-                                            <i class="fas fa-edit"></i> Editar
-                                        </a>
-                                        
-                                        <button type="button" class="btn-custom-danger" style="padding: 5px 10px;" 
-                                            onclick="prepararModalEliminarEmpleado('{{ empleado.idEmpleado }}', '{{ empleado.nombre|escapejs }}', '{% url 'eliminar_empleado' empleado.idEmpleado %}')">
-                                            <i class="fas fa-trash-alt"></i> Eliminar
-                                        </button>
-                                    </td>
-                                </tr>
-                                {% empty %}
-                                <tr>
-                                    <td colspan="9" class="text-center-custom">No hay empleados registrados.</td>
-                                </tr>
-                                {% endfor %}
-                            </tbody>
+                                </tbody>
                         </table>
                     </div>
                 </div>
             </div>
+
             <div class="modal fade" id="modalEliminarEmpleado" tabindex="-1" aria-labelledby="modalEliminarEmpleadoLabel" aria-hidden="true">
                 <div class="modal-dialog modal-dialog-centered">
                     <div class="modal-content">
@@ -318,16 +272,12 @@
                         <div class="modal-body">
                             <p>¿Está seguro de que desea eliminar al empleado <strong><span id="modal-nombre-empleado-texto"></span></strong> (ID: <span id="modal-id-empleado-texto"></span>)?</p>
                             <p class="text-muted" style="font-size: 0.9em;">
-                                Esta acción no se puede deshacer y podría fallar si el empleado tiene registros operativos o de facturación asociados en el sistema.
+                                Esta acción no se puede deshacer y podría desactivar al usuario si posee registros operativos.
                             </p>
                         </div>
                         <div class="modal-footer">
                             <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                            <form id="form-eliminar-empleado" method="POST" action="">
-                                {% csrf_token %}
-                                <button type="submit" class="btn"
-                                style="background-color: var(--primary-color); color: white;">Sí, Eliminar Empleado</button>
-                            </form>
+                            <button type="button" id="btn-confirmar-eliminar" class="btn" style="background-color: var(--primary-color); color: white;">Sí, Eliminar Empleado</button>
                         </div>
                     </div>
                 </div>
@@ -338,64 +288,231 @@
 
 {% block extra_js %}
     <script>
+        // Configuración Global de la URL de tu API REST
+        const API_URL = '/api/empleados-admin/';
+        let idEmpleadoAEliminar = null;
+        let modalEliminarInstance = null;
+
+        // Inicializar al cargar la página
+        document.addEventListener("DOMContentLoaded", () => {
+            cargarEmpleados();
+            modalEliminarInstance = new bootstrap.Modal(document.getElementById('modalEliminarEmpleado'));
+            
+            // Escuchar el submit del formulario de edición
+            document.getElementById('form-editar-empleado').addEventListener('submit', guardarEdicion);
+            
+            // Escuchar el botón del modal de confirmación de eliminación
+            document.getElementById('btn-confirmar-eliminar').addEventListener('click', ejecutarEliminacion);
+        });
+
+        // 1. OBTENER Y LISTAR EMPLEADOS (GET)
+        async function cargarEmpleados() {
+            try {
+                const response = await fetch(API_URL);
+                const empleados = await response.json();
+                const tbody = document.querySelector('#tabla-empleados tbody');
+                tbody.innerHTML = '';
+
+                if (empleados.length === 0) {
+                    tbody.innerHTML = `<tr><td colspan="8" class="text-center">No hay empleados registrados.</td></tr>`;
+                    return;
+                }
+
+                empleados.forEach(emp => {
+                    const fila = document.createElement('tr');
+                    fila.className = 'fila-empleado';
+                    if(!emp.is_active) fila.style.opacity = '0.6'; // Atenuar si está desactivado
+
+                    fila.innerHTML = `
+                        <td>${emp.idEmpleado}</td>
+                        <td class="nombre-empleado">${emp.nombre_completo}</td>
+                        <td>${emp.usuario}</td>
+                        <td>${emp.rol}</td>
+                        <td>${emp.telefono || 'N/A'}</td>
+                        <td>${emp.correo}</td>
+                        <td>${emp.cedula}</td>
+                        <td style="white-space: nowrap;">
+                            <button onclick="prepararEdicion(${emp.idEmpleado})" class="btn-custom-edit" style="color: white; padding: 5px 10px; border-radius: 5px; border:none; font-weight: bold; cursor:pointer; margin-right: 5px;">
+                                <i class="fas fa-edit"></i> Editar
+                            </button>
+                            <button onclick="prepararModalEliminar('${emp.idEmpleado}', '${emp.nombre} ${emp.apellido}')" class="btn-custom-danger" style="padding: 5px 10px; font-weight: bold;">
+                                <i class="fas fa-trash-alt"></i> Eliminar
+                            </button>
+                        </td>
+                    `;
+                    tbody.appendChild(fila);
+                });
+            } catch (error) {
+                mostrarAlerta('danger', 'Error al conectar con el servidor.');
+            }
+        }
+
+        // 2. PREPARAR EL FORMULARIO CON LOS DATOS ACTUALES (GET individual)
+        async function prepararEdicion(id) {
+            try {
+                const response = await fetch(`${API_URL}${id}/`);
+                const emp = await response.json();
+
+                document.getElementById('edit-id').value = emp.idEmpleado;
+                document.getElementById('edit-nombre').value = emp.nombre;
+                document.getElementById('edit-apellido').value = emp.apellido;
+                document.getElementById('edit-rol').value = emp.rol;
+                document.getElementById('edit-telefono').value = emp.telefono || '';
+                document.getElementById('edit-correo').value = emp.correo;
+                document.getElementById('edit-cedula').value = emp.cedula;
+                document.getElementById('edit-password').value = '';
+                document.getElementById('edit-confirm-password').value = '';
+
+                document.getElementById('titulo-editar').textContent = `Editar Empleado: ${emp.nombre_completo}`;
+                document.getElementById('contenedor-editar').style.display = 'block';
+                document.getElementById('contenedor-editar').scrollIntoView({ behavior: 'smooth' });
+            } catch (error) {
+                mostrarAlerta('danger', 'No se pudieron recuperar los datos del empleado.');
+            }
+        }
+
+        // 3. GUARDAR LOS CAMBIOS VIA API (PUT)
+        async function guardarEdicion(e) {
+            e.preventDefault();
+            const id = document.getElementById('edit-id').value;
+
+            const datos = {
+                nombre: document.getElementById('edit-nombre').value,
+                apellido: document.getElementById('edit-apellido').value,
+                rol: document.getElementById('edit-rol').value,
+                telefono: document.getElementById('edit-telefono').value,
+                correo: document.getElementById('edit-correo').value,
+                cedula: document.getElementById('edit-cedula').value,
+            };
+
+            const pass = document.getElementById('edit-password').value;
+            const confirmPass = document.getElementById('edit-confirm-password').value;
+            
+            if (pass || confirmPass) {
+                datos.nueva_password = pass;
+                datos.confirmar_password = confirmPass;
+            }
+
+            try {
+                const response = await fetch(`${API_URL}${id}/`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': '{{ csrf_token }}' // Cabecera de seguridad obligatoria de Django
+                    },
+                    body: JSON.stringify(datos)
+                });
+
+                const resultado = await response.json();
+
+                if (response.ok) {
+                    mostrarAlerta('success', `Empleado actualizado con éxito.`);
+                    cerrarEdicion();
+                    cargarEmpleados();
+                } else {
+                    // Mostrar errores devueltos por los validadores del Serializer de DRF
+                    let errores = Object.values(resultado).flat().join('<br>');
+                    mostrarAlerta('danger', errores);
+                }
+            } catch (error) {
+                mostrarAlerta('danger', 'Ocurrió un error inesperado al procesar el formulario.');
+            }
+        }
+
+        // 4. ELIMINAR O DESACTIVAR EMPLEADO (DELETE)
+        function prepararModalEliminar(id, nombreCompleto) {
+            idEmpleadoAEliminar = id;
+            document.getElementById('modal-id-empleado-texto').textContent = id;
+            document.getElementById('modal-nombre-empleado-texto').textContent = nombreCompleto;
+            modalEliminarInstance.show();
+        }
+
+        async function ejecutarEliminacion() {
+            if (!idEmpleadoAEliminar) return;
+
+            try {
+                const response = await fetch(`${API_URL}${idEmpleadoAEliminar}/`, {
+                    method: 'DELETE',
+                    headers: {
+                        'X-CSRFToken': '{{ csrf_token }}'
+                    }
+                });
+
+                const data = await response.json();
+                modalEliminarInstance.hide();
+
+                if (response.status === 200) {
+                    if (data.message) mostrarAlerta('success', data.message);
+                    if (data.warning) mostrarAlerta('warning', data.warning);
+                    cargarEmpleados();
+                } else {
+                    mostrarAlerta('danger', data.error || 'No se pudo completar la acción.');
+                }
+            } catch (error) {
+                mostrarAlerta('danger', 'Error de red al intentar eliminar.');
+            }
+        }
+
+        // Funciones auxiliares de UI
+        function cerrarEdicion() {
+            document.getElementById('contenedor-editar').style.display = 'none';
+            document.getElementById('form-editar-empleado').reset();
+        }
+
+        function mostrarAlerta(tipo, mensaje) {
+            const container = document.getElementById('alert-container');
+            container.style.pointerEvents = 'none';
+            container.style.zIndex = '9999';
+
+            // Creamos el elemento contenedor del Toast de forma nativa
+            const alertDiv = document.createElement('div');
+            // Usamos clases estándar de alertas con soporte para descartar dinámicamente
+            alertDiv.className = `alert alert-${tipo === 'danger' ? 'danger' : tipo} alert-dismissible fade show shadow-lg d-flex align-items-center justify-content-between`;
+            
+            alertDiv.style.pointerEvents = 'auto';
+    
+            // El contenido HTML: separamos el mensaje del botón de cierre para que no colisionen
+            alertDiv.innerHTML = `
+                <div class="d-flex align-items-center" style="padding-right: 15px;">
+                    <i class="fa ${tipo === 'danger' ? 'fa-exclamation-circle' : 'fa-check-circle'} me-2" style="font-size: 1.2rem;"></i>
+                    <span>${mensaje}</span>
+                </div>
+                <button type="button" class="btn-close shadow-none" data-bs-dismiss="alert" aria-label="Close"></button>
+            `;
+
+            // Insertar la alerta al principio del contenedor para que las nuevas salgan arriba
+            container.insertBefore(alertDiv, container.firstChild);
+            
+            // Cierre automático regular tras 5 segundos si el usuario no hace clic antes
+            setTimeout(() => {
+                if (alertDiv && alertDiv.parentNode) {
+                    alertDiv.classList.remove('show');
+                    alertDiv.style.opacity = '0';
+                    setTimeout(() => {
+                        if (alertDiv.parentNode) alertDiv.remove();
+                    }, 150);
+                }
+            }, 5000);
+        }
+
+        // Lógica local del buscador (Modificada levemente para tu tabla interactiva)
         function filtrarEmpleado() {
             const input = document.getElementById('buscador');
             const btnLimpiar = document.getElementById('btn-limpiar');
-            const tbody = document.querySelector('.table-custom tbody');
             const filtro = input.value.toLowerCase();
             const filas = document.querySelectorAll('.fila-empleado');
 
             btnLimpiar.style.display = filtro.length > 0 ? "block" : "none";
 
-            let coincidencias = 0;
-
             filas.forEach(fila => {
                 const nombreEmpleado = fila.querySelector('.nombre-empleado').textContent.toLowerCase();
-                
-                if (nombreEmpleado.includes(filtro)) {
-                    fila.style.display = "";
-                    coincidencias++;
-                } else {
-                    fila.style.display = "none";
-                }
+                fila.style.display = nombreEmpleado.includes(filtro) ? "" : "none";
             });
-
-            const filaVaciaPrevia = document.getElementById('empty-results-row');
-            if (filaVaciaPrevia) filaVaciaPrevia.remove();
-
-            if (coincidencias === 0) {
-                const emptyRow = document.createElement('tr');
-                emptyRow.id = 'empty-results-row';
-                emptyRow.innerHTML = `
-                    <td colspan="8">
-                        <div class="empty-results" style="padding: 20px; text-align: center; color: #666;">
-                            <i class="fas fa-ban fa-2x"></i>
-                            <p class="mb-0">No se encontraron empleados que coincidan con "<span>${input.value}</span>"</p>
-                        </div>
-                    </td>`;
-                tbody.appendChild(emptyRow);
-            }
         }
 
         function limpiarBusqueda() {
-            const input = document.getElementById('buscador');
-            input.value = ""; // Vaciar input
-            filtrarEmpleado(); // Resetear el filtrado para mostrar todo
-            input.focus(); // Devolver el foco al buscador
-        }
-    </script>
-    <script>
-        function prepararModalEliminarEmpleado(idEmpleado, nombreEmpleado, urlEliminar) {
-            // 1. Actualizar los textos internos del modal
-            document.getElementById('modal-id-empleado-texto').textContent = idEmpleado;
-            document.getElementById('modal-nombre-empleado-texto').textContent = nombreEmpleado;
-            
-            // 2. Actualizar el atributo action del formulario del modal
-            document.getElementById('form-eliminar-empleado').action = urlEliminar;
-            
-            // 3. Inicializar y desplegar el modal de Bootstrap 5
-            var modalEliminar = new bootstrap.Modal(document.getElementById('modalEliminarEmpleado'));
-            modalEliminar.show();
+            document.getElementById('buscador').value = "";
+            filtrarEmpleado();
         }
     </script>
 {% endblock %}

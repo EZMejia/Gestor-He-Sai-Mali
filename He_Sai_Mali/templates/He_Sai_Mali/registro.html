@@ -271,10 +271,6 @@
         <div class="step-section" id="step-4">
             <h3>Paso 4: Resumen</h3>
             <p>
-                <label class="summary-label">Usuario:</label>
-                <span id="summary-usuario"></span>
-            </p>
-            <p>
                 <label class="summary-label">Nombre Completo:</label>
                 <span id="summary-nombre"></span>
             </p>
@@ -285,6 +281,10 @@
             <p>
                 <label class="summary-label">Correo:</label>
                 <span id="summary-correo"></span>
+            </p>
+            <p>
+                <label class="summary-label">Teléfono:</label>
+                <span id="summary-telefono"></span>
             </p>
             <p>
                 <label class="summary-label">Cédula:</label>
@@ -299,14 +299,6 @@
     </form>
 
     <script>
-        // ----------------------------------------------------------------------------------
-        // 1. OBTENCIÓN DE DATOS EXISTENTES DESDE DJANGO
-        // ----------------------------------------------------------------------------------
-        const existingEmails = {{ correos_existentes|safe|default:"[]" }};
-        const existingPhones = {{ telefonos_existentes|safe|default:"[]" }};
-        const existingCedulas = {{ cedulas_existentes|safe|default:"[]" }};
-        const existingUsernames = {{ usuarios_existentes|safe|default:"[]" }}; // NUEVA VARIABLE
-
         // Función para mostrar el paso actual y ocultar los demás
         function showStep(stepNumber) {
             // Ocultar el mensaje de error al cambiar de paso
@@ -323,33 +315,6 @@
             const errorDiv = document.getElementById('form-error-message');
             errorDiv.innerHTML = message; // Se usa innerHTML para renderizar los <br> y permitir mensajes multilínea
             errorDiv.style.display = 'block';
-        }
-
-        // ----------------------------------------------------------------------------------
-        // LÓGICA DE GENERACIÓN DE NOMBRE DE USUARIO (MODIFICADA)
-        // ----------------------------------------------------------------------------------
-        // 1. Genera el nombre de usuario base (ej: juanadmHSM)
-        function generateBaseUsername(nombre, apellido, rol) {
-            const n = nombre.trim().substring(0, 2).toLowerCase();
-            const a = apellido.trim().substring(0, 2).toLowerCase();
-            const r = rol.trim(); 
-            return n + a + r + "HSM";
-        }
-
-        // 2. Itera y agrega un sufijo numérico si el nombre de usuario ya existe
-        function generateUniqueUsername(nombre, apellido, rol, existingUsernames) {
-            const baseUser = generateBaseUsername(nombre, apellido, rol);
-            let potentialUsername = baseUser;
-            let counter = 1;
-
-            // El primer nombre de usuario (sin número) debe chequearse primero.
-            while (existingUsernames.includes(potentialUsername)) {
-                // Si existe, añade el contador y lo prueba de nuevo en la siguiente iteración
-                potentialUsername = baseUser + counter;
-                counter++;
-            }
-            
-            return potentialUsername;
         }
 
         // ----------------------------------------------------------------------------------
@@ -442,24 +407,6 @@
                         document.getElementById('cedula').classList.add('error-highlight');
                         if (!firstInvalidInput) firstInvalidInput = document.getElementById('cedula');
                     } 
-                    
-                    // VALIDACIÓN DE UNICIDAD (Existencia en BD)
-                    else if (existingEmails.includes(correo)) {
-                        isValid = false;
-                        errorMessage = "El correo ya está registrado por otro empleado. Por favor, verifica el dato.";
-                        document.getElementById('correo').classList.add('error-highlight');
-                        if (!firstInvalidInput) firstInvalidInput = document.getElementById('correo');
-                    } else if (existingPhones.includes(telefonoNum)) { 
-                        isValid = false;
-                        errorMessage = "El número de teléfono ya está registrado por otro empleado. Por favor, verifica el dato.";
-                        document.getElementById('telefono').classList.add('error-highlight');
-                        if (!firstInvalidInput) firstInvalidInput = document.getElementById('telefono');
-                    } else if (existingCedulas.includes(cedula)) {
-                        isValid = false;
-                        errorMessage = "La cédula ya está registrada por otro empleado. Por favor, verifica el dato.";
-                        document.getElementById('cedula').classList.add('error-highlight');
-                        if (!firstInvalidInput) firstInvalidInput = document.getElementById('cedula');
-                    }
                 } else if (currentStep === 3) {
                     const pass1 = document.getElementById('contrasena1').value;
                     const pass2 = document.getElementById('contrasena2').value;
@@ -513,35 +460,65 @@
             const nombre = document.getElementById('nombre').value;
             const apellido = document.getElementById('apellido').value;
             const rolSelect = document.getElementById('rol');
-            const rol = rolSelect.options[rolSelect.selectedIndex].text;
             const correo = document.getElementById('correo').value;
+            const telefono = document.getElementById('telefono').value;
             const cedula = document.getElementById('cedula').value;
-
-            // 1. Generar y mostrar el USUARIO (USA LA NUEVA LÓGICA DE UNICIDAD)
-            const usuario = generateUniqueUsername(nombre, apellido, rol, existingUsernames);
-            document.getElementById('summary-usuario').textContent = usuario;
 
             // 2. Mostrar la demás información en el resumen
             document.getElementById('summary-nombre').textContent = `${nombre} ${apellido}`;
-            document.getElementById('summary-rol').textContent = rol;
+            document.getElementById('summary-rol').textContent = rolSelect.options[rolSelect.selectedIndex].text;
             document.getElementById('summary-correo').textContent = correo;
+            document.getElementById('summary-telefono').textContent = telefono;
             document.getElementById('summary-cedula').textContent = cedula;
-
-            // 3. Crear campo oculto para enviar el usuario
-            let user_input = document.getElementById('generated_username');
-            if (!user_input) {
-                user_input = document.createElement('input');
-                user_input.type = 'hidden';
-                user_input.name = 'usuario';
-                user_input.id = 'generated_username';
-                document.getElementById('registrationForm').appendChild(user_input);
-            }
-            user_input.value = usuario;
         }
 
         // Asegurarse de que solo el primer paso se muestre al cargar
         document.addEventListener('DOMContentLoaded', () => {
             showStep(1);
+        });
+
+        document.getElementById('registrationForm').addEventListener('submit', function(event) {
+            event.preventDefault(); // Evitar recarga de página
+
+            // 1. Recopilar datos del formulario
+            const data = {
+                nombre: document.getElementById('nombre').value,
+                apellido: document.getElementById('apellido').value,
+                rol: document.getElementById('rol').value,
+                correo: document.getElementById('correo').value,
+                telefono: document.getElementById('telefono').value,
+                cedula: document.getElementById('cedula').value,
+                contrasena1: document.getElementById('contrasena1').value,
+                contrasena2: document.getElementById('contrasena2').value,
+            };
+
+            // 2. Realizar petición REST
+            fetch('/api/empleados/registro/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    // Si mantienes autenticación de sesión, debes enviar el X-CSRFToken aquí:
+                    // 'X-CSRFToken': getCookie('csrftoken') 
+                },
+                body: JSON.stringify(data)
+            })
+            .then(response => response.json().then(resData => ({ status: response.status, body: resData })))
+            .then(result => {
+                if (result.status === 201) {
+                    // Éxito: Redirigir
+                    window.location.href = '/dashboard/';
+                } else {
+                    // Error HTTP 400: Mostrar los errores devueltos por el serializador
+                    let errorMsg = "Errores en el registro:<br>";
+                    for (const [field, errors] of Object.entries(result.body)) {
+                        errorMsg += `<b>${field}:</b> ${errors.join(', ')}<br>`;
+                    }
+                    displayError(errorMsg);
+                }
+            })
+            .catch(error => {
+                displayError("Error de conexión con el servidor.");
+            });
         });
     </script>
 </body>

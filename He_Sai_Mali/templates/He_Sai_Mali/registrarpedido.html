@@ -1,6 +1,5 @@
 {% extends "He_Sai_Mali/base.html" %}
 {% load static %}
-{% load custom_filters %}
 
 {% block title %}{% if pedido_existente %}Añadir a Pedido N°{{ pedido_existente.idPedido }}{% else %}Nuevo Pedido{% endif %}{% endblock %}
 
@@ -192,23 +191,13 @@
 {% block header %}{% if pedido_existente %}EDITAR PEDIDO N°{{ pedido_existente.idPedido }}{% else %}REGISTRAR PEDIDO{% endif %}{% endblock %}
 
 {% block content %}
-<div class="toast-container position-fixed top-0 end-0 p-4" style="z-index: 1080;">
-    {% if messages %}
-        {% for message in messages %}
-            <div class="alert alert-{% if message.tags == 'error' %}danger{% else %}{{ message.tags }}{% endif %} alert-dismissible fade show shadow-lg pe-auto" role="alert">
-                <div class="d-flex align-items-center">
-                    <i class="fa {% if message.tags == 'error' %}fa-exclamation-circle{% else %}fa-check-circle{% endif %} me-2"></i>
-                    <span>{{ message }}</span>
-                </div>
-                <button type="button" class="btn-close shadow-none" data-bs-dismiss="alert" aria-label="Close"></button>
-            </div>
-        {% endfor %}
-    {% endif %}
-</div>
+<!-- Contenedor de Toasts JS -->
+<div id="toast-container-js" class="toast-container position-fixed top-0 end-0 p-4" style="z-index: 1080;"></div>
 
-<form method="POST" class="container-fluid">
+<form id="formularioPedido" class="container-fluid">
     {% csrf_token %}
     <div class="row">
+        <!-- SECCIÓN DE PLATILLOS -->
         <div class="col-md-8 main-content px-4">
             <div class="sticky-top-custom">
                 <div class="input-group mb-3 shadow-sm border border-secondary rounded">
@@ -217,108 +206,57 @@
                 </div>
             </div>
 
+            <!-- Aquí se inyectarán las categorías dinámicamente -->
             <div id="contenedorMenu">
-                {% for categoria, platillos in platillos_agrupados.items %}
-                <div class="categoria-seccion" data-categoria="{{ categoria }}">
-                    <span class="category-badge shadow-sm">{{ categoria }}</span>
-                    <div class="row" id="fila_categoria_{{ forloop.counter }}">
-                        {% for p in platillos %}
-                        <div class="col-md-4 mb-4 item-platillo" id="card_container_{{ p.idProductoMenu }}" data-original-category="fila_categoria_{{ forloop.parentloop.counter }}">
-                            <div class="card card-platillo shadow-sm h-100" id="card_{{ p.idProductoMenu }}">
-                                <div class="card-body d-flex flex-column">
-                                    <div class="d-flex justify-content-between align-items-start">
-                                        <h6 class="fw-bold mb-1">{{ p.nombre }}</h6>
-                                        <span id="status_{{ p.idProductoMenu }}" class="badge-agotado d-none">Agotado</span>
-                                    </div>
-                                    <p class="text-danger fw-bold mb-2">C$ {{ p.precio }}</p>
-                                    
-                                    <div class="mt-auto d-flex align-items-center justify-content-between">
-                                        <button type="button" class="btn btn-quantity" onclick="cambiarCantidad('{{ p.idProductoMenu }}', -1)">-</button>
-                                        <input type="number" 
-                                            name="cantidad_{{ p.idProductoMenu }}" 
-                                            id="input_{{ p.idProductoMenu }}" 
-                                            class="form-control mx-2 text-center border-0 fw-bold" 
-                                            value="0" min="0"
-                                            oninput="validarPositivo(this)"
-                                            data-precio="{{ p.precio }}"
-                                            style="width: 80px; background: transparent; padding: 0; font-size: 1.2rem;">
-                                        <button type="button" class="btn btn-quantity" onclick="cambiarCantidad('{{ p.idProductoMenu }}', 1)">+</button>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        {% endfor %}
-                    </div>
-                </div>
-                {% endfor %}
+                <div class="text-center py-5"><div class="spinner-border text-danger" role="status"></div></div>
+            </div>
 
-                <!-- Sección de Agotados -->
-                <div id="seccionAgotados" class="d-none mt-4">
-                    <span class="category-badge shadow-sm" style="background-color: #6c757d; color: white;">Agotado</span>
-                    <div class="row" id="listaAgotados">
-                    </div>
-                </div>
+            <div id="seccionAgotados" class="d-none mt-4">
+                <span class="category-badge shadow-sm" style="background-color: #6c757d; color: white;">Agotado</span>
+                <div class="row" id="listaAgotados"></div>
+            </div>
 
-                <div id="mensajeNoResultados" class="text-center py-5 d-none">
-                    <i class="fa fa-search-minus fa-3x text-secondary mb-3"></i>
-                    <h5 class="text-secondary">No se encontraron platillos que coincidan con tu búsqueda.</h5>
-                </div>
+            <div id="mensajeNoResultados" class="text-center py-5 d-none">
+                <i class="fa fa-search-minus fa-3x text-secondary mb-3"></i>
+                <h5 class="text-secondary">No se encontraron platillos.</h5>
             </div>
         </div>
 
+        <!-- SECCIÓN DE RESUMEN -->
         <div class="col-md-4 order-summary p-0">
             <div class="p-4" style="overflow-y: auto;">
-                
                 <h4 class="fw-bold mb-4" style="color: #981a28;">Detalles del Pedido</h4>
                 
                 <div class="shadow-sm rounded border mb-3 p-3">
                     <div class="mb-3">
                         <label class="small fw-bold">Nombre del Cliente</label>
-                        {% if pedido_existente %}
-                            <input type="text" class="form-control form-control-sm" value="{{ nombre_cliente_previo }}" disabled>
-                            <input type="hidden" name="nombre_cliente" value="{{ nombre_cliente_previo }}">
-                        {% else %}
-                            <input type="text" name="nombre_cliente" class="form-control form-control-sm" placeholder="Nombre del cliente" required>
-                        {% endif %}
+                        <input type="text" id="nombre_cliente" class="form-control form-control-sm" placeholder="Nombre del cliente" required>
                     </div>
 
                     <div class="row g-2 mb-3">
                         <div class="col-md-6">
                             <label class="small fw-bold">Teléfono</label>
-                            <input type="text" pattern="[0-9]{8}" name="telefono_cliente" 
-                            oninput="this.value = this.value.replace(/[^0-9]/g, '').slice(0, 8);"
-                            class="form-control form-control-sm" value="{{ telefono_cliente_previo }}" {% if pedido_existente %}disabled{% endif %}>
+                            <input type="text" id="telefono_cliente" pattern="[0-9]{8}" oninput="this.value = this.value.replace(/[^0-9]/g, '').slice(0, 8);" class="form-control form-control-sm">
                         </div>
                         <div class="col-md-6">
                             <label class="small fw-bold">Tipo</label>
-                            <select name="tipo_cliente" id="tipo_cliente" class="form-select form-select-sm" onchange="toggleIdentificacion()" {% if pedido_existente %}disabled{% endif %}>
-                                <option value="persona">Persona</option>
-                                <option value="empresa">Empresa</option>
+                            <select id="tipo_cliente" class="form-select form-select-sm" onchange="toggleIdentificacion()">
+                                <option value="Persona">Persona</option>
+                                <option value="Empresa">Empresa</option>
                             </select>
                         </div>
                     </div>
 
                     <div class="mb-3" id="identificacion_field" style="display:none;">
-                        <label class="small fw-bold">RUC / Cédula</label>
-                        <input type="text" name="identificacion_cliente" id="identificacion_cliente" class="form-control form-control-sm" {% if pedido_existente %}disabled{% endif %}>
+                        <label class="small fw-bold">RUC</label>
+                        <input type="text" id="identificacion_cliente" class="form-control form-control-sm">
                     </div>
 
                     <div class="mb-3">
                         <label class="small fw-bold">Mesa</label>
-                        <select name="mesa" class="form-select form-select-sm">
-                            <option value="ninguna" {% if pedido_existente and not pedido_existente.idMesa %}selected{% endif %}>Para llevar</option>
-                            
-                            {% if pedido_existente and pedido_existente.idMesa %}
-                                <option value="{{ pedido_existente.idMesa.idMesa }}" selected>
-                                    Mesa {{ pedido_existente.idMesa.idMesa }} (Actual)
-                                </option>
-                            {% endif %}
-
-                            {% for m in mesas_disponibles %}
-                                {% if not pedido_existente or m.idMesa != pedido_existente.idMesa.idMesa %}
-                                    <option value="{{ m.idMesa }}">Mesa {{ m.idMesa }}</option>
-                                {% endif %}
-                            {% endfor %}
+                        <select id="mesa_select" class="form-select form-select-sm">
+                            <option value="ninguna">Para llevar</option>
+                            <!-- Llenado dinámico -->
                         </select>
                     </div>
                 </div>
@@ -330,28 +268,17 @@
                             <thead>
                                 <tr class="border-bottom">
                                     <th>Platillo</th>
-                                    <th class="text-center">Cantidad</th>
+                                    <th class="text-center">Cant.</th>
                                     <th class="text-end">Total</th>
                                 </tr>
                             </thead>
-                            <tbody id="cuerpo_resumen" {% if platillos_previos %}class="border-bottom"{% endif %}>
-                                <tr>
-                                    <td colspan="3" class="text-center text-body-secondary fst-italic">No hay platillos seleccionados<br>&nbsp;</td>
-                                </tr>
+                            <tbody id="cuerpo_resumen">
+                                <tr><td colspan="3" class="text-center text-body-secondary fst-italic">No hay platillos seleccionados<br>&nbsp;</td></tr>
                             </tbody>
-                            {% if platillos_previos %}
-                            <tbody style="color: #666;">
-                                {% for p in platillos_previos %}
-                                <tr>
-                                    <td>{{ p.nombre }}<br><small class="text-body-secondary">C$ {{p.precio }} c/u</small></td>
-                                    <td class="text-center">{{ p.cantidad }}</td>
-                                    <td class="text-end">C$ {{ p.subtotal }}</td>
-                                </tr>
-                                {% endfor %}
+                            <tbody id="cuerpo_previos" style="color: #666;">
+                                <!-- Platillos de un pedido previo irán aquí -->
                             </tbody>
-                            {% endif %}
                         </table>
-                        
                     </div>
                 </div>
             </div>
@@ -361,40 +288,192 @@
                     <span>Subtotal</span>
                     <span class="fw-bold">C$ <span id="total_display">0.00</span></span>
                 </div>
-                <button type="submit" class="btn btn-block w-100 py-3 fw-bold text-white shadow">
-                    {% if pedido_existente %}Actualizar Pedido{% else %}Confirmar Pedido{% endif %}
+                <button type="submit" id="btn_submit_order" class="btn text-white btn-block w-100 py-3 fw-bold shadow">
+                    Confirmar Pedido
                 </button>
             </div>
         </div>
     </div>
 </form>
-<div class="overlay-pedido" id="overlayPedido"></div>
 
+<div class="overlay-pedido" id="overlayPedido"></div>
 <button type="button" class="btn btn-ver-pedido-flotante" id="btnTogglePedido">
     <i class="fas fa-shopping-cart me-2"></i> Ver Pedido
 </button>
 {% endblock %}
 
 {% block extra_js %}
-{{ inventario_json|json_script:"inventario-data-json" }}
-{{ recetas_json|json_script:"recetas-data-json" }}
-
 <script>
-    const inventarioOriginal = JSON.parse(document.getElementById('inventario-data-json').textContent);
-    const recetas = JSON.parse(document.getElementById('recetas-data-json').textContent);
+    // Variables globales
+    let inventarioOriginal = {};
+    let recetas = {};
+    let platillosPreviosTotales = 0;
+    
+    // Obtenemos el ID de pedido si es que está en la URL, ej: /pedidos/12/
+    const urlParts = window.location.pathname.split('/').filter(p => p);
+    const potentialId = urlParts[urlParts.length - 1];
+    const pedidoId = isNaN(potentialId) ? null : potentialId;
+    const API_URL = pedidoId ? `/api/pedidos/registrar/${pedidoId}/` : `/api/pedidos/registrar/`;
 
-    calcularTotal();
+    document.addEventListener('DOMContentLoaded', async () => {
+        await inicializarFormulario();
 
+        // Mobile sidebar logic
+        const btnToggle = document.getElementById('btnTogglePedido');
+        const panelPedido = document.querySelector('.order-summary');
+        const overlay = document.getElementById('overlayPedido');
+        
+        const togglePanel = () => {
+            panelPedido.classList.toggle('abierto');
+            overlay.classList.toggle('activo');
+        };
+        btnToggle.addEventListener('click', togglePanel);
+        overlay.addEventListener('click', togglePanel); 
+    });
+
+    // 1. CARGA DE DATOS (GET)
+    async function inicializarFormulario() {
+        try {
+            const response = await fetch(API_URL);
+            if (!response.ok) throw new Error("Error obteniendo datos del servidor.");
+            const data = await response.json();
+
+            inventarioOriginal = data.inventario;
+            recetas = data.recetas;
+
+            renderMenu(data.platillos_agrupados);
+            renderMesas(data.mesas_disponibles, data.pedido_existente);
+            
+            if (data.pedido_existente) {
+                configurarPedidoExistente(data.pedido_existente, data.platillos_previos);
+            }
+
+            setTimeout(verificarDisponibilidadGlobal, 100);
+        } catch (error) {
+            mostrarToast(error.message, 'danger');
+        }
+    }
+
+    // 2. RENDERIZADO DEL MENÚ Y MESAS
+    function renderMenu(platillosAgrupados) {
+        const contenedor = document.getElementById('contenedorMenu');
+        contenedor.innerHTML = '';
+        let indexCategoria = 1;
+
+        for (const [categoria, platillos] of Object.entries(platillosAgrupados)) {
+            let htmlHTML = `
+                <div class="categoria-seccion" data-categoria="${categoria}">
+                    <span class="category-badge shadow-sm">${categoria}</span>
+                    <div class="row" id="fila_categoria_${indexCategoria}">
+            `;
+            
+            platillos.forEach(p => {
+                htmlHTML += `
+                    <div class="col-md-4 mb-4 item-platillo" id="card_container_${p.idProductoMenu}" data-original-category="fila_categoria_${indexCategoria}">
+                        <div class="card card-platillo shadow-sm h-100" id="card_${p.idProductoMenu}">
+                            <div class="card-body d-flex flex-column">
+                                <div class="d-flex justify-content-between align-items-start">
+                                    <h6 class="fw-bold mb-1 plato-nombre">${p.nombre}</h6>
+                                    <span id="status_${p.idProductoMenu}" class="badge-agotado d-none">Agotado</span>
+                                </div>
+                                <p class="text-danger fw-bold mb-2">C$ ${p.precio.toFixed(2)}</p>
+                                
+                                <div class="mt-auto d-flex align-items-center justify-content-between">
+                                    <button type="button" class="btn btn-quantity" onclick="cambiarCantidad('${p.idProductoMenu}', -1)">-</button>
+                                    <input type="number" name="cantidad_${p.idProductoMenu}" id="input_${p.idProductoMenu}" 
+                                        class="form-control mx-2 text-center border-0 fw-bold" 
+                                        value="0" min="0" oninput="validarPositivo(this)" data-precio="${p.precio}"
+                                        style="width: 80px; background: transparent; padding: 0; font-size: 1.2rem;">
+                                    <button type="button" class="btn btn-quantity" onclick="cambiarCantidad('${p.idProductoMenu}', 1)">+</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+
+            htmlHTML += `</div></div>`;
+            contenedor.innerHTML += htmlHTML;
+            indexCategoria++;
+        }
+    }
+
+    function renderMesas(mesas, pedidoExistente) {
+        const select = document.getElementById('mesa_select');
+        
+        if (pedidoExistente && pedidoExistente.idMesa) {
+            select.innerHTML += `<option value="${pedidoExistente.idMesa}" selected>Mesa ${pedidoExistente.idMesa} (Actual)</option>`;
+        } else if (pedidoExistente) {
+            select.querySelector('option[value="ninguna"]').selected = true;
+        }
+
+        mesas.forEach(m => {
+            if (!pedidoExistente || m.idMesa !== pedidoExistente.idMesa) {
+                select.innerHTML += `<option value="${m.idMesa}">Mesa ${m.idMesa}</option>`;
+            }
+        });
+    }
+
+    function configurarPedidoExistente(pedido, platillosPrevios) {
+        // 1. Evitar crash verificando que los elementos existen antes de usar innerText
+        const headerTitle = document.getElementById('header_title');
+        if (headerTitle) {
+            headerTitle.innerText = `EDITAR PEDIDO N°${pedido.idPedido}`;
+        }
+
+        const btnSubmit = document.getElementById('btn_submit_order');
+        if (btnSubmit) {
+            btnSubmit.innerText = "Actualizar Pedido";
+        }
+
+        // 2. Llenar datos del cliente de forma segura 
+        // (Soporta tanto pedido.cliente.nombre como pedido.nombre_cliente por si tu API varía)
+        const nameInput = document.getElementById('nombre_cliente');
+        if (nameInput) {
+            nameInput.value = (pedido.cliente && pedido.cliente.nombre) ? pedido.cliente.nombre : (pedido.nombre_cliente || '');
+            nameInput.disabled = true;
+        }
+        
+        const phoneInput = document.getElementById('telefono_cliente');
+        if (phoneInput) {
+            phoneInput.value = (pedido.cliente && pedido.cliente.telefono) ? pedido.cliente.telefono : (pedido.telefono_cliente || ''); 
+            phoneInput.disabled = true;
+        }
+
+        const tipoCliente = document.getElementById('tipo_cliente');
+        if (tipoCliente) tipoCliente.disabled = true;
+
+        const idCliente = document.getElementById('identificacion_cliente');
+        if (idCliente) idCliente.disabled = true;
+
+        // 3. Mostrar platillos previos
+        const tbodyPrevios = document.getElementById('cuerpo_previos');
+        if (tbodyPrevios && platillosPrevios) {
+            platillosPrevios.forEach(p => {
+                platillosPreviosTotales += parseFloat(p.subtotal);
+                tbodyPrevios.innerHTML += `
+                    <tr>
+                        <td>${p.nombre}<br><small class="text-body-secondary">C$ ${p.precio} c/u</small></td>
+                        <td class="text-center">${p.cantidad}</td>
+                        <td class="text-end subtotal-previo">C$ ${parseFloat(p.subtotal).toFixed(2)}</td>
+                    </tr>
+                `;
+            });
+        }
+        
+        const cuerpoResumen = document.getElementById('cuerpo_resumen');
+        if (cuerpoResumen) cuerpoResumen.classList.add('border-bottom');
+        
+        calcularTotal();
+    }
+
+    // 3. LÓGICA DE INVENTARIO Y UI (IDÉNTICA A TU CÓDIGO)
     function cambiarCantidad(id, delta) {
         const input = document.getElementById('input_' + id);
         if (!input) return;
-
-        let valActual = parseInt(input.value) || 0;
-        let nuevoVal = valActual + delta;
-        
+        let nuevoVal = (parseInt(input.value) || 0) + delta;
         if (nuevoVal < 0) nuevoVal = 0;
         if (delta > 0 && !puedeIncrementar(id, 1)) return; 
-
         input.value = nuevoVal;
         verificarDisponibilidadGlobal();
         calcularTotal();
@@ -404,10 +483,8 @@
         const invTemporal = calcularInventarioRestante();
         const receta = recetas[idProducto];
         if (!receta) return true;
-
         for (const ing of receta) {
-            const stockDisponible = invTemporal[ing.idArticulo] || 0;
-            if (stockDisponible < (parseFloat(ing.cantidad) * incremento)) return false;
+            if ((invTemporal[ing.idArticulo] || 0) < (parseFloat(ing.cantidad) * incremento)) return false;
         }
         return true;
     }
@@ -416,12 +493,9 @@
         const invRestante = { ...inventarioOriginal };
         document.querySelectorAll('input[name^="cantidad_"]').forEach(input => {
             const idProd = input.name.split('_')[1];
-            const cantidad = parseInt(input.value) || 0;
-            const receta = recetas[idProd];
-            if (cantidad > 0 && receta) {
-                receta.forEach(ing => {
-                    invRestante[ing.idArticulo] -= (parseFloat(ing.cantidad) * cantidad);
-                });
+            const cant = parseInt(input.value) || 0;
+            if (cant > 0 && recetas[idProd]) {
+                recetas[idProd].forEach(ing => { invRestante[ing.idArticulo] -= (parseFloat(ing.cantidad) * cant); });
             }
         });
         return invRestante;
@@ -435,218 +509,193 @@
 
         for (const idProducto in recetas) {
             const ingredientes = recetas[idProducto];
-            let puedePrepararseSiquieraUno = true;
+            let puedePrepararse = ingredientes.every(ing => (invRestante[ing.idArticulo] || 0) >= parseFloat(ing.cantidad));
+            let stockInicialSuficiente = ingredientes.every(ing => inventarioOriginal[ing.idArticulo] >= parseFloat(ing.cantidad));
 
-            for (const ing of ingredientes) {
-                const stockDisponible = invRestante[ing.idArticulo] || 0;
-                if (stockDisponible < parseFloat(ing.cantidad)) {
-                    puedePrepararseSiquieraUno = false;
-                    break;
-                }
-            }
-
-            const cardContainer = document.getElementById(`card_container_${idProducto}`);
+            const container = document.getElementById(`card_container_${idProducto}`);
             const card = document.getElementById(`card_${idProducto}`);
-            const statusBadge = document.getElementById(`status_${idProducto}`);
-            const input = document.getElementById(`input_${idProducto}`);
-            const cantidadActual = parseInt(input?.value) || 0;
+            const badge = document.getElementById(`status_${idProducto}`);
+            const cant = parseInt(document.getElementById(`input_${idProducto}`)?.value) || 0;
 
             if (card) {
-                // LÓGICA DE AGOTADOS ORIGINALES (Stock 0 desde el inicio)
-                const stockInicialSuficiente = ingredientes.every(ing => inventarioOriginal[ing.idArticulo] >= parseFloat(ing.cantidad));
-                
-                if (!stockInicialSuficiente && cantidadActual === 0) {
-                    // Si nunca hubo stock, se va a la sección de abajo (Funcionalidad previa)
+                if (!stockInicialSuficiente && cant === 0) {
                     card.classList.add('agotado-original');
-                    listaAgotados.appendChild(cardContainer);
+                    listaAgotados.appendChild(container);
                     hayAgotadosOriginales = true;
-                } else if (!puedePrepararseSiquieraUno && cantidadActual === 0) {
-                    // LÓGICA DINÁMICA: Se quedó sin stock por otras selecciones
+                } else if (!puedePrepararse && cant === 0) {
                     card.classList.add('agotado-original');
-                    if (statusBadge) statusBadge.classList.remove('d-none');
-                    regresarACategoria(cardContainer);
+                    if(badge) badge.classList.remove('d-none');
+                    regresarACategoria(container);
                 } else {
-                    // Tiene stock o tiene cantidad seleccionada (Normal)
                     card.classList.remove('agotado-original');
-                    if (statusBadge) statusBadge.classList.add('d-none');
-                    regresarACategoria(cardContainer);
+                    if(badge) badge.classList.add('d-none');
+                    regresarACategoria(container);
                 }
             }
         }
-
         seccionAgotados.classList.toggle('d-none', !hayAgotadosOriginales);
-
-        document.querySelectorAll('.categoria-seccion').forEach(seccion => {
-            const platosVisibles = seccion.querySelectorAll('.row .item-platillo').length;
-            if (platosVisibles === 0) {
-                seccion.style.display = 'none';
-            }
+        document.querySelectorAll('.categoria-seccion').forEach(sec => {
+            sec.style.display = sec.querySelectorAll('.row .item-platillo').length === 0 ? 'none' : 'block';
         });
     }
 
     function regresarACategoria(container) {
         const originalId = container.getAttribute('data-original-category');
         const filaOriginal = document.getElementById(originalId);
-        if (filaOriginal && !filaOriginal.contains(container)) {
-            filaOriginal.appendChild(container);
-        }
+        if (filaOriginal && !filaOriginal.contains(container)) filaOriginal.appendChild(container);
     }
 
     function calcularTotal() {
-        let total = 0;
-        const cuerpoResumen = document.getElementById('cuerpo_resumen');
+        let total = platillosPreviosTotales;
         let htmlResumen = "";
-        let hayItems = false;
+        let hayNuevos = false;
 
-        // Seleccionamos todos los inputs de cantidad
         document.querySelectorAll('input[name^="cantidad_"]').forEach(input => {
-            const cantidad = parseInt(input.value);
-            const precio = parseFloat(input.getAttribute('data-precio'));
-            
-            if (cantidad > 0) {
-                hayItems = true;
-                // Buscamos el nombre del platillo en la tarjeta correspondiente
-                const nombrePlatillo = input.closest('.card-body').querySelector('h6').innerText;
-                const subtotalItem = cantidad * precio;
-                total += subtotalItem;
-
-                // Creamos la fila para el resumen utilizando text-end de Bootstrap 5
-                htmlResumen += `
-                    <tr>
-                        <td>${nombrePlatillo}<br><small class="text-body-secondary">C$ ${precio.toFixed(2)} c/u</small></td>
-                        <td class="text-center align-middle">${cantidad}</td>
-                        <td class="text-end align-middle fw-bold">C$ ${subtotalItem.toFixed(2)}</td>
-                    </tr>
-                `;
+            const cant = parseInt(input.value);
+            if (cant > 0) {
+                hayNuevos = true;
+                const precio = parseFloat(input.getAttribute('data-precio'));
+                const sub = cant * precio;
+                total += sub;
+                const nombre = input.closest('.card-body').querySelector('.plato-nombre').innerText;
+                htmlResumen += `<tr>
+                    <td>${nombre}<br><small class="text-body-secondary">C$ ${precio.toFixed(2)} c/u</small></td>
+                    <td class="text-center align-middle">${cant}</td>
+                    <td class="text-end align-middle fw-bold">C$ ${sub.toFixed(2)}</td>
+                </tr>`;
             }
         });
 
-        // Sumar platillos previos (Si existen en el contexto de Django)
-        const filasPrevias = document.querySelectorAll('.platillos-anteriores tbody:nth-child(3) tr');
-        filasPrevias.forEach(fila => {
-            // Extraemos el texto del subtotal usando .text-end de Bootstrap 5
-            const elementoSubtotal = fila.querySelector('.text-end');
-            if (elementoSubtotal) {
-                const textoSubtotal = elementoSubtotal.innerText;
-                const valorSubtotal = parseFloat(textoSubtotal.replace('C$', '').trim());
-                if (!isNaN(valorSubtotal)) {
-                    total += valorSubtotal;
-                }
-            }
-        });
-
-        // Si no hay nada, mostramos el mensaje por defecto con fst-italic
-        if (!hayItems) {
-            cuerpoResumen.innerHTML = '<tr><td colspan="3" class="text-center text-body-secondary fst-italic">No hay platillos seleccionados<br>&nbsp;</td></tr>';
-        } else {
-            cuerpoResumen.innerHTML = htmlResumen;
-        }
-
+        document.getElementById('cuerpo_resumen').innerHTML = hayNuevos ? htmlResumen : 
+            '<tr><td colspan="3" class="text-center text-body-secondary fst-italic">No hay platillos seleccionados<br>&nbsp;</td></tr>';
         document.getElementById('total_display').innerText = total.toFixed(2);
     }
 
     function validarPositivo(input) {
-        let valor = parseInt(input.value);
-        if (isNaN(valor) || valor < 0) {
-            input.value = 0;
-        } else {
+        let val = parseInt(input.value);
+        if (isNaN(val) || val < 0) input.value = 0;
+        else {
             const idProd = input.name.split('_')[1];
-            const sol = valor;
             input.value = 0; 
-            if (puedeIncrementar(idProd, sol)) {
-                input.value = sol;
-            } else {
+            if (puedeIncrementar(idProd, val)) input.value = val;
+            else {
                 let max = 0;
                 while (puedeIncrementar(idProd, max + 1)) max++;
                 input.value = max;
             }
         }
-        verificarDisponibilidadGlobal();
-        calcularTotal();
+        verificarDisponibilidadGlobal(); calcularTotal();
     }
 
     document.getElementById('busquedaPlatillo').addEventListener('input', function(e) {
         const busqueda = e.target.value.toLowerCase();
-        let totalVisibles = 0; // Contador para rastrear si algo quedó visible
-
-        // 1. Filtrar los platillos
+        let visibles = 0;
         document.querySelectorAll('.item-platillo').forEach(item => {
-            const nombre = item.querySelector('h6').innerText.toLowerCase();
-            if (nombre.includes(busqueda)) {
-                item.classList.remove('d-none');
-                item.style.display = 'block';
-                totalVisibles++; // Incrementamos si hay coincidencia
-            } else {
-                item.classList.add('d-none');
-                item.style.display = 'none';
-            }
+            if (item.querySelector('.plato-nombre').innerText.toLowerCase().includes(busqueda)) {
+                item.classList.remove('d-none'); item.style.display = 'block'; visibles++;
+            } else { item.classList.add('d-none'); item.style.display = 'none'; }
         });
-
-        // 2. Ocultar o mostrar las secciones de categorías
-        document.querySelectorAll('.categoria-seccion').forEach(seccion => {
-            const platillosVisibles = seccion.querySelectorAll('.item-platillo:not(.d-none)').length;
-            seccion.style.display = (platillosVisibles > 0) ? 'block' : 'none';
-        });
-
-        // 3. Caso especial: Sección de Agotados
-        const seccionAgotados = document.getElementById('seccionAgotados');
-        const listaAgotados = document.getElementById('listaAgotados');
-        const agotadosVisibles = listaAgotados.querySelectorAll('.item-platillo:not(.d-none)').length;
         
-        if (agotadosVisibles > 0) {
-            seccionAgotados.classList.remove('d-none');
-        } else {
-            seccionAgotados.classList.add('d-none');
-        }
+        document.querySelectorAll('.categoria-seccion').forEach(sec => {
+            sec.style.display = sec.querySelectorAll('.item-platillo:not(.d-none)').length > 0 ? 'block' : 'none';
+        });
 
-        // 4. LÓGICA NUEVA: Mostrar mensaje si el total de visibles es 0
-        const mensajeNoResultados = document.getElementById('mensajeNoResultados');
-        if (totalVisibles === 0) {
-            mensajeNoResultados.classList.remove('d-none');
-        } else {
-            mensajeNoResultados.classList.add('d-none');
-        }
+        const agotadosVisibles = document.getElementById('listaAgotados').querySelectorAll('.item-platillo:not(.d-none)').length;
+        document.getElementById('seccionAgotados').classList.toggle('d-none', agotadosVisibles === 0);
+        document.getElementById('mensajeNoResultados').classList.toggle('d-none', visibles > 0);
     });
 
     function toggleIdentificacion() {
-        const tipo = document.getElementById('tipo_cliente').value;
-        document.getElementById('identificacion_field').style.display = (tipo === 'empresa') ? 'block' : 'none';
+        const isEmpresa = document.getElementById('tipo_cliente').value === 'Empresa';
+        document.getElementById('identificacion_field').style.display = isEmpresa ? 'block' : 'none';
     }
 
-    document.addEventListener('DOMContentLoaded', () => {
-        setTimeout(verificarDisponibilidadGlobal, 10);
-    });
-</script>
-<script>
-    document.addEventListener('DOMContentLoaded', () => {
-        const btnToggle = document.getElementById('btnTogglePedido');
-        const panelPedido = document.querySelector('.order-summary');
-        const overlay = document.getElementById('overlayPedido');
+    // 4. ENVÍO DE DATOS A LA API (POST)
+    document.getElementById('formularioPedido').addEventListener('submit', async function(e) {
+        e.preventDefault();
+        
+        const btnSubmit = document.getElementById('btn_submit_order');
+        btnSubmit.disabled = true;
+        btnSubmit.classList.remove('text-white');
+        btnSubmit.classList.add('text-secondary');
+        btnSubmit.innerText = "Procesando...";
 
-        if (btnToggle && panelPedido && overlay) {
-            // Función para abrir y cerrar el panel lateral
-            const togglePanel = () => {
-                panelPedido.classList.toggle('abierto');
-                overlay.classList.toggle('activo');
-            };
+        // Recolectar productos seleccionados
+        const productosPayload = [];
+        document.querySelectorAll('input[name^="cantidad_"]').forEach(input => {
+            const cantidad = parseInt(input.value);
+            if (cantidad > 0) {
+                productosPayload.push({
+                    idProductoMenu: parseInt(input.name.split('_')[1]),
+                    cantidad: cantidad
+                });
+            }
+        });
 
-            // Eventos al hacer clic en el botón o en la capa oscura
-            btnToggle.addEventListener('click', togglePanel);
-            overlay.addEventListener('click', togglePanel); 
+        // Construir JSON según estructura solicitada
+        const payload = {
+            cliente: {
+                nombre_cliente: document.getElementById('nombre_cliente').value,
+                telefono_cliente: document.getElementById('telefono_cliente').value,
+                tipo_cliente: document.getElementById('tipo_cliente').value,
+                identificacion_cliente: document.getElementById('identificacion_cliente').value
+            },
+            mesa: document.getElementById('mesa_select').value,
+            productos: productosPayload
+        };
+
+        const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+
+        try {
+            const response = await fetch(API_URL, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': csrfToken
+                },
+                body: JSON.stringify(payload)
+            });
+
+            const responseData = await response.json();
+
+            if (!response.ok) {
+                throw new Error(responseData.error || 'Ocurrió un error al registrar el pedido.');
+            }
+
+            mostrarToast(responseData.message, 'success');
+            // Redirigir a una lista de pedidos después de éxito
+            setTimeout(() => { window.location.href = '/pedidos/'; }, 1500);
+
+        } catch (error) {
+            mostrarToast(error.message, 'danger');
+            btnSubmit.disabled = false;
+            btnSubmit.innerText = pedidoId ? "Actualizar Pedido" : "Confirmar Pedido";
         }
     });
-</script>
-<script>
-    document.addEventListener('DOMContentLoaded', () => {
-        // CIERRE AUTOMÁTICO (Después de 4 segundos)
+
+    // 5. TOAST DINÁMICOS
+    function mostrarToast(mensaje, tipo) {
+        const container = document.getElementById('toast-container-js');
+        const icon = tipo === 'danger' ? 'fa-exclamation-circle' : 'fa-check-circle';
+        const toastId = 'toast_' + Date.now();
+        
+        const toastHTML = `
+            <div id="${toastId}" class="alert alert-${tipo} alert-dismissible fade show shadow-lg pe-auto" role="alert">
+                <div class="d-flex align-items-center">
+                    <i class="fa ${icon} me-2"></i><span>${mensaje}</span>
+                </div>
+                <button type="button" class="btn-close shadow-none" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+        `;
+        container.innerHTML += toastHTML;
+
         setTimeout(() => {
-            document.querySelectorAll('.toast-container .alert').forEach(alerta => {
-                if (alerta) {
-                    alerta.classList.remove('show');
-                    setTimeout(() => alerta.remove(), 150);
-                }
-            });
+            const t = document.getElementById(toastId);
+            if(t) {
+                t.classList.remove('show');
+                setTimeout(() => t.remove(), 150);
+            }
         }, 4000);
-    });
+    }
 </script>
 {% endblock %}

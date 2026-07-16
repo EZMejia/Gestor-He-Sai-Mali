@@ -1,6 +1,5 @@
 {% extends "He_Sai_Mali/base.html" %}
 {% load static %}
-{% load custom_filters %}
 
 {% block title %}Cola de Pedidos{% endblock %}
 
@@ -237,19 +236,8 @@
     <div id="app">
         <main class="main-content" id="main-content">
             <div class="contenido">
-                <div id="contenedor-mensajes" class="toast-container position-fixed top-0 end-0 p-4" style="z-index: 1080;">
-                    {% if messages %}
-                        {% for message in messages %}
-                            <div class="alert alert-{% if message.tags == 'error' %}danger{% else %}{{ message.tags }}{% endif %} alert-dismissible fade show shadow-lg pe-auto" role="alert">
-                                <div class="d-flex align-items-center">
-                                    <i class="fa {% if message.tags == 'error' %}fa-exclamation-circle{% else %}fa-check-circle{% endif %} me-2"></i>
-                                    <span>{{ message }}</span>
-                                </div>
-                                <button type="button" class="btn-close shadow-none" data-bs-dismiss="alert" aria-label="Close"></button>
-                            </div>
-                        {% endfor %}
-                    {% endif %}
-                </div>
+                <!-- Contenedor dinámico de mensajes tipo Toast -->
+                <div id="contenedor-mensajes" class="toast-container position-fixed top-0 end-0 p-4" style="z-index: 1080;"></div>
 
                 <div class="mb-4">
                     <a href="{% url 'registrarpedido' %}" class="btn-nuevo" style="border: none;">
@@ -257,168 +245,67 @@
                     </a>
                 </div>
 
+                <!-- Esta lista se llenará dinámicamente mediante JS -->
                 <div id="lista-pedidos">
-                {% if cola_pedidos %}
-                    {% for pedido in cola_pedidos %}
-                        {% with estado_general=estado_botones|get_item:pedido.idPedido %}
-                        <div class="container_pedidos">
-                            <div class="pedido_head">
-                                <span class="numero"><b>Pedido N° {{ pedido.idPedido }} | Mesa: {{ pedido.idMesa_id|default:"Sin Mesa" }}</b></span>
-                                <span class="cliente"><b>Cliente:</b> {{ pedido.nombre }}</span>
-                            </div>
-                            <div class="info">
-                                <span class="total"><b>Total</b>: C${{ pedido.montoTotal|floatformat:2 }}</span>
-                                <span class="fecha"><b>Fecha</b>: {{ pedido.fecha|date:"d/m/Y H:i" }}</span>
-                            </div>
-                            
-                            <div>
-                                <h3>Detalle de Productos:</h3>
-                                <ul class="lista_platillos">
-                                    {% for platillo in platillos_por_pedido|get_item:pedido.idPedido %}
-                                        <li class="platillos">
-                                            <div class="platillo">{{ platillo.Cantidad }}x {{ platillo.Nombre }}</div>
-                                            
-                                            <div class="progress-container" title="Estado: {{ platillo.Estado }}">
-                                                <div class="progress-bar" 
-                                                    style="width: {% if platillo.Estado == 'Registrado' %}33%{% elif platillo.Estado == 'Listo' %}66%{% else %}100%{% endif %};">
-                                                </div>
-                                            </div>
-
-                                            <div class="d-flex align-items-center justify-content-end gap-2" style="width: 100%;">
-                                                <form method="POST" action="{% url 'cambiar_estado_platillo' platillo.IdPedido_Platillo %}" style="display:inline; width: 100%;" class="ajax-form estado-form">
-                                                    {% csrf_token %}
-                                                    <button type="button" class="platillo_estado btn-cambio-estado" 
-                                                            data-id="{{ platillo.IdPedido_Platillo }}"
-                                                            data-original-color="#981a28"
-                                                            data-original-html='{% if platillo.Estado == "Registrado" %}<i class="fas fa-fire"></i> Preparar{% elif platillo.Estado == "Listo" %}<i class="fas fa-check"></i> Servir{% else %}<i class="fas fa-concierge-bell"></i> Servido{% endif %}'
-                                                            {% if platillo.Estado == 'Servido' %} disabled {% endif %} 
-                                                            style="background-color: #981a28;">
-                                                        {% if platillo.Estado == "Registrado" %}
-                                                            <i class="fas fa-fire"></i> Preparar
-                                                        {% elif platillo.Estado == "Listo" %}
-                                                            <i class="fas fa-check"></i> Servir
-                                                        {% else %}
-                                                            <i class="fas fa-concierge-bell"></i> Servido
-                                                        {% endif %}
-                                                    </button>
-                                                </form>
-
-                                                {% if platillo.Estado == 'Registrado' or platillo.TiempoPreparacion == 0 and platillo.Estado != 'Servido' %}
-                                                    <!-- Tratamiento como ANULACIÓN (Gris) si está registrado o si es producto directo sin servir -->
-                                                    <button type="button" class="btn btn-secondary btn-sm" style="height: 100%;" title="Anular Platillo"
-                                                        onclick="abrirModalBaja('{% url 'registrar_merma_platillo' platillo.IdPedido_Platillo %}', 
-                                                        '{{ platillo.Nombre }}', 'Anular', '{{ pedido.idPedido }}', '{{ pedido.nombre }}')">
-                                                        <i class="fas fa-minus-circle"></i>
-                                                    </button>
-                                                {% else %}
-                                                    <!-- Tratamiento como MERMA (Amarillo) si ya se cocinó o si ya fue servido y se echó a perder -->
-                                                    <button type="button" class="btn btn-warning btn-sm text-dark" style="height: 100%;" title="Registrar Merma"
-                                                        onclick="abrirModalBaja('{% url 'registrar_merma_platillo' platillo.IdPedido_Platillo %}', 
-                                                        '{{ platillo.Nombre }}', 'Merma', '{{ pedido.idPedido }}', '{{ pedido.nombre }}')">
-                                                        <i class="fas fa-exclamation-triangle"></i>
-                                                    </button>
-                                                {% endif %}
-                                            </div>
-                                        </li>
-                                    {% endfor %}
-                                </ul>
-                            </div>
-
-                            <div class="action-buttons">
-                                <button type="button" class="btn-facturar" 
-                                    onclick="mostrarFormularioPago('{{ pedido.idPedido }}', '{{ pedido.montoTotal|floatformat:2 }}', '{% url 'facturar_pedido' pedido.idPedido %}')"
-                                    {% if not estado_general.puede_facturar %}disabled{% endif %}>
-                                    <i class="fas fa-receipt"></i> Facturar
-                                </button>
-                                <a href="{% url 'registrarpedido_agregar' pedido.idPedido %}" class="btn-agregar">
-                                    <i class="fas fa-plus"></i> Agregar
-                                </a>
-                                <button type="submit" class="btn-eliminar" {% if not estado_general.puede_eliminar %}disabled{% endif %}
-                                onclick="prepararModalEliminar('{{ pedido.idPedido }}', '{% url 'eliminar_pedido' pedido.idPedido %}')">
-                                    <i class="fas fa-trash-alt"></i> Eliminar
-                                </button>
-                            </div>
-                        </div>
-                        {% endwith %}
-                    {% endfor %}
-                {% endif %}
+                    <div class="text-center py-5">
+                        <i class="fas fa-spinner fa-spin fa-2x text-muted"></i>
+                        <p class="mt-2 text-muted">Cargando cola de pedidos...</p>
+                    </div>
                 </div>
             </div>
 
             {# MODAL PAGO #}
-            <div class="modal fade" id="modalFormularioPago" tabindex="-1" aria-labelledby="modalFormularioPagoLabel"
-            aria-hidden="true">
+            <div class="modal fade" id="modalFormularioPago" tabindex="-1" aria-labelledby="modalFormularioPagoLabel" aria-hidden="true">
                 <div class="modal-dialog modal-dialog-centered">
                     <div class="modal-content">
                         <div class="modal-header" style="background-color: var(--primary-color); color: white;">
                             <h5 class="modal-title" id="modalFormularioPagoLabel">
                                 <i class="fas fa-receipt"></i> Método de Pago
                             </h5>
-                            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"
-                                aria-label="Close"></button>
+                            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
                         </div>
-                        <form method="POST" action="" id="formularioPago">
-                            {% csrf_token %}
+                        <form id="formularioPago">
                             <div class="modal-body">
-                                <h4 id="montoTotalDisplay" class="mb-3" style="color: #444; font-weight: bold;">Monto Total:
-                                </h4>
-
-                                <label for="metodo_pago" class="form-label" style="font-weight: bold;">Seleccione el
-                                    método:</label>
-                                <select id="metodo_pago" name="metodo_pago" required
-                                    class="form-select form-control-custom">
-                                    <option value="">-- Seleccione --</option>
-                                    {% for metodo in metodos %}
-                                    <option value="{{ metodo }}">{{ metodo }}</option>
-                                    {% endfor %}
+                                <h4 id="montoTotalDisplay" class="mb-3" style="color: #444; font-weight: bold;">Monto Total:</h4>
+                                <label for="metodo_pago" class="form-label" style="font-weight: bold;">Seleccione el método:</label>
+                                <select id="metodo_pago" name="metodo_pago" required class="form-select">
+                                    <!-- Cargado por JS -->
                                 </select>
                             </div>
                             <div class="modal-footer">
                                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                                <button type="submit" class="btn" style="background-color: #38761d; color: white;">
-                                    Confirmar Pago
-                                </button>
+                                <button type="submit" class="btn" style="background-color: #38761d; color: white;">Confirmar Pago</button>
                             </div>
                         </form>
                     </div>
                 </div>
             </div>
 
-            {# Modal para eliminar pedido #}
-            <div class="modal fade" id="modalEliminarPedido" tabindex="-1" aria-labelledby="modalEliminarPedidoLabel"
-            aria-hidden="true">
+            {# MODAL ELIMINAR PEDIDO #}
+            <div class="modal fade" id="modalEliminarPedido" tabindex="-1" aria-labelledby="modalEliminarPedidoLabel" aria-hidden="true">
                 <div class="modal-dialog modal-dialog-centered">
                     <div class="modal-content">
                         <div class="modal-header" style="background-color: var(--primary-color); color: white;">
                             <h5 class="modal-title" id="modalEliminarPedidoLabel">
                                 <i class="fas fa-exclamation-triangle"></i> Confirmar Eliminación
                             </h5>
-                            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"
-                                aria-label="Close"></button>
+                            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
                         </div>
                         <div class="modal-body">
-                            <p>¿Está seguro de que desea eliminar el <strong>Pedido N° <span
-                                        id="modal-id-pedido-texto"></span></strong>?</p>
-                            <p class="text-muted" style="font-size: 0.9em;">
-                                Esta acción eliminará permanentemente la orden.
-                            </p>
+                            <p>¿Está seguro de que desea eliminar el <strong>Pedido N° <span id="modal-id-pedido-texto"></span></strong>?</p>
+                            <p class="text-muted" style="font-size: 0.9em;">Esta acción eliminará permanentemente la orden y retornará los insumos al almacén.</p>
                         </div>
                         <div class="modal-footer">
                             <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                            <!-- Formulario interceptado vía la clase ajax-form compartida -->
-                            <form id="form-eliminar-pedido" method="POST" action="" class="ajax-form">
-                                {% csrf_token %}
-                                <button type="submit" class="btn" onclick="cerrarModalEliminar()"
-                                    style="background-color: var(--primary-color); color: white;">
-                                    Sí, Eliminar Pedido
-                                </button>
+                            <form id="form-eliminar-pedido">
+                                <button type="submit" class="btn" style="background-color: var(--primary-color); color: white;">Sí, Eliminar Pedido</button>
                             </form>
                         </div>
                     </div>
                 </div>
             </div>
 
-            {# Modal dinámico para Anulaciones o Mermas #}
+            {# MODAL DINÁMICO DE BAJA (ANULACIÓN O MERMA) #}
             <div class="modal fade" id="modalBajaPlatillo" tabindex="-1" aria-hidden="true">
                 <div class="modal-dialog modal-dialog-centered">
                     <div class="modal-content">
@@ -426,8 +313,7 @@
                             <h5 class="modal-title" id="modal-baja-titulo"></h5>
                             <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
                         </div>
-                        <form id="form-baja-platillo" method="POST" action="" class="ajax-form">
-                            {% csrf_token %}
+                        <form id="form-baja-platillo">
                             <div class="modal-body">
                                 <p id="modal-baja-alerta" class="alert py-2 small"></p>
                                 <strong>Cliente: <span id="modal-baja-cliente" class="fw-normal"></span></strong><br>
@@ -447,165 +333,210 @@
     
 {% block extra_js %}
     <script>
+        // --- CONTROLADORES DE MODALES ---
         let modalBajaInstancia = null;
-
-        function abrirModalBaja(urlAccion, nombrePlatillo, tipoBaja, idPedido, nombreCliente) {
-            // Configurar elementos básicos
-            document.getElementById('form-baja-platillo').action = urlAction = urlAccion;
-            document.getElementById('modal-baja-nombre').textContent = nombrePlatillo;
-            document.getElementById('modal-baja-cliente').textContent = nombreCliente;
-
-            const header = document.getElementById('modal-baja-header');
-            const titulo = document.getElementById('modal-baja-titulo');
-            const alerta = document.getElementById('modal-baja-alerta');
-            const txtArea = document.getElementById('justificacion');
-            const btnSubmit = document.getElementById('modal-baja-btn-submit');
-
-            if (tipoBaja === 'Anular') {
-                // Estilo Gris/Info para Anulaciones (sin pérdida física de stock)
-                header.className = "modal-header bg-secondary text-white";
-                titulo.innerHTML = '<i class="fas fa-minus-circle"></i> Anular Platillo para pedido N° ' + idPedido;
-                alerta.className = "alert alert-info py-2 small";
-                alerta.textContent = "El platillo no se ha cocinado. Al anularlo, los insumos regresarán al almacén digital automáticamente.";
-                btnSubmit.className = "btn btn-info";
-                btnSubmit.textContent = "Confirmar Anulación";
-            } else {
-                // Estilo Amarillo/Peligro para Mermas (pérdida física de stock)
-                header.className = "modal-header bg-warning text-dark";
-                titulo.innerHTML = '<i class="fas fa-exclamation-triangle"></i> Registrar Merma para pedido N° ' + idPedido;
-                alerta.className = "alert alert-warning py-2 text-dark small";
-                alerta.textContent = "¡Cuidado! Este platillo ya se preparó. Al marcarlo como merma saldrá de la cuenta, pero el stock físico ya se consumió.";
-                btnSubmit.className = "btn btn-warning";
-                btnSubmit.textContent = "Confirmar Merma";
-            }
-
-            modalBajaInstancia = new bootstrap.Modal(document.getElementById('modalBajaPlatillo'));
-            modalBajaInstancia.show();
-        }
-
-        function cerrarModalBaja() {
-            if (modalBajaInstancia) {
-                modalBajaInstancia.hide();
-            }
-        }
-    </script>
-
-    <script>
-        // Modal formulario de pago
         let modalPagoInstancia = null;
-
-        // Lógica para el modal de Pago
-        function mostrarFormularioPago(id, total, facturarUrl) {
-            document.getElementById('montoTotalDisplay').textContent = `Monto Total: C$${ parseFloat(total).toFixed(2) }`;
-            document.getElementById('formularioPago').action = facturarUrl;
-
-            modalPagoInstancia = new bootstrap.Modal(document.getElementById('modalFormularioPago'));
-            modalPagoInstancia.show();
-        }
-
-        function cerrarModalPago() {
-            if (modalPagoInstancia) { 
-                modalPagoInstancia.hide(); 
-            }
-        }
-
-        // Modal eliminar pedido
         let modalEliminarInstancia = null;
 
-        function prepararModalEliminar(idPedido, urlEliminar) {
-            document.getElementById('modal-id-pedido-texto').textContent = idPedido;
-            document.getElementById('form-eliminar-pedido').action = urlEliminar;
+        let currentBajaId = null;
+        let currentEliminarId = null;
+        let currentFacturarId = null;
 
-            modalEliminarInstancia = new bootstrap.Modal(document.getElementById('modalEliminarPedido'));
-            modalEliminarInstancia.show();
-        }
-
-        function cerrarModalEliminar() {
-            if (modalEliminarInstancia) {
-            modalEliminarInstancia.hide();
-            }
-        }
-    </script>
-
-    <script>
-        document.addEventListener('DOMContentLoaded', function() {
-        // Diccionario para rastrear los contadores activos: { 'id-platillo': { tiempo: 10, intervalo: ID, ... } }
+        // Variables de datos globales
         let countdowns = {};
+        let metodosPagoDisponibles = [];
 
-        function procesarHTML(html) {
-            const parser = new DOMParser();
-            const doc = parser.parseFromString(html, 'text/html');
-
-            const nuevoContenido = doc.getElementById('lista-pedidos');
-            const actualContenido = document.getElementById('lista-pedidos');
-
-            if (nuevoContenido && actualContenido) {
-                // ANTES de inyectar el HTML, revisamos si el servidor nos ganó o si todo sigue igual
-                Object.keys(countdowns).forEach(id => {
-                    let btnNuevo = nuevoContenido.querySelector(`.btn-cambio-estado[data-id="${id}"]`);
-                    
-                    // Si el platillo ya no está, o si su estado (texto) cambió en el servidor:
-                    if (!btnNuevo || btnNuevo.dataset.originalHtml !== countdowns[id].htmlOriginal) {
-                        clearInterval(countdowns[id].intervalo);
-                        delete countdowns[id];
-                        // Opcional: Podrías disparar un toast aquí avisando "El estado fue modificado por otro usuario"
-                    } else {
-                        // Si sigue igual, le pasamos la "ropa" de cuenta regresiva al botón nuevo para que no parpadee
-                        btnNuevo.classList.add('counting-down');
-                        btnNuevo.style.backgroundColor = 'var(--secondary-color)';
-                        btnNuevo.style.color = '#333';
-                        btnNuevo.innerHTML = `<i class="fas fa-undo"></i> Deshacer (${countdowns[id].tiempo}s)`;
+        // --- UTILIDADES ---
+        function getCookie(name) {
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i].trim();
+                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
                     }
-                });
-
-                actualContenido.innerHTML = nuevoContenido.innerHTML;
+                }
             }
-
-            const nuevosMensajes = doc.getElementById('contenedor-mensajes');
-            const actualesMensajes = document.getElementById('contenedor-mensajes');
-            if (nuevosMensajes && actualesMensajes && nuevosMensajes.querySelector('.alert')) {
-                actualesMensajes.innerHTML = nuevosMensajes.innerHTML;
-            }
+            return cookieValue;
         }
 
-        function actualizarVista() {
-            fetch(window.location.href, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
-            .then(response => response.text())
-            .then(html => procesarHTML(html))
-            .catch(error => console.error('Error:', error));
+        function formatearFecha(fechaStr) {
+            const date = new Date(fechaStr);
+            if (isNaN(date)) return fechaStr;
+            const day = String(date.getDate()).padStart(2, '0');
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const year = date.getFullYear();
+            const hours = String(date.getHours()).padStart(2, '0');
+            const minutes = String(date.getMinutes()).padStart(2, '0');
+            return `${day}/${month}/${year} ${hours}:${minutes}`;
         }
 
-        function enviarFormularioAjax(form) {
-            const submitBtn = form.querySelector('button');
-            if (submitBtn) submitBtn.disabled = true;
+        function mostrarToast(mensaje, tipo = 'success') {
+            const container = document.getElementById('contenedor-mensajes');
+            const icon = tipo === 'danger' ? 'fa-exclamation-circle' : 'fa-check-circle';
+            const alertClass = `alert-${tipo}`;
+            
+            const toastHtml = `
+                <div class="alert ${alertClass} alert-dismissible fade show shadow-lg pe-auto" role="alert">
+                    <div class="d-flex align-items-center">
+                        <i class="fa ${icon} me-2"></i>
+                        <span>${mensaje}</span>
+                    </div>
+                    <button type="button" class="btn-close shadow-none" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            `;
+            container.insertAdjacentHTML('beforeend', toastHtml);
+            
+            const alertElement = container.lastElementChild;
+            setTimeout(() => {
+                if (alertElement) {
+                    const bsAlert = bootstrap.Alert.getOrCreateInstance(alertElement);
+                    bsAlert.close();
+                }
+            }, 5000);
+        }
 
-            fetch(form.action, {
-                method: 'POST',
-                body: new FormData(form),
+        // --- PETICIONES API ---
+        function cargarColaPedidos() {
+            fetch('/api/pedidos/mesero-cola/', {
+                method: 'GET',
                 headers: { 'X-Requested-With': 'XMLHttpRequest' }
             })
-            .then(response => response.text())
-            .then(html => procesarHTML(html))
-            .finally(() => { if (submitBtn) submitBtn.disabled = false; });
+            .then(res => {
+                if (res.status === 403) throw new Error("No tienes permisos de mesero.");
+                return res.json();
+            })
+            .then(data => {
+                metodosPagoDisponibles = data.metodos_pago;
+                renderizarPedidos(data.cola_pedidos);
+                actualizarMetodosPagoSelect();
+            })
+            .catch(err => {
+                console.error(err);
+                document.getElementById('lista-pedidos').innerHTML = `
+                    <div class="alert alert-danger text-center">
+                        Hubo un error cargando los pedidos: ${err.message}
+                    </div>
+                `;
+            });
         }
 
-        // Interceptar envíos normales
-        document.body.addEventListener('submit', function(e) {
-            if (e.target.classList.contains('ajax-form') && !e.target.classList.contains('estado-form')) {
-                e.preventDefault(); 
-                if (e.target.id === 'formularioPago') cerrarModalPago();
-                else if (e.target.id === 'form-baja-platillo') cerrarModalBaja();
-                enviarFormularioAjax(e.target);
+        // --- RENDERIZADO DINÁMICO ---
+        function renderizarPedidos(pedidos) {
+            const container = document.getElementById('lista-pedidos');
+            if (!pedidos || pedidos.length === 0) {
+                container.innerHTML = '<div class="alert alert-info text-center py-4">No tienes pedidos activos en la cola.</div>';
+                return;
             }
-        });
 
-        // Doble Tap
+            let html = '';
+            pedidos.forEach(pedido => {
+                let platillosHtml = '';
+                
+                pedido.platillos.forEach(plat => {
+                    let progressWidth = '33%';
+                    if (plat.estado === 'Listo') progressWidth = '66%';
+                    if (plat.estado === 'Servido') progressWidth = '100%';
+
+                    let btnText = '';
+                    if (plat.estado === 'Registrado') btnText = '<i class="fas fa-fire"></i> Preparar';
+                    else if (plat.estado === 'Listo') btnText = '<i class="fas fa-check"></i> Servir';
+                    else btnText = '<i class="fas fa-concierge-bell"></i> Servido';
+
+                    let bajaBtn = '';
+                    // Lógica del backend para clasificar Merma o Anulación
+                    if (plat.estado === 'Registrado' || (plat.tiempoPreparacion === 0 && plat.estado !== 'Servido')) {
+                        bajaBtn = `
+                            <button type="button" class="btn btn-secondary btn-sm" style="height: 100%;" title="Anular Platillo"
+                                onclick="abrirModalBaja(${plat.idPedido_Platillo}, '${plat.nombre}', 'Anular', ${pedido.idPedido}, '${pedido.nombre_cliente}')">
+                                <i class="fas fa-minus-circle"></i>
+                            </button>
+                        `;
+                    } else if (plat.estado !== 'Servido') {
+                        bajaBtn = `
+                            <button type="button" class="btn btn-warning btn-sm text-dark" style="height: 100%;" title="Registrar Merma"
+                                onclick="abrirModalBaja(${plat.idPedido_Platillo}, '${plat.nombre}', 'Merma', ${pedido.idPedido}, '${pedido.nombre_cliente}')">
+                                <i class="fas fa-exclamation-triangle"></i>
+                            </button>
+                        `;
+                    }
+
+                    // Conservar visualmente la cuenta regresiva si el temporizador está corriendo localmente
+                    let isCounting = countdowns[plat.idPedido_Platillo];
+                    let inlineStyle = isCounting ? 'background-color: var(--secondary-color); color: #333;' : 'background-color: #981a28;';
+                    let displayedContent = isCounting ? `<i class="fas fa-undo"></i> Deshacer (${isCounting.tiempo}s)` : btnText;
+                    let extraClass = isCounting ? 'counting-down' : '';
+
+                    platillosHtml += `
+                        <li class="platillos">
+                            <div class="platillo">${plat.cantidad}x ${plat.nombre}</div>
+                            <div class="progress-container" title="Estado: ${plat.estado}">
+                                <div class="progress-bar" style="width: ${progressWidth};"></div>
+                            </div>
+                            <div class="d-flex align-items-center justify-content-end gap-2" style="width: 100%;">
+                                <button type="button" class="platillo_estado btn-cambio-estado ${extraClass}" 
+                                        data-id="${plat.idPedido_Platillo}"
+                                        data-original-color="#981a28"
+                                        data-original-html='${btnText}'
+                                        ${plat.estado === 'Servido' ? 'disabled' : ''} 
+                                        style="${inlineStyle}">
+                                    ${displayedContent}
+                                </button>
+                                ${bajaBtn}
+                            </div>
+                        </li>
+                    `;
+                });
+
+                html += `
+                    <div class="container_pedidos">
+                        <div class="pedido_head">
+                            <span class="numero"><b>Pedido N° ${pedido.idPedido} | Mesa: ${pedido.idMesa_id || "Sin Mesa"}</b></span>
+                            <span class="cliente"><b>Cliente:</b> ${pedido.nombre_cliente}</span>
+                        </div>
+                        <div class="info">
+                            <span class="total"><b>Total</b>: C$${parseFloat(pedido.montoTotal).toFixed(2)}</span>
+                            <span class="fecha"><b>Fecha</b>: ${formatearFecha(pedido.fecha)}</span>
+                        </div>
+                        <div>
+                            <h3>Detalle de Productos:</h3>
+                            <ul class="lista_platillos">
+                                ${platillosHtml}
+                            </ul>
+                        </div>
+                        <div class="action-buttons">
+                            <button type="button" class="btn-facturar" 
+                                onclick="mostrarFormularioPago(${pedido.idPedido}, ${pedido.montoTotal})"
+                                ${!pedido.puede_facturar ? 'disabled' : ''}>
+                                <i class="fas fa-receipt"></i> Facturar
+                            </button>
+                            <a href="/pedidos/registrar/${pedido.idPedido}/" class="btn-agregar">
+                                <i class="fas fa-plus"></i> Agregar
+                            </a>
+                            <button type="button" class="btn-eliminar" 
+                                onclick="prepararModalEliminar(${pedido.idPedido})"
+                                ${!pedido.puede_eliminar ? 'disabled' : ''}>
+                                <i class="fas fa-trash-alt"></i> Eliminar
+                            </button>
+                        </div>
+                    </div>
+                `;
+            });
+
+            container.innerHTML = html;
+        }
+
+        // --- EVENTOS Y LÓGICA DE INTERACCIONES ---
+
+        // Doble clic para cambiar de estado (con temporizador deshacer)
         document.body.addEventListener('dblclick', function(e) {
             let btn = e.target.closest('.btn-cambio-estado');
             if (!btn || btn.disabled || btn.classList.contains('counting-down')) return;
             
             let id = btn.dataset.id;
-            if (countdowns[id]) return; // Ya está corriendo
+            if (countdowns[id]) return;
 
             countdowns[id] = {
                 tiempo: 5,
@@ -625,7 +556,7 @@
                         botonVivo.innerHTML = `<i class="fas fa-undo"></i> Deshacer (${countdowns[id].tiempo}s)`;
                     }
                 } else {
-                    // Terminaron los 10 segundos
+                    // Finaliza el conteo sin cancelaciones -> Enviar POST a la API
                     clearInterval(countdowns[id].intervalo);
                     delete countdowns[id];
 
@@ -633,20 +564,36 @@
                         botonVivo.classList.remove('counting-down');
                         botonVivo.innerHTML = `<i class="fas fa-spinner fa-spin"></i> Procesando...`;
                         botonVivo.disabled = true;
-                        botonVivo.style.backgroundColor = botonVivo.dataset.originalColor;
-                        botonVivo.style.color = 'white';
                         
-                        let formVivo = botonVivo.closest('form');
-                        if (formVivo) enviarFormularioAjax(formVivo);
+                        fetch(`/api/pedidos/cambiar-estado/${id}/`, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'X-CSRFToken': getCookie('csrftoken'),
+                                'X-Requested-With': 'XMLHttpRequest'
+                            }
+                        })
+                        .then(res => {
+                            if (!res.ok) throw new Error("Error en la solicitud");
+                            return res.json();
+                        })
+                        .then(data => {
+                            mostrarToast(data.message, 'success');
+                            cargarColaPedidos();
+                        })
+                        .catch(err => {
+                            mostrarToast("Error al actualizar el estado del platillo.", 'danger');
+                            cargarColaPedidos();
+                        });
                     }
                 }
             }
 
             countdowns[id].intervalo = setInterval(tick, 1000);
-            tick(); // Forzar primer cambio visual inmediato
+            tick(); 
         });
 
-        // Clic para Cancelar
+        // Clic para cancelar cuenta regresiva (Deshacer)
         document.body.addEventListener('click', function(e) {
             let btn = e.target.closest('.btn-cambio-estado.counting-down');
             if (!btn) return;
@@ -663,7 +610,163 @@
             }
         });
 
-        setInterval(actualizarVista, 5000);
-    });
+        // --- MANEJO DE MODALES DE CONFIRMACIÓN ---
+
+        // 1. Modales de Anulación y Mermas (Bajas)
+        function abrirModalBaja(platilloId, nombrePlatillo, tipoBaja, idPedido, nombreCliente) {
+            currentBajaId = platilloId;
+            document.getElementById('modal-baja-nombre').textContent = nombrePlatillo;
+            document.getElementById('modal-baja-cliente').textContent = nombreCliente;
+
+            const header = document.getElementById('modal-baja-header');
+            const titulo = document.getElementById('modal-baja-titulo');
+            const alerta = document.getElementById('modal-baja-alerta');
+            const btnSubmit = document.getElementById('modal-baja-btn-submit');
+
+            if (tipoBaja === 'Anular') {
+                header.className = "modal-header bg-secondary text-white";
+                titulo.innerHTML = `<i class="fas fa-minus-circle"></i> Anular Platillo - Pedido N° ${idPedido}`;
+                alerta.className = "alert alert-info py-2 small";
+                alerta.textContent = "El platillo no se ha cocinado. Al anularlo, los insumos regresarán al inventario digital.";
+                btnSubmit.className = "btn btn-info text-white";
+                btnSubmit.textContent = "Confirmar Anulación";
+            } else {
+                header.className = "modal-header bg-warning text-dark";
+                titulo.innerHTML = `<i class="fas fa-exclamation-triangle"></i> Registrar Merma - Pedido N° ${idPedido}`;
+                alerta.className = "alert alert-warning py-2 text-dark small";
+                alerta.textContent = "¡Cuidado! Este platillo ya se preparó. Al marcarlo como merma saldrá de la cuenta, pero el stock físico ya se consumió.";
+                btnSubmit.className = "btn btn-warning text-dark";
+                btnSubmit.textContent = "Confirmar Merma";
+            }
+
+            modalBajaInstancia = new bootstrap.Modal(document.getElementById('modalBajaPlatillo'));
+            modalBajaInstancia.show();
+        }
+
+        document.getElementById('form-baja-platillo').addEventListener('submit', function(e) {
+            e.preventDefault();
+            if (!currentBajaId) return;
+
+            fetch(`/api/pedidos/registrar-merma/${currentBajaId}/`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCookie('csrftoken'),
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            })
+            .then(res => res.json())
+            .then(data => {
+                mostrarToast(data.message, data.tipo_notificacion);
+                modalBajaInstancia.hide();
+                cargarColaPedidos();
+            })
+            .catch(err => {
+                mostrarToast("Error al procesar la baja del platillo.", 'danger');
+            });
+        });
+
+        // 2. Modal de Eliminar Pedido
+        function prepararModalEliminar(idPedido) {
+            currentEliminarId = idPedido;
+            document.getElementById('modal-id-pedido-texto').textContent = idPedido;
+            modalEliminarInstancia = new bootstrap.Modal(document.getElementById('modalEliminarPedido'));
+            modalEliminarInstancia.show();
+        }
+
+        document.getElementById('form-eliminar-pedido').addEventListener('submit', function(e) {
+            e.preventDefault();
+            if (!currentEliminarId) return;
+
+            fetch(`/api/pedidos/eliminar/${currentEliminarId}/`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCookie('csrftoken'),
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            })
+            .then(res => {
+                if (!res.ok) throw new Error("No se pudo eliminar el pedido.");
+                return res.json();
+            })
+            .then(data => {
+                mostrarToast(data.message, 'success');
+                modalEliminarInstancia.hide();
+                cargarColaPedidos();
+            })
+            .catch(err => {
+                mostrarToast(err.message || "Error al eliminar el pedido.", "danger");
+            });
+        });
+
+        // 3. Modal de Pago (Facturación)
+        function actualizarMetodosPagoSelect() {
+            const select = document.getElementById('metodo_pago');
+            
+            // 1. Guardamos el valor que el usuario tiene seleccionado actualmente
+            const valorSeleccionado = select.value; 
+
+            // 2. Reconstruimos las opciones
+            select.innerHTML = '<option value="">-- Seleccione --</option>';
+            metodosPagoDisponibles.forEach(metodo => {
+                select.innerHTML += `<option value="${metodo}">${metodo}</option>`;
+            });
+
+            // 3. Volvemos a aplicar el valor que guardamos (si es que había uno seleccionado)
+            if (valorSeleccionado) {
+                select.value = valorSeleccionado;
+            }
+        }
+        
+        function mostrarFormularioPago(idPedido, total) {
+            currentFacturarId = idPedido;
+            document.getElementById('montoTotalDisplay').textContent = `Monto Total: C$${parseFloat(total).toFixed(2)}`;
+            modalPagoInstancia = new bootstrap.Modal(document.getElementById('modalFormularioPago'));
+            modalPagoInstancia.show();
+        }
+
+        const urlFacturaBase = "{% url 'facturar_pedido' 0 %}";
+
+        document.getElementById('formularioPago').addEventListener('submit', function(e) {
+            e.preventDefault();
+            if (!currentFacturarId) return;
+
+            const metodoPago = document.getElementById('metodo_pago').value;
+
+            // Se realiza la petición POST para registrar el pago
+            fetch(`/pedidos/facturar/${currentFacturarId}/`, { 
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                    'X-CSRFToken': getCookie('csrftoken'),
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                body: new URLSearchParams({ 'metodo_pago': metodoPago })
+            })
+            .then(res => {
+                if (!res.ok) throw new Error("Error al procesar el pago.");
+                
+                modalPagoInstancia.hide();
+                mostrarToast("Pedido facturado con éxito. Redirigiendo...", 'success');
+                
+                // 2. Reemplazamos el '0' de la URL base por el ID del pedido actual
+                const urlDestino = urlFacturaBase.replace('0', currentFacturarId);
+                
+                // 3. Redirigimos al usuario después de 1 segundo para que vea la notificación de éxito
+                setTimeout(() => {
+                    window.location.href = urlDestino;
+                }, 1000);
+            })
+            .catch(err => {
+                mostrarToast("Error al procesar la facturación.", "danger");
+            });
+        });
+
+        // Polling para mantener actualizada la cola en tiempo real cada 5 segundos
+        document.addEventListener('DOMContentLoaded', function() {
+            cargarColaPedidos();
+            setInterval(cargarColaPedidos, 5000);
+        });
     </script>
 {% endblock %}

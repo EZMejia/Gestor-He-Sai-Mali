@@ -1,5 +1,7 @@
 {% extends 'He_Sai_Mali/base.html' %}
 
+{% block title %}Admin - Facturas{% endblock %}
+
 {% block extra_style %}
 <style>
     /* ==== ESTILO UNIFICADO CON EL DASHBOARD ORIGINAL ==== */
@@ -25,7 +27,7 @@
     /* Aseguramos el scroll igual que antes */
     #page-content-wrapper-inner {
         overflow-y: auto !important;
-        height: calc(100vh - 65px) !important;
+        height: calc(100dvh - 65px) !important;
         overflow-x: hidden;
     }
 
@@ -62,8 +64,9 @@
         color: var(--primary-color);
     }
     .historial-wrapper .metric-card .card-value {
-        font-size: 2.5rem;
+        font-size: clamp(2rem, 3vw, 2.5rem);
         font-weight: bold;
+        word-wrap: break-word;
         color: black;
     }
     .historial-wrapper .metric-card p {
@@ -213,18 +216,8 @@
 
 {% block content %}
 <div class="historial-wrapper container-fluid mt-4 px-4 pb-5">
+    <!-- Contenedor dinámico de notificaciones -->
     <div id="contenedor-mensajes" class="toast-container position-fixed top-0 end-0 p-4" style="z-index: 1080;">
-        {% if messages %}
-            {% for message in messages %}
-                <div class="alert alert-{% if message.tags == 'error' %}danger{% else %}{{ message.tags }}{% endif %} alert-dismissible fade show shadow-lg pe-auto" role="alert">
-                    <div class="d-flex align-items-center">
-                        <i class="fa {% if message.tags == 'error' %}fa-exclamation-circle{% else %}fa-check-circle{% endif %} me-2"></i>
-                        <span>{{ message }}</span>
-                    </div>
-                    <button type="button" class="btn-close shadow-none" data-bs-dismiss="alert" aria-label="Close"></button>
-                </div>
-            {% endfor %}
-        {% endif %}
     </div>
     
     <div class="mb-4">
@@ -234,14 +227,15 @@
         <p style="color: #6c757d;">Visualiza, filtra y gestiona los registros contables.</p>
     </div>
 
+    <!-- MÉTRICAS (Valores vacíos por defecto, se llenan con JS) -->
     <div class="row g-4 mb-4" id="metricas-contenedor">
         <div class="col-md-4">
             <div class="metric-card" style="border-left-color: var(--success-color);">
                 <div class="card-header">
                     <h3>Ventas Totales</h3>
-                    <i class="fas fa-coins card-icon" style="color: var(--success-color);"></i>
+                    <i class="fas fa-dollar-sign card-icon" style="color: var(--success-color);"></i>
                 </div>
-                <div class="card-value">C${{ ventas_totales|floatformat:2 }}</div>
+                <div class="card-value" id="val-ventas">C$0.00</div>
                 <p>Total facturado en el período</p>
             </div>
         </div>
@@ -249,9 +243,9 @@
             <div class="metric-card" style="border-left-color: var(--info-color);">
                 <div class="card-header">
                     <h3>Facturas Emitidas</h3>
-                    <i class="fas fa-file-invoice card-icon" style="color: var(--info-color);"></i>
+                    <i class="fas fa-receipt card-icon" style="color: var(--info-color);"></i>
                 </div>
-                <div class="card-value">{{ total_facturas }}</div>
+                <div class="card-value" id="val-facturas">0</div>
                 <p>Documentos generados</p>
             </div>
         </div>
@@ -261,49 +255,53 @@
                     <h3>Clientes Atendidos</h3>
                     <i class="fas fa-users card-icon" style="color: var(--warning-color);"></i>
                 </div>
-                <div class="card-value">{{ total_clientes }}</div>
+                <div class="card-value" id="val-clientes">0</div>
                 <p>Personas únicas</p>
             </div>
         </div>
     </div>
 
+    <!-- FILTROS -->
     <div class="card-filtros">
-        <form id="filtro-facturas" method="GET" action="{% url 'historial_facturas' %}" class="row g-3 align-items-end">
-            <div class="col-md-4">
+        <form id="filtro-facturas" class="row g-3 align-items-end">
+            <div class="col-12 col-lg-4">
                 <label for="buscar">Cliente o ID</label>
-                <input type="text" class="form-control" id="buscar" name="q" placeholder="Ej. Juan o 54" value="{{ request.GET.q }}">
+                <input type="text" class="form-control" id="buscar" name="q" placeholder="Ej. Juan o 54">
             </div>
             
-            <div class="col-md-2">
+            <!-- Fechas toman mitad de pantalla en móviles (6), un tercio en tablet (4) y un sexto en PC (2) -->
+            <div class="col-6 col-md-4 col-lg-2">
                 <label for="fecha_inicio">Desde</label>
-                <input type="date" class="form-control" id="fecha_inicio" name="fecha_inicio" value="{{ fecha_inicio }}">
+                <input type="date" class="form-control" id="fecha_inicio" name="fecha_inicio">
             </div>
 
-            <div class="col-md-2">
+            <div class="col-6 col-md-4 col-lg-2">
                 <label for="fecha_fin">Hasta</label>
-                <input type="date" class="form-control" id="fecha_fin" name="fecha_fin" value="{{ fecha_fin }}">
+                <input type="date" class="form-control" id="fecha_fin" name="fecha_fin">
             </div>
 
-            <div class="col-md-2">
+            <div class="col-12 col-md-4 col-lg-2">
                 <label for="estado">Estado</label>
                 <select class="form-select" id="estado" name="estado">
-                    <option value="TODOS" {% if request.GET.estado == 'TODOS' %}selected{% endif %}>Todos</option>
-                    <option value="VIGENTE" {% if request.GET.estado == 'VIGENTE' %}selected{% endif %}>Vigentes</option>
-                    <option value="ANULADA" {% if request.GET.estado == 'ANULADA' %}selected{% endif %}>Anuladas</option>
+                    <option value="TODOS" selected>Todos</option>
+                    <option value="VIGENTE">Vigentes</option>
+                    <option value="ANULADA">Anuladas</option>
                 </select>
             </div>
 
-            <div class="col-md-2 d-grid gap-2 d-flex justify-content-end">
+            <!-- Botones: Ocupan fila propia en tablet, pero se alinean a la derecha en PC. Eliminamos el d-grid conflictivo -->
+            <div class="col-12 col-lg-2 d-flex gap-2 justify-content-lg-end mt-3 mt-lg-auto">
                 <button type="button" id="btn-limpiar" class="btn-limpiar" title="Limpiar">
                     <i class="fas fa-undo-alt"></i>
                 </button>
-                <button type="submit" class="btn-buscar w-100">
+                <button type="submit" class="btn-buscar flex-grow-1">
                     <i class="fas fa-search me-1"></i> Buscar
                 </button>
             </div>
         </form>
     </div>
 
+    <!-- TABLA DE RESULTADOS -->
     <div class="table-container" id="tabla-contenedor">
         <div class="table-responsive">
             <table class="table table-borderless align-middle text-center">
@@ -317,59 +315,34 @@
                         <th>Acciones</th>
                     </tr>
                 </thead>
-                <tbody>
-                    {% for factura in facturas %}
-                    <tr>
-                        <td class="text-start ps-4" style="font-weight: 500;">#{{ factura.idPedido }}</td>
-                        <td class="fecha-factura">{{ factura.fecha|date:"d \d\e F \d\e Y" }}</td>
-                        <td class="text-start fw-bold">{{ factura.idCliente.nombre }}</td>
-                        <td class="text-end fw-bold">C${{ factura.monto_con_iva|floatformat:2 }}</td>
-                        <td>
-                            {% if factura.estado_factura == 'VIGENTE' %}
-                                <span class="badge-vigente"><i class="fas fa-check-circle me-1"></i> Vigente</span>
-                            {% else %}
-                                <span class="badge-anulada"><i class="fas fa-ban me-1"></i> Anulada</span>
-                            {% endif %}
-                        </td>
-                        <td>
-                            <div class="d-flex justify-content-center gap-2">
-                                <a href="{% url 'descargar_pdf_factura' factura.idPedido %}" class="btn-icon btn-icon-pdf" target="_blank" title="Ver PDF">
-                                    <i class="fa-solid fa-file-pdf"></i>
-                                </a>
-                                
-                                <button type="button" class="btn-icon btn-icon-anular" title="Anular Factura" 
-                                        {% if factura.estado_factura == 'ANULADA' %}disabled{% else %}onclick="prepararModalAnularFactura('{{ factura.idPedido }}', '{{ factura.idCliente.nombre|escapejs }}', '{% url 'anular_factura' factura.idPedido %}')"{% endif %}>
-                                    <i class="fa-solid fa-ban"></i>
-                                </button>
-                            </div>
-                        </td>
-                    </tr>
-                    {% empty %}
-                    <tr>
-                        <td colspan="6" class="py-5">
-                            <div class="text-center text-muted">
-                                <i class="fas fa-inbox fa-3x mb-3"></i>
-                                <p>No se encontraron facturas.</p>
-                            </div>
-                        </td>
-                    </tr>
-                    {% endfor %}
+                <tbody id="tabla-body">
+                    <!-- Los datos se inyectarán aquí mediante JS -->
                 </tbody>
             </table>
+            
+            <div id="loading-spinner" class="text-center text-muted">
+                <div class="spinner-border" role="status">
+                    <span class="visually-hidden">Cargando...</span>
+                </div>
+                <p class="mt-2">Cargando registros...</p>
+            </div>
         </div>
     </div>
 
-    <div class="modal fade" id="modalAnularFactura" tabindex="-1" aria-labelledby="modalAnularFacturaLabel" aria-hidden="true">
+    <!-- MODAL DE ANULACIÓN -->
+    <div class="modal fade" id="modalAnularFactura" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content">
                 <div class="modal-header" style="background-color: var(--primary-color); color: white;">
-                    <h5 class="modal-title" id="modalAnularFacturaLabel">
+                    <h5 class="modal-title">
                         <i class="fas fa-exclamation-triangle"></i> Confirmar Anulación
                     </h5>
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
-                <form id="form-anular-factura" method="POST" action="">
+                <form id="form-anular-factura">
                     {% csrf_token %}
+                    <input type="hidden" id="modal-id-pedido">
+                    
                     <div class="modal-body">
                         <p style="font-size: 1.1rem; margin-bottom: 5px;">¿Está seguro de que desea anular la factura <strong>N° <span id="modal-id-factura-texto"></span></strong>?</p>
                         <p style="font-size: 1.1rem; margin-bottom: 15px;"><strong>Cliente:</strong> <span id="modal-nombre-cliente-texto" style="color: var(--primary-color); font-weight: 600;"></span></p>
@@ -390,7 +363,7 @@
                     </div>
                     <div class="modal-footer">
                         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                        <button type="submit" class="btn" style="background-color: var(--primary-color); color: white;">
+                        <button type="submit" class="btn" id="btn-submit-anular" style="background-color: var(--primary-color); color: white;">
                             Sí, Anular Factura
                         </button>
                     </div>
@@ -404,97 +377,275 @@
 
 {% block extra_js %}
 <script>
-    // Función para traducir los meses de inglés a español
-    function traducirFechas() {
-        const meses = {
-            'January': 'enero',
-            'February': 'febrero',
-            'March': 'marzo',
-            'April': 'abril',
-            'May': 'mayo',
-            'June': 'junio',
-            'July': 'julio',
-            'August': 'agosto',
-            'September': 'septiembre',
-            'October': 'octubre',
-            'November': 'noviembre',
-            'December': 'diciembre'
-        };
-        document.querySelectorAll('.fecha-factura').forEach(celda => {
-            let texto = celda.textContent;
-            for (let [ingles, espanol] of Object.entries(meses)) {
-                texto = texto.replace(ingles, espanol);
-            }
-            celda.textContent = texto;
+    // URL Base de tu API (Asegúrate de que coincida con tus urls.py)
+    const API_HISTORIAL_URL = '/api/historial-facturas/';
+    
+    const tablaBody = document.getElementById('tabla-body');
+    const loadingSpinner = document.getElementById('loading-spinner');
+    let modalAnularInstancia = null;
+
+    // --- FORMATEADOR DE FECHA ---
+    function formatearFecha(fechaStr) {
+        if (!fechaStr) return "Fecha desconocida";
+        
+        // Separamos la fecha de la hora descartando todo lo que esté después de la 'T'
+        const soloFecha = fechaStr.split('T')[0]; 
+        
+        // Ahora sí aplicamos T00:00:00 de forma segura para evitar el desface de zona horaria
+        const fecha = new Date(soloFecha + 'T00:00:00');
+        
+        // Fallback de seguridad en caso de que el dato sea anómalo
+        if (isNaN(fecha.getTime())) return "Fecha inválida"; 
+        
+        const opciones = { day: 'numeric', month: 'long', year: 'numeric' };
+        return fecha.toLocaleDateString('es-ES', opciones);
+    }
+
+    // --- SISTEMA DE TOASTS DINÁMICOS ---
+    function mostrarToast(mensaje, tipo) {
+        const contenedor = document.getElementById('contenedor-mensajes');
+        const icon = tipo === 'success' ? 'fa-check-circle' : (tipo === 'danger' ? 'fa-exclamation-circle' : 'fa-info-circle');
+        const alertClass = tipo === 'error' ? 'danger' : tipo;
+        
+        const toastHTML = `
+            <div class="alert alert-${alertClass} alert-dismissible fade show shadow-lg pe-auto" role="alert">
+                <div class="d-flex align-items-center">
+                    <i class="fa ${icon} me-2"></i>
+                    <span>${mensaje}</span>
+                </div>
+                <button type="button" class="btn-close shadow-none" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+        `;
+        contenedor.insertAdjacentHTML('beforeend', toastHTML);
+        
+        // Auto-eliminar después de 5 segundos
+        const alertElement = contenedor.lastElementChild;
+        setTimeout(() => {
+            const bsAlert = new bootstrap.Alert(alertElement);
+            bsAlert.close();
+        }, 5000);
+    }
+
+    // --- OBTENER DATOS DE LA API ---
+    async function cargarFacturas() {
+        // Mostrar spinner, ocultar tabla
+        tablaBody.innerHTML = '';
+        loadingSpinner.style.display = 'block';
+
+        // Construir URL con parámetros del formulario
+        const formData = new FormData(document.getElementById('filtro-facturas'));
+        const params = new URLSearchParams(formData).toString();
+        const url = `${API_HISTORIAL_URL}?${params}`;
+
+        try {
+            const response = await fetch(url);
+            if (!response.ok) throw new Error("Error al obtener los datos");
+            
+            const data = await response.json();
+            actualizarUI(data);
+        } catch (error) {
+            console.error(error);
+            mostrarToast("No se pudo cargar el historial de facturas.", "danger");
+        } finally {
+            loadingSpinner.style.display = 'none';
+        }
+    }
+
+    // --- ACTUALIZAR DOM ---
+    function actualizarUI(data) {
+        // Actualizar Métricas
+        document.getElementById('val-ventas').textContent = `C$${data.metricas.ventas_totales.toFixed(2)}`;
+        document.getElementById('val-facturas').textContent = data.metricas.total_facturas;
+        document.getElementById('val-clientes').textContent = data.metricas.total_clientes;
+
+        // Actualizar Filtros si la API hizo un override inteligente (ej. resetear fechas hoy)
+        document.getElementById('buscar').value = data.filtros.q || '';
+        document.getElementById('fecha_inicio').value = data.filtros.fecha_inicio || '';
+        document.getElementById('fecha_fin').value = data.filtros.fecha_fin || '';
+        document.getElementById('estado').value = data.filtros.estado || 'TODOS';
+
+        // Renderizar Tabla
+        if (data.facturas.length === 0) {
+            tablaBody.innerHTML = `
+                <tr>
+                    <td colspan="6" class="py-5">
+                        <div class="text-center text-muted">
+                            <i class="fas fa-inbox fa-3x mb-3"></i>
+                            <p>No se encontraron facturas.</p>
+                        </div>
+                    </td>
+                </tr>`;
+            return;
+        }
+
+        data.facturas.forEach(factura => {
+            const esVigente = factura.estado_factura === 'VIGENTE';
+            const badge = esVigente 
+                ? `<span class="badge-vigente"><i class="fas fa-check-circle me-1"></i> Vigente</span>`
+                : `<span class="badge-anulada"><i class="fas fa-ban me-1"></i> Anulada</span>`;
+            
+            const btnAnular = esVigente
+                ? `<button type="button" class="btn-icon btn-icon-anular" title="Anular Factura" 
+                            onclick="abrirModalAnular('${factura.idPedido}', '${factura.cliente_nombre.replace(/'/g, "\\'")}')">
+                        <i class="fa-solid fa-ban"></i>
+                    </button>`
+                : `<button type="button" class="btn-icon btn-icon-anular" disabled><i class="fa-solid fa-ban"></i></button>`;
+
+            const row = `
+                <tr>
+                    <td class="text-start ps-4" style="font-weight: 500;">#${factura.idPedido}</td>
+                    <td>${formatearFecha(factura.fecha)}</td>
+                    <td class="text-start fw-bold">${factura.cliente_nombre}</td>
+                    <td class="text-end fw-bold">C$${factura.monto_con_iva.toFixed(2)}</td>
+                    <td>${badge}</td>
+                    <td>
+                        <div class="d-flex justify-content-center gap-2">
+                            <a href="/factura/descargar/${factura.idPedido}/" class="btn-icon btn-icon-pdf" target="_blank" title="Ver PDF">
+                                <i class="fa-solid fa-file-pdf"></i>
+                            </a>
+                            ${btnAnular}
+                        </div>
+                    </td>
+                </tr>
+            `;
+            tablaBody.insertAdjacentHTML('beforeend', row);
         });
     }
 
-    // Funciones del Modal de Anulación
-    let modalAnularInstancia = null;
-
-    function prepararModalAnularFactura(idFactura, nombreCliente, urlAccion) {
-        document.getElementById('modal-id-factura-texto').textContent = idFactura;
-        document.getElementById('modal-nombre-cliente-texto').textContent = nombreCliente;
-        document.getElementById('form-anular-factura').action = urlAccion;
+    // --- MANEJO DEL MODAL Y PETICIÓN POST ---
+    function abrirModalAnular(idPedido, clienteNombre) {
+        document.getElementById('modal-id-pedido').value = idPedido;
+        document.getElementById('modal-id-factura-texto').textContent = idPedido;
+        document.getElementById('modal-nombre-cliente-texto').textContent = clienteNombre;
+        document.getElementById('motivo_anulacion').value = ""; // Limpiar motivo
         
-        // Limpiamos el select cada vez que se abre el modal
-        document.getElementById('motivo_anulacion').value = "";
-
         if (!modalAnularInstancia) {
             modalAnularInstancia = new bootstrap.Modal(document.getElementById('modalAnularFactura'));
         }
         modalAnularInstancia.show();
     }
 
-    document.addEventListener("DOMContentLoaded", function() {
-        traducirFechas();
+    document.getElementById('form-anular-factura').addEventListener('submit', async function(e) {
+        e.preventDefault();
+        
+        const idPedido = document.getElementById('modal-id-pedido').value;
+        const motivo = document.getElementById('motivo_anulacion').value;
+        const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+        const btnSubmit = document.getElementById('btn-submit-anular');
+        
+        btnSubmit.disabled = true;
+        btnSubmit.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Procesando...';
 
-        const form = document.getElementById('filtro-facturas');
-        const inputs = form.querySelectorAll('input, select');
-        const btnLimpiar = document.getElementById('btn-limpiar');
-        let timeout = null;
-
-        function realizarBusqueda() {
-            const url = new URL(form.action);
-            const formData = new FormData(form);
-            const searchParams = new URLSearchParams(formData);
-            url.search = searchParams.toString();
-
-            fetch(url, {
-                headers: { 'X-Requested-With': 'XMLHttpRequest' }
-            })
-            .then(response => response.text())
-            .then(html => {
-                const parser = new DOMParser();
-                const doc = parser.parseFromString(html, 'text/html');
-                document.getElementById('tabla-contenedor').innerHTML = doc.getElementById('tabla-contenedor').innerHTML;
-                document.getElementById('metricas-contenedor').innerHTML = doc.getElementById('metricas-contenedor').innerHTML;
-                window.history.replaceState({}, '', url);
-                traducirFechas();
+        try {
+            const response = await fetch(`${API_HISTORIAL_URL}anular/${idPedido}/`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': csrfToken
+                },
+                body: JSON.stringify({ motivo_anulacion: motivo })
             });
+            
+            const data = await response.json();
+            
+            if (response.ok) {
+                modalAnularInstancia.hide();
+                mostrarToast(data.mensaje, data.tipo_alerta); // success o warning dependendiendo del stock
+                cargarFacturas(); // Refrescar la tabla
+            } else {
+                // Manejar errores de DRF (ej. validación)
+                let errorMsg = data.error || data.warning || "Ocurrió un error en la validación.";
+                if (data.motivo_anulacion) { errorMsg = data.motivo_anulacion[0]; }
+                mostrarToast(errorMsg, "danger");
+            }
+        } catch (error) {
+            mostrarToast("Error de conexión al intentar anular la factura.", "danger");
+        } finally {
+            btnSubmit.disabled = false;
+            btnSubmit.innerHTML = 'Sí, Anular Factura';
+        }
+    });
+
+    // === VALIDACIÓN Y FILTRADO AUTOMÁTICO DE FECHAS ===
+    function validarFechasYFiltrar() {
+        const startInput = document.getElementById('fecha_inicio');
+        const endInput = document.getElementById('fecha_fin');
+
+        // Si ambos campos tienen un valor ingresado, validamos su coherencia
+        if (startInput.value && endInput.value) {
+            const startDate = new Date(startInput.value + 'T00:00:00');
+            const endDate = new Date(endInput.value + 'T00:00:00');
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+
+            // Validaciones de lógica de fechas replicadas del dashboard
+            if (startDate > endDate) {
+                startInput.value = endInput.value; 
+            }
+            if (endDate > today) {
+                endInput.value = today.toISOString().split('T')[0];
+            }
+        } else if (endInput.value) {
+            // Si solo se ha ingresado fecha final, evitamos que exceda el día de hoy
+            const endDate = new Date(endInput.value + 'T00:00:00');
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            
+            if (endDate > today) {
+                endInput.value = today.toISOString().split('T')[0];
+            }
         }
 
-        inputs.forEach(input => {
+        // Ejecutar la consulta asíncrona hacia la API
+        cargarFacturas();
+    }
+
+    // --- EVENT LISTENERS DE LOS FILTROS ---
+    document.addEventListener("DOMContentLoaded", function() {
+        const form = document.getElementById('filtro-facturas');
+        const btnLimpiar = document.getElementById('btn-limpiar');
+        
+        // Elementos individuales del formulario
+        const inputBuscador = document.getElementById('buscar');
+        const inputEstado = document.getElementById('estado');
+        const inputFechaInicio = document.getElementById('fecha_inicio');
+        const inputFechaFin = document.getElementById('fecha_fin');
+        
+        let timeout = null;
+
+        // Carga inicial
+        cargarFacturas();
+
+        // 1. Escuchadores para Texto y Estado (con Anti-rebote)
+        [inputBuscador, inputEstado].forEach(input => {
             input.addEventListener('input', () => {
                 clearTimeout(timeout);
-                timeout = setTimeout(realizarBusqueda, 400);
+                timeout = setTimeout(cargarFacturas, 400);
             });
         });
 
+        // 2. Escuchadores específicos para las fechas con su lógica de autovalidación
+        [inputFechaInicio, inputFechaFin].forEach(input => {
+            input.addEventListener('input', () => {
+                clearTimeout(timeout);
+                // Llamamos a la nueva función en lugar del cargarFacturas directo
+                timeout = setTimeout(validarFechasYFiltrar, 400); 
+            });
+        });
+
+        // Evento manual del botón submit (por si presionan Enter en el teclado)
         form.addEventListener('submit', function(e) {
             e.preventDefault();
-            realizarBusqueda();
+            validarFechasYFiltrar();
         });
 
+        // Lógica de limpieza
         btnLimpiar.addEventListener('click', () => {
-            inputs.forEach(input => {
-                if (input.type === 'select-one') {
-                    input.value = 'TODOS';
-                } else {
-                    input.value = '';
-                }
-            });
-            realizarBusqueda();
+            inputBuscador.value = '';
+            inputFechaInicio.value = '';
+            inputFechaFin.value = '';
+            inputEstado.value = 'TODOS';
+            cargarFacturas();
         });
     });
 </script>

@@ -170,11 +170,13 @@
             </div>
         </div>
         <h2>Iniciar Sesión</h2>
-        {% if messages %}
-            {% for message in messages %}
-                <p class="error">{{ message }}</p>
-            {% endfor %}
-        {% endif %}
+        <div id="error-container">
+            {% if messages %}
+                {% for message in messages %}
+                    <p class="error">{{ message }}</p>
+                {% endfor %}
+            {% endif %}
+        </div>
         {% csrf_token %}
         <p>
             <label>Usuario:</label>
@@ -190,5 +192,50 @@
         
         <p class="Blank">Registrarse</p>
     </form>
+
+    <script>
+    document.querySelector('form').addEventListener('submit', function(e) {
+        e.preventDefault(); // Detiene la recarga tradicional
+        
+        const formData = new FormData(this);
+        const data = {
+            'usuario': formData.get('usuario'),
+            'contrasena': formData.get('contrasena')
+        };
+        
+        const errorContainer = document.getElementById('error-container');
+        errorContainer.innerHTML = ''; // Limpia errores previos
+        
+        fetch("{% url 'api_login' %}", {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': formData.get('csrfmiddlewaretoken') // Token CSRF obligatorio
+            },
+            body: JSON.stringify(data)
+        })
+        .then(response => {
+            return response.json().then(json => {
+                if (!response.ok) {
+                    // Si hay un error de validación de campos, se extrae el texto del mensaje
+                    let errorMsg = json.error;
+                    if (typeof json.error === 'object') {
+                        errorMsg = Object.values(json.error).flat().join(' ');
+                    }
+                    throw new Error(errorMsg || 'Ocurrió un error al intentar iniciar sesión.');
+                }
+                return json;
+            });
+        })
+        .then(res => {
+            if (res.success && res.redirect_url) {
+                window.location.href = res.redirect_url; // Redirige según mande el API
+            }
+        })
+        .catch(error => {
+            errorContainer.innerHTML = `<p class="error">${error.message}</p>`;
+        });
+    });
+    </script>
 </body>
 </html>

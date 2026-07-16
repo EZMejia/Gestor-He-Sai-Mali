@@ -1,6 +1,5 @@
 {% extends "He_Sai_Mali/base.html" %}
 {% load static %}
-{% load custom_filters %}
 
 {% block title %}Admin - Proveedores{% endblock %}
 
@@ -149,216 +148,254 @@
 {% block header %}ADMINISTRACIÓN DE INGREDIENTES{% endblock %}
 
 {% block content %}
-    <div id="app">
-        <main class="main-content" id="main-content">
-            <div class="contenido">
-                <div class="container_admin">
-                    
-                    <h1 style="color: #981a28; margin-bottom: 20px;">Administración de Proveedores</h1>
+<div id="app">
+    <main class="main-content" id="main-content">
+        <div class="contenido">
+            <div class="container_admin">
+                <h1 style="color: #981a28; margin-bottom: 20px;">Administración de Proveedores</h1>
 
-                    <div class="toast-container position-fixed top-0 end-0 p-4" style="z-index: 1080;">
-                        {% if messages %}
-                            {% for message in messages %}
-                                <div class="alert alert-{% if message.tags == 'error' %}danger{% else %}{{ message.tags }}{% endif %} alert-dismissible fade show shadow-lg pe-auto" role="alert">
-                                    <div class="d-flex align-items-center">
-                                        <i class="fa {% if message.tags == 'error' %}fa-exclamation-circle{% else %}fa-check-circle{% endif %} me-2"></i>
-                                        <span>{{ message }}</span>
-                                    </div>
-                                    <button type="button" class="btn-close shadow-none" data-bs-dismiss="alert" aria-label="Close"></button>
+                <div id="alert-container" class="toast-container position-fixed top-0 end-0 p-4" style="z-index: 9999; pointer-events: none;"></div>
+
+                <div class="card-custom">
+                    <div class="card-header-custom">
+                        <h2 id="form-titulo">Agregar Nuevo Proveedor</h2>
+                    </div>
+                    <div class="card-body-custom">
+                        <form id="form-proveedor">
+                            <input type="hidden" id="prov-id">
+                            <div style="display: flex; gap: 15px; flex-wrap: wrap;">
+                                <div style="flex: 1 1 23%; min-width: 200px;">
+                                    <label class="form-label-custom">Nombre del Proveedor</label>
+                                    <input type="text" id="prov-nombre" class="form-control-custom" required autocomplete="off">
                                 </div>
-                            {% endfor %}
-                        {% endif %}
-                    </div>
-                    
-                    <div class="card-custom">
-                        <div class="card-header-custom">
-                            {% if proveedor_a_editar %}Editar Proveedor: {{ proveedor_a_editar.nombre }}{% else %}Agregar Nuevo Proveedor{% endif %}
-                        </div>
-                        <div class="card-body-custom">
-                            <form method="post" action="{% if proveedor_a_editar %}{% url 'editar_proveedor' proveedor_a_editar.idProveedor %}{% else %}{% url 'admin_proveedores' %}{% endif %}">
-                                {% csrf_token %}
-                                <div style="display: flex; gap: 15px; flex-wrap: wrap;">
-                                    <div style="flex: 1 1 30%; min-width: 200px;">
-                                        <label for="nombre" class="form-label-custom">Nombre</label>
-                                        <input type="text" class="form-control-custom" id="nombre" name="nombre" required autocomplete="off"
-                                        value="{{ proveedor_a_editar.nombre|default:'' }}">
-                                    </div>
-                                    <div style="flex: 1 1 10%; min-width: 200px;">
-                                        <label for="telefono" class="form-label-custom">Teléfono</label>
-                                        <input type="text" class="form-control-custom" id="telefono" name="telefono" autocomplete="off" inputmode="numeric" pattern="[0-9]{8}" title="El teléfono debe contener exactamente 8 dígitos numéricos."
-                                        oninput="this.value = this.value.replace(/[^0-9]/g, '').slice(0, 8);"
-                                        value="{{ proveedor_a_editar.telefono|default:'' }}">
-                                    </div>
-                                    <div style="flex: 1 1 20%; min-width: 200px;">
-                                        <label for="direccion" class="form-label-custom">Dirección</label>
-                                        <input type="text" class="form-control-custom" id="direccion" name="direccion" autocomplete="off"
-                                        value="{{ proveedor_a_editar.direccion|default:'' }}">
-                                    </div>
-                                    <div style="flex: 1 1 20%; display: flex; align-items: flex-end; min-width: 250px;">
-                                        {% if proveedor_a_editar %}
-                                            <button type="submit" class="btn-custom-success" style="flex-grow: 1; margin-bottom: 12px;">
-                                                Actualizar Proveedor
-                                            </button>
-                                            <a href="{% url 'admin_proveedores' %}" class="btn-custom-danger" style="margin-bottom: 12px; flex-grow: 1; text-align: center; text-decoration: none; margin-left: 5px; padding: 9px; font-weight: normal;">
-                                                Cancelar
-                                            </a>
-                                        {% else %}
-                                            <button type="submit" class="btn-custom-success" style="width: 100%;margin-bottom: 12px;">
-                                                Guardar Proveedor
-                                            </button>
-                                        {% endif %}
-                                    </div>
+                                <div style="flex: 1 1 23%; min-width: 200px;">
+                                    <label class="form-label-custom">Teléfono</label>
+                                    <input type="text" id="prov-telefono" class="form-control-custom" pattern="[0-9]{8}" oninput="this.value = this.value.replace(/[^0-9]/g, '').slice(0, 8);" autocomplete="off">
                                 </div>
-                            </form>
-                        </div>
+                                <div style="flex: 1 1 23%; min-width: 200px;">
+                                    <label class="form-label-custom">Dirección</label>
+                                    <input type="text" id="prov-direccion" class="form-control-custom" autocomplete="off">
+                                </div>
+                                <div style="flex: 1 1 100%; display: flex; gap: 10px; justify-content: flex-end; margin-top: 0px;">
+                                    <button type="button" id="btn-cancelar" onclick="resetearFormulario()" class="btn-custom-danger" style="display: none; padding: 10px 20px; font-weight: normal;">Cancelar</button>
+                                    <button type="submit" id="btn-guardar" class="btn-custom-success" style="padding: 10px 20px;">Guardar Proveedor</button>
+                                </div>
+                            </div>
+                        </form>
                     </div>
+                </div>
 
-                    <h2 style="color: #981a28; margin-top: 30px; border-bottom: 2px solid #981a28; padding-bottom: 5px; margin-bottom: 10px;">Listado de Proveedores</h2>
-                    
-                    <div style="margin-bottom: 20px;">
-                        <label for="buscador" style="font-weight: bold; display: block; margin-bottom: 5px;">Buscar proveedor:</label>
-                        <div style="position: relative; display: flex; align-items: center;">
-                            <span style="position: absolute; left: 10px; color: #888;">
-                                <i class="fas fa-search"></i>
-                            </span>
-                            <input type="text" id="buscador" class="form-control" 
-                                placeholder="Escribe el nombre del proveedor..." 
-                                style="padding-left: 35px; padding-right: 35px; margin-bottom: 0;" 
-                                autocomplete="off"
-                                onkeyup="filtrarProveedor()">
-                            <span id="btn-limpiar" onclick="limpiarBusqueda()" 
-                                style="position: absolute; right: 10px; color: #888; cursor: pointer; display: none;">
-                                <i class="fas fa-times-circle"></i>
-                            </span>
-                        </div>
+                <h2 style="color: #981a28; margin-top: 30px; border-bottom: 2px solid #981a28; padding-bottom: 5px; margin-bottom: 10px;">Listado de Proveedores</h2>
+                
+                <label style="font-weight: bold; display: block; margin-bottom: 5px;">Buscar proveedor:</label>
+                <div style="position: relative; display: flex; align-items: center; margin-bottom: 20px;">
+                    <span style="position: absolute; left: 10px; color: #888;"><i class="fas fa-search"></i></span>
+                    <input type="text" id="buscador" class="form-control" placeholder="Escribe el nombre del proveedor..." style="padding-left: 35px;" onkeyup="filtrarProveedor()">
+                    <span id="btn-limpiar" onclick="limpiarBusqueda()" style="position: absolute; right: 10px; color: #888; cursor: pointer; display: none;"><i class="fas fa-times-circle"></i></span>
+                </div>
+
+                <div class="card-custom" style="padding: 0; overflow-x: auto;">
+                    <table class="table-custom" id="tabla-proveedores">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Nombre</th>
+                                <th>Teléfono</th>
+                                <th>Dirección</th>
+                                <th>Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <div class="modal fade" id="modalEliminarProveedor" tabindex="-1" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content">
+                    <div class="modal-header" style="background-color: var(--primary-color); color: white;">
+                        <h5 class="modal-title"><i class="fas fa-exclamation-triangle"></i> Confirmar Eliminación</h5>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                     </div>
-
-                    <div class="card-custom" style="padding: 0; overflow-x: auto;">
-                        <table class="table-custom">
-                            <thead>
-                                <tr>
-                                    <th>ID</th>
-                                    <th>Nombre</th>
-                                    <th>Teléfono</th>
-                                    <th>Dirección</th>
-                                    <th></th>
-                                </tr>
-                            </thead>
-                            <tbody id="tabla-proveedores-body">
-                                {% for prov in proveedores %}
-                                <tr class="fila-proveedor">
-                                    <td>{{ prov.idProveedor }}</td>
-                                    <td class="nombre-proveedor">{{ prov.nombre }}</td>
-                                    <td>{{ prov.telefono|default:"N/A" }}</td>
-                                    <td>{{ prov.direccion|default:"N/A" }}</td>
-                                    <td style="white-space: nowrap;">
-                                        <a href="{% url 'editar_proveedor' prov.idProveedor %}" class='btn-custom-edit'
-                                            style="color: white; padding: 5px 10px; border-radius: 5px; text-decoration: none; font-weight: bold; display: inline-block; margin-right: 5px;">
-                                            <i class="fas fa-edit"></i> Editar
-                                        </a>
-                                        <button type="button" class="btn-custom-danger" style="padding: 5px 10px;" 
-                                            onclick="prepararModalEliminarProveedor('{{ prov.idProveedor }}', '{{ prov.nombre|escapejs }}', '{% url 'eliminar_proveedor' prov.idProveedor %}')">
-                                            <i class="fas fa-trash-alt"></i> Eliminar
-                                        </button>
-                                    </td>
-                                </tr>
-                                {% empty %}
-                                <tr>
-                                    <td colspan="4" class="text-center-custom">No hay proveedores registrados.</td>
-                                </tr>
-                                {% endfor %}
-                            </tbody>
-                        </table>
+                    <div class="modal-body">
+                        <p>¿Está seguro de que desea eliminar al proveedor <strong><span id="modal-nombre"></span></strong> (ID: <span id="modal-id"></span>)?</p>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                        <button type="button" id="btn-confirmar-eliminar" class="btn" style="background-color: var(--primary-color); color: white;">Eliminar permanentemente</button>
                     </div>
                 </div>
             </div>
-            <div class="modal fade" id="modalEliminarProveedor" tabindex="-1" aria-labelledby="modalEliminarProveedorLabel" aria-hidden="true">
-                <div class="modal-dialog modal-dialog-centered">
-                    <div class="modal-content">
-                        <div class="modal-header" style="background-color: var(--primary-color); color: white;">
-                            <h5 class="modal-title" id="modalEliminarProveedorLabel">
-                                <i class="fas fa-exclamation-triangle"></i> Confirmar Eliminación
-                            </h5>
-                            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
-                        </div>
-                        <div class="modal-body">
-                            <p>¿Está seguro de que desea eliminar el proveedor <strong><span id="modal-nombre-proveedor-texto"></span></strong> (ID: <span id="modal-id-proveedor-texto"></span>)?</p>
-                        </div>
-                        <div class="modal-footer">
-                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                            <form id="form-eliminar-proveedor" method="POST" action="">
-                                {% csrf_token %}
-                                <button type="submit" class="btn"
-                                style="background-color: var(--primary-color); color: white;">Sí, Eliminar Proveedor</button>
-                            </form>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </main>
-    </div>
+        </div>
+    </main>
+</div>
 {% endblock %}
 
 {% block extra_js %}
-    <script>
-        function filtrarProveedor() {
-            const input = document.getElementById('buscador');
-            const btnLimpiar = document.getElementById('btn-limpiar');
-            const tbody = document.querySelector('.table-custom tbody');
-            const filtro = input.value.toLowerCase();
-            const filas = document.querySelectorAll('.fila-proveedor');
+<script>
+    const API_URL = '/api/proveedores-admin/';
+    let idEliminar = null;
+    let modalInstance = null;
 
-            btnLimpiar.style.display = filtro.length > 0 ? "block" : "none";
+    document.addEventListener("DOMContentLoaded", () => {
+        cargarProveedores();
+        modalInstance = new bootstrap.Modal(document.getElementById('modalEliminarProveedor'));
+        document.getElementById('form-proveedor').addEventListener('submit', guardarProveedor);
+        document.getElementById('btn-confirmar-eliminar').addEventListener('click', ejecutarEliminacion);
+    });
 
-            let coincidencias = 0;
+    async function cargarProveedores() {
+        try {
+            const res = await fetch(API_URL);
+            const data = await res.json();
+            const tbody = document.querySelector('#tabla-proveedores tbody');
+            tbody.innerHTML = '';
 
-            filas.forEach(fila => {
-                const nombreEmpleado = fila.querySelector('.nombre-proveedor').textContent.toLowerCase();
-                
-                if (nombreEmpleado.includes(filtro)) {
-                    fila.style.display = "";
-                    coincidencias++;
-                } else {
-                    fila.style.display = "none";
-                }
+            data.forEach(p => {
+                const tr = document.createElement('tr');
+                tr.className = 'fila-proveedor';
+                tr.innerHTML = `
+                    <td>${p.idProveedor}</td>
+                    <td class="nombre-proveedor">${p.nombre}</td>
+                    <td>${p.telefono || '—'}</td>
+                    <td>${p.direccion || '—'}</td>
+                    <td>
+                        <button onclick="prepararEdicion(${p.idProveedor})" class="btn-custom-edit" style="color:white; font-weight: bold; padding:5px 10px; border:none; border-radius:5px; cursor:pointer;"><i class="fas fa-edit"></i> Editar</button>
+                        <button onclick="prepararEliminar(${p.idProveedor}, '${p.nombre}')" class="btn-custom-danger" style="padding:5px 10px;"><i class="fas fa-trash-alt"></i> Eliminar</button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
             });
+        } catch {
+            mostrarAlerta('danger', 'Error al enlazar con el listado de la API.');
+        }
+    }
 
-            const filaVaciaPrevia = document.getElementById('empty-results-row');
-            if (filaVaciaPrevia) filaVaciaPrevia.remove();
+    // 2. Enviar los datos estructurados al backend (POST/PUT)
+    async function guardarProveedor(e) {
+        e.preventDefault();
+        const id = document.getElementById('prov-id').value;
+        const datos = {
+            nombre: document.getElementById('prov-nombre').value,
+            telefono: document.getElementById('prov-telefono').value || null,
+            direccion: document.getElementById('prov-direccion').value || null
+        };
 
-            if (coincidencias === 0) {
-                const emptyRow = document.createElement('tr');
-                emptyRow.id = 'empty-results-row';
-                emptyRow.innerHTML = `
-                    <td colspan="5">
-                        <div class="empty-results" style="padding: 20px; text-align: center; color: #666;">
-                            <i class="fas fa-ban fa-2x"></i>
-                            <p class="mb-0">No se encontraron proveedores que coincidan con "<span>${input.value}</span>"</p>
-                        </div>
-                    </td>`;
-                tbody.appendChild(emptyRow);
+        const esEdicion = id !== "";
+        const url = esEdicion ? `${API_URL}${id}/` : API_URL;
+        const metodo = esEdicion ? 'PUT' : 'POST';
+
+        try {
+            const res = await fetch(url, {
+                method: metodo,
+                headers: { 'Content-Type': 'application/json', 'X-CSRFToken': '{{ csrf_token }}' },
+                body: JSON.stringify(datos)
+            });
+            const data = await res.json();
+
+            if (res.ok) {
+                mostrarAlerta('success', esEdicion ? 'Proveedor actualizado con éxito.' : 'Proveedor registrado con éxito.');
+                resetearFormulario();
+                cargarProveedores();
+            } else {
+                let msg = Object.values(data).flat().join('<br>');
+                mostrarAlerta('danger', msg);
             }
+        } catch {
+            mostrarAlerta('danger', 'Error al procesar el servidor.');
         }
+    }
 
-        function limpiarBusqueda() {
-            const input = document.getElementById('buscador');
-            input.value = ""; // Vaciar input
-            filtrarProveedor(); // Resetear el filtrado para mostrar todo
-            input.focus(); // Devolver el foco al buscador
-        }
-    </script>
-    <script>
-        function prepararModalEliminarProveedor(idProveedor, nombreProveedor, urlEliminar) {
-            // 1. Actualizar los textos dentro del modal
-            document.getElementById('modal-id-proveedor-texto').textContent = idProveedor;
-            document.getElementById('modal-nombre-proveedor-texto').textContent = nombreProveedor;
+    // 3. Rellenar los inputs al presionar Editar (GET individual)
+    async function prepararEdicion(id) {
+        try {
+            const res = await fetch(`${API_URL}${id}/`);
+            const p = await res.json();
             
-            // 2. Actualizar la acción (action) del formulario dentro del modal
-            document.getElementById('form-eliminar-proveedor').action = urlEliminar;
-            
-            // 3. Mostrar el modal usando la API de Bootstrap 5
-            var modalEliminar = new bootstrap.Modal(document.getElementById('modalEliminarProveedor'));
-            modalEliminar.show();
+            document.getElementById('prov-id').value = p.idProveedor;
+            document.getElementById('prov-nombre').value = p.nombre;
+            document.getElementById('prov-telefono').value = p.telefono || '';
+            document.getElementById('prov-direccion').value = p.direccion || ''; // Mapeo corregido aquí
+
+            document.getElementById('form-titulo').textContent = `Modificar Proveedor: ${p.nombre}`;
+            document.getElementById('btn-guardar').textContent = "Actualizar Cambios";
+            document.getElementById('btn-cancelar').style.display = 'inline-block';
+            document.getElementById('form-titulo').scrollIntoView({ behavior: 'smooth' });
+        } catch {
+            mostrarAlerta('danger', 'Error al extraer datos del proveedor.');
         }
-    </script>
+    }
+
+    function prepararEliminar(id, nombre) {
+        idEliminar = id;
+        document.getElementById('modal-id').textContent = id;
+        document.getElementById('modal-nombre').textContent = nombre;
+        modalInstance.show();
+    }
+
+    async function ejecutarEliminacion() {
+        if (!idEliminar) return;
+        try {
+            const res = await fetch(`${API_URL}${idEliminar}/`, {
+                method: 'DELETE',
+                headers: { 'X-CSRFToken': '{{ csrf_token }}' }
+            });
+            const data = await res.json();
+            modalInstance.hide();
+
+            if (res.status === 200) {
+                mostrarAlerta('success', data.message);
+                cargarProveedores();
+            } else {
+                mostrarAlerta('danger', data.error);
+            }
+        } catch {
+            mostrarAlerta('danger', 'Error de red en la comunicación.');
+        }
+    }
+
+    function resetearFormulario() {
+        document.getElementById('form-proveedor').reset();
+        document.getElementById('prov-id').value = "";
+        document.getElementById('form-titulo').textContent = "Agregar Nuevo Proveedor";
+        document.getElementById('btn-guardar').textContent = "Guardar Proveedor";
+        document.getElementById('btn-cancelar').style.display = 'none';
+    }
+
+    function mostrarAlerta(tipo, mensaje) {
+        const container = document.getElementById('alert-container');
+        const alertDiv = document.createElement('div');
+        alertDiv.className = `alert alert-${tipo} alert-dismissible fade show shadow-lg d-flex align-items-center justify-content-between`;
+        alertDiv.style.pointerEvents = 'auto';
+        alertDiv.style.minWidth = '320px';
+        alertDiv.style.marginBottom = '10px';
+
+        alertDiv.innerHTML = `
+            <div class="d-flex align-items-center" style="padding-right: 25px;">
+                <i class="fa ${tipo === 'danger' ? 'fa-exclamation-circle' : 'fa-check-circle'} me-2" style="font-size: 1.2rem;"></i>
+                <span>${mensaje}</span>
+            </div>
+            <button type="button" class="btn-close shadow-none" data-bs-dismiss="alert" aria-label="Close"></button>
+        `;
+        container.insertBefore(alertDiv, container.firstChild);
+        setTimeout(() => { if(alertDiv && alertDiv.parentNode) alertDiv.remove(); }, 5000);
+    }
+
+    function filtrarProveedor() {
+        const input = document.getElementById('buscador').value.toLowerCase();
+        const btn = document.getElementById('btn-limpiar');
+        const filas = document.querySelectorAll('.fila-proveedor');
+        btn.style.display = input.length > 0 ? "block" : "none";
+        filas.forEach(f => {
+            const txt = f.querySelector('.nombre-proveedor').textContent.toLowerCase();
+            f.style.display = txt.includes(input) ? "" : "none";
+        });
+    }
+
+    function limpiarBusqueda() {
+        document.getElementById('buscador').value = "";
+        filtrarProveedor();
+    }
+</script>
 {% endblock %}
