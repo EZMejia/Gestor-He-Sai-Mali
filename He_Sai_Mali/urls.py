@@ -2,6 +2,7 @@ from django.urls import path, include
 from rest_framework.routers import DefaultRouter
 from . import views
 from . import api
+from He_Sai_Mali.api import SetSucursalActivaAPIView
 
 router = DefaultRouter()
 router.register(r'empleados-admin', api.EmpleadoAdminViewSet, basename='api_admin_empleados')
@@ -92,4 +93,7 @@ urlpatterns = [
     # --- Logout ---
     path('logout/', views.logout_view, name='logout'),
     # ----------------------------------------   
+
+    # --- API para establecer la sucursal activa ---
+    path('api/set-sucursal-activa/', SetSucursalActivaAPIView.as_view(), name='set_sucursal_activa'),
 ]

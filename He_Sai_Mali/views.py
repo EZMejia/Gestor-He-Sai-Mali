@@ -593,3 +593,8 @@ def historial_facturas_html(request):
 def logout_view(request):
     logout(request)
     return redirect('login')
+
+def global_sucursales(request):
+    if request.user.is_authenticated and request.user.rol == 'Administrador' and not request.user.sucursal_id:
+        return {'sucursales_disponibles': Sucursal.objects.filter(is_active=True)}
+    return {'sucursales_disponibles': []}

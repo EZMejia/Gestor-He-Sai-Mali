@@ -202,6 +202,34 @@
                 </div>
                 
                 <div class="d-none d-sm-flex align-items-center">
+                    
+                    <!-- CONTENEDOR DE SUCURSAL (VISIBLE PARA TODOS, RESPONSIVE) -->
+                    <div class="d-none d-md-flex align-items-center me-3">
+                        <div class="d-flex align-items-center px-3 py-1 rounded-3" style="background-color: rgba(0, 0, 0, 0.25); border: 1px solid rgba(218, 207, 183, 0.25);">
+                            <span class="me-2 text-nowrap" style="color: #dacfb7; font-size: 13px; font-weight: 600; letter-spacing: 0.3px;">
+                                <i class="fas fa-store me-1"></i> Sucursal:
+                            </span>
+                            
+                            {% if user.rol == 'Administrador' and not user.sucursal_id %}
+                                <!-- Dropdown dinámico para el Administrador Global -->
+                                <select id="sucursalGlobal" class="form-select form-select-sm border-0 bg-transparent shadow-none p-0 pe-4" onchange="cambiarSucursalContexto(this.value)" style="color: #ffffff; cursor: pointer; font-weight: 500; font-size: 13px; width: auto;">
+                                    <option value="todas" class="bg-dark text-white" {% if request.session.sucursal_activa_id == 'todas' or not request.session.sucursal_activa_id %}selected{% endif %}>Todas (Global)</option>
+                                    {% for sucursal in sucursales_disponibles %}
+                                        <option value="{{ sucursal.idSucursal }}" class="bg-dark text-white" {% if request.session.sucursal_activa_id|stringformat:"s" == sucursal.idSucursal|stringformat:"s" %}selected{% endif %}>
+                                            {{ sucursal.nombre_comercial }}
+                                        </option>
+                                    {% endfor %}
+                                </select>
+                            {% else %}
+                                <!-- Texto estático de solo lectura para Admin Local, Mesero o Cocinero -->
+                                <span class="text-white text-nowrap" style="font-weight: 500; font-size: 13px;">
+                                    {{ user.sucursal.nombre_comercial|default:"Sin asignar" }}
+                                </span>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <!-- Badge de usuario original -->
                     <div class="user-info-badge d-flex align-items-center p-2">
                         <span class="me-2">{{ user.nombre }} {{ user.apellido }}</span>
                         <img src="{% static 'He_Sai_Mali/avatar.png' %}" height="35" alt="User">
@@ -252,9 +280,12 @@
                             <a href="{% url 'admin_proveedores' %}" class="nav-link p-2 {% if request.resolver_match.url_name == 'admin_proveedores' %}active{% endif %}">
                                 <i class="fas fa-truck-loading me-2"></i> Proveedores
                             </a>
-                            <a href="{% url 'registro' %}" class="nav-link p-2">
-                                <i class="fas fa-user-plus me-2"></i> Registrar usuario
-                            </a>
+                            <!-- Registrar usuario mientras haya una sucursal seleccionada-->
+                            {% if user.sucursal_id or request.session.sucursal_activa_id and request.session.sucursal_activa_id != 'todas' %}
+                                <a href="{% url 'registro' %}" class="nav-link p-2">
+                                    <i class="fas fa-user-plus me-2"></i> Registrar usuario
+                                </a>
+                            {% endif %}
 
                         {% else %}                            
                             {% if user.rol == "Mesero" %}
@@ -322,6 +353,42 @@
                 });
             }
         });
+
+        // NUEVO: Función para obtener el token de seguridad CSRF
+        function getCookie(name) {
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i].trim();
+                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
+        }
+
+        // NUEVO: Función que se ejecuta al cambiar la sucursal en el select
+        function cambiarSucursalContexto(sucursal_id) {
+            const csrftoken = getCookie('csrftoken');
+            
+            fetch('/api/set-sucursal-activa/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': csrftoken
+                },
+                body: JSON.stringify({ 'sucursal_id': sucursal_id })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if(data.status === 'success') {
+                    window.location.reload(); // Recarga la página para aplicar el filtro
+                }
+            });
+        }
     </script>
     {% block extra_js %}{% endblock %}
 </body>

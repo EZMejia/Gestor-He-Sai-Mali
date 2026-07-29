@@ -204,6 +204,7 @@
         </div>
 
         <h2>Registro de Empleado</h2>
+        <!-- El token se genera aquí de todos modos para protección básica del formulario -->
         {% csrf_token %}
         
         <div id="form-error-message"></div>
@@ -222,7 +223,9 @@
                 <label>Rol:</label>
                 <select name="rol" id="rol" required>
                     <option value="">Seleccionar rol</option>
-                    <option value="Administrador" {% if valores.rol == 'Administrador' %}selected{% endif %}>Administrador</option>
+                    {% if not user.sucursal_id %}
+                        <option value="Administrador" {% if valores.rol == 'Administrador' %}selected{% endif %}>Administrador</option>
+                    {% endif %}
                     <option value="Mesero" {% if valores.rol == 'Mesero' %}selected{% endif %}>Mesero</option>
                     <option value="Cocinero" {% if valores.rol == 'Cocinero' %}selected{% endif %}>Cocinero</option>
                 </select>
@@ -356,7 +359,8 @@
                 if (currentStep === 1) {
                     const nombre = document.getElementById('nombre').value;
                     const apellido = document.getElementById('apellido').value;
-                    const rol = document.getElementById('rol').value; // Usar el valor para la validación
+                    const rol = document.getElementById('rol').value;
+                    
                     // Expresión regular para letras (a-z, A-Z), letras acentuadas, ñ, Ñ y espacios
                     const nameRegex = /^[a-zA-Z\u00C0-\u017F\sñÑ]*$/; 
 
@@ -430,7 +434,6 @@
                 }
             }
 
-
             // --- 3. Manejo del flujo (Si es válido o no) ---
             if (isValid) {
                 const nextStepNumber = currentStep + 1;
@@ -497,8 +500,8 @@
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    // Si mantienes autenticación de sesión, debes enviar el X-CSRFToken aquí:
-                    // 'X-CSRFToken': getCookie('csrftoken') 
+                    // La inyección sugerida por Erick
+                    'X-CSRFToken': '{{ csrf_token }}' 
                 },
                 body: JSON.stringify(data)
             })

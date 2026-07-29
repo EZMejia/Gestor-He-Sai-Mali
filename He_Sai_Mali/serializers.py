@@ -118,13 +118,16 @@ class RegistroEmpleadoSerializer(serializers.ModelSerializer):
 
     rol = serializers.ChoiceField(choices=[('Administrador', 'Administrador'), ('Mesero', 'Mesero'), ('Cocinero', 'Cocinero'),])
 
+    # NUEVO: Declaramos explícitamente el sucursal_id para que el serializador sepa qué hacer con él
+    sucursal_id = serializers.IntegerField(required=False, allow_null=True)
+
     contrasena1 = serializers.CharField(write_only=True, required=True, style={'input_type': 'password'})
     contrasena2 = serializers.CharField(write_only=True, required=True, style={'input_type': 'password'})
 
     class Meta:
         model = Empleado
-        # Excluimos 'usuario' de la petición, ya que lo generaremos internamente
-        fields = ['nombre', 'apellido', 'telefono', 'correo', 'cedula', 'rol', 'contrasena1', 'contrasena2']
+        # NUEVO: Añadimos 'sucursal_id' al final de la lista de fields
+        fields = ['nombre', 'apellido', 'telefono', 'correo', 'cedula', 'rol', 'contrasena1', 'contrasena2', 'sucursal_id']
 
     def validate(self, data):
         # 1. Validar que las contraseñas coincidan
@@ -164,6 +167,8 @@ class RegistroEmpleadoSerializer(serializers.ModelSerializer):
             contador += 1
 
         # Utilizamos el EmpleadoManager definido en models.py
+        # Como agregaste sucursal_id a los fields, ya viene dentro de **validated_data.
+        # Django se encarga de inyectarlo automáticamente en tu modelo.
         empleado = Empleado.objects.create_user(
             usuario=usuario,
             contrasena=contrasena,

@@ -18,15 +18,33 @@ from operator import attrgetter
 from .serializers import *
 from .models import *
 
+# Función auxiliar para obtener la sucursal activa del usuario
+def obtener_sucursal_contexto(request):
+    usuario = request.user
+    if usuario.sucursal_id:
+        return usuario.sucursal_id
+    if usuario.rol == 'Administrador' and not usuario.sucursal_id:
+        sucursal_sesion = request.session.get('sucursal_activa_id')
+        if sucursal_sesion and str(sucursal_sesion) != 'todas':
+            return int(sucursal_sesion)
+    return None
+
 # Consulta a la API para mostrar, eliminar o actualizar un empleado
 class EmpleadoAdminViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
-    queryset = Empleado.objects.all().order_by('apellido', 'nombre')
+
+    # NUEVO: Filtro dinámico por sucursal
+    def get_queryset(self):
+        queryset = Empleado.objects.all().order_by('apellido', 'nombre')
+        sucursal_filtro = obtener_sucursal_contexto(self.request)
+        if sucursal_filtro:
+            queryset = queryset.filter(sucursal_id=sucursal_filtro)
+        return queryset
 
     def get_serializer_class(self):
         # Asigna el serializador dinámicamente según la acción de la API
         if self.action in ['update', 'partial_update']:
-            return EditarEmpleadoSerializer
+            return EditarEmpleadoSerializer 
         return EmpleadoListSerializer
 
     def destroy(self, request, *bind, **kwargs):
@@ -67,23 +85,29 @@ class RegistroEmpleadoAPIView(APIView):
     permission_classes = [IsAuthenticated]
 
     def post(self, request):
-        serializer = RegistroEmpleadoSerializer(data=request.data)
+        sucursal_id = obtener_sucursal_contexto(request)
         
-        if serializer.is_valid():
-            empleado = serializer.save()
-            
-            # INYECTAMOS EL MENSAJE EN LA SESIÓN PARA EL HTML DE DESTINO
-            # dashboard.html pintará esto en su bloque {% if messages %}
-            messages.success(
-                request, 
-                f"Empleado registrado exitosamente. Su usuario asignado es: {empleado.usuario}"
+        # Bloqueo 1: No puede registrar si no hay sucursal en contexto
+        if not sucursal_id:
+            return Response(
+                {"error": ["Debes seleccionar una sucursal específica en el menú superior para registrar un empleado."]}, 
+                status=status.HTTP_400_BAD_REQUEST
             )
+
+        # BLOQUEO 2:Prevenir que un Admin Local cree otro Administrador
+        rol_solicitado = request.data.get('rol')
+        if request.user.sucursal_id and rol_solicitado == 'Administrador':
+            return Response(
+                {"error": ["Operación denegada. Solo el Administrador Global puede crear nuevos administradores."]}, 
+                status=status.HTTP_403_FORBIDDEN
+            )
+
+        # Continuamos con el registro normal
+        serializer = RegistroEmpleadoSerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save(sucursal_id=sucursal_id)
+            return Response({"status": "success"}, status=status.HTTP_201_CREATED)
             
-            return Response({
-                "status": "success",
-                "usuario": empleado.usuario
-            }, status=status.HTTP_201_CREATED)
-        
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
     
 # Consulta API para iniciar sesión
@@ -147,14 +171,65 @@ class ProveedorViewSet(viewsets.ModelViewSet):
 class MesaViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
     serializer_class = MesaSerializer
-    queryset = Mesa.objects.all().order_by('idMesa')
     lookup_field = 'idMesa'
+
+    # NUEVO: Filtro dinámico por sucursal
+    def get_queryset(self):
+        queryset = Mesa.objects.all().order_by('idMesa')
+        sucursal_filtro = obtener_sucursal_contexto(self.request)
+        if sucursal_filtro:
+            queryset = queryset.filter(sucursal_id=sucursal_filtro)
+        return queryset
+
+    def perform_create(self, serializer):
+        if self.request.user.is_authenticated:
+            # Aquí extraemos SOLO EL NOMBRE
+            usuario_actual = f"{self.request.user.nombre} {self.request.user.apellido}"
+            # Aquí extraemos SOLO EL ROL
+            rol_actual = self.request.user.rol
+        else:
+            usuario_actual = 'Sistema'
+            rol_actual = 'Sistema'
+            
+        with transaction.atomic():
+            with connection.cursor() as cursor:
+                # Enviamos las DOS variables a PostgreSQL por separado
+                cursor.execute("SELECT set_config('restaurante.usuario_actual', %s, true);", [usuario_actual])
+                cursor.execute("SELECT set_config('restaurante.rol_actual', %s, true);", [rol_actual])
+            serializer.save()
+
+    def perform_update(self, serializer):
+        if self.request.user.is_authenticated:
+            usuario_actual = f"{self.request.user.nombre} {self.request.user.apellido}"
+            rol_actual = self.request.user.rol
+        else:
+            usuario_actual = 'Sistema'
+            rol_actual = 'Sistema'
+            
+        with transaction.atomic():
+            with connection.cursor() as cursor:
+                cursor.execute("SELECT set_config('restaurante.usuario_actual', %s, true);", [usuario_actual])
+                cursor.execute("SELECT set_config('restaurante.rol_actual', %s, true);", [rol_actual])
+            serializer.save()
 
     def destroy(self, request, *args, **kwargs):
         instance = self.get_object()
         id_mesa = instance.idMesa
+        
+        if request.user.is_authenticated:
+            usuario_actual = f"{request.user.nombre} {request.user.apellido}"
+            rol_actual = request.user.rol
+        else:
+            usuario_actual = 'Sistema'
+            rol_actual = 'Sistema'
+
         try:
-            instance.delete()
+            with transaction.atomic():
+                with connection.cursor() as cursor:
+                    cursor.execute("SELECT set_config('restaurante.usuario_actual', %s, true);", [usuario_actual])
+                    cursor.execute("SELECT set_config('restaurante.rol_actual', %s, true);", [rol_actual])
+                instance.delete()
+                
             return Response(
                 {"message": f"Mesa '{id_mesa}' eliminada exitosamente."},
                 status=status.HTTP_200_OK
@@ -168,8 +243,21 @@ class MesaViewSet(viewsets.ModelViewSet):
 # Consulta API par articulo_inventario 
 class ArticuloInventarioViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
-    queryset = ArticuloInventario.objects.all().order_by('nombre')
     serializer_class = ArticuloInventarioSerializer
+
+    # Filtrado dinámico según la sucursal activa del usuario
+    def get_queryset(self):
+        # Traemos todos por defecto
+        queryset = ArticuloInventario.objects.all().order_by('nombre')
+        
+        # Consultamos qué sucursal nos toca ver
+        sucursal_filtro = obtener_sucursal_contexto(self.request)
+        
+        # Si hay una sucursal específica filtramos el inventario
+        if sucursal_filtro:
+            queryset = queryset.filter(sucursal_id=sucursal_filtro)
+            
+        return queryset
 
     # POST: /api/articulos-inventario/<pk>/comprar/
     @action(detail=True, methods=['post'], url_path='comprar')
@@ -529,6 +617,11 @@ class HistorialFacturasAPIView(APIView):
             Q(estado_factura='ANULADA')
         ).order_by('-fecha')
 
+        # --- NUEVO: Filtro por Sucursal Activa ---
+        sucursal_filtro = obtener_sucursal_contexto(request)
+        if sucursal_filtro:
+            facturas = facturas.filter(sucursal_id=sucursal_filtro)
+            
         # 2. Filtro por Cliente o ID
         if q:
             if q.isdigit():
@@ -1448,3 +1541,12 @@ class RegistrarPedidoAPIView(APIView):
             return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
         except Exception as e:
             return Response({'error': f"Ocurrió un error interno: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+class SetSucursalActivaAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        sucursal_id = request.data.get('sucursal_id')
+        # Guardamos la elección temporalmente en la sesión del navegador
+        request.session['sucursal_activa_id'] = sucursal_id
+        return Response({"status": "success", "mensaje": "Sucursal actualizada"})
