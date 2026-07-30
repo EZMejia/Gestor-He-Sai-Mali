@@ -1,0 +1,343 @@
+{% extends "He_Sai_Mali/base.html" %}
+{% load static %}
+
+{% block title %}Admin - Auditoría del Sistema{% endblock %}
+
+{% block extra_style %}
+    <style>
+        :root {
+            --primary-color: #981a28; 
+            --secondary-color: #f3bb67; 
+            --bg-page: #2c3038; 
+        }
+
+        body { height: 100%; overflow: hidden; }
+        .main-content { height: calc(100dvh - 60px); display: flex; flex-direction: column; overflow: hidden; }
+        .contenido { flex-grow: 1; padding: 20px 20px; overflow-y: auto;}
+
+        .container_admin {
+            background-color: white;
+            box-shadow: 0 0 50px 10px rgba(0, 0, 0, 0.3);
+            width: 100%;
+            border-radius: 5px;
+            padding: 20px;
+            margin-bottom: 25px;
+        }
+
+        .card-custom {
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .card-header-custom {
+            background-color: #981a28; 
+            color: white;
+            padding: 10px 15px;
+            border-bottom: 3px solid #f3bb67; 
+            border-radius: 5px 5px 0 0;
+            font-weight: bold;
+        }
+        
+        .card-body-custom { padding: 15px; }
+
+        .form-label-custom {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+            color: #333;
+            font-size: 0.9em;
+        }
+
+        .form-control-custom, .form-select-custom {
+            width: 100%;
+            padding: 8px 12px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            box-sizing: border-box;
+            background-color: #fff;
+        }
+
+        .table-custom {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.9em;
+        }
+        .table-custom thead tr { background-color: #ddd; }
+        .table-custom th, .table-custom td {
+            padding: 12px 10px;
+            text-align: left;
+            border-bottom: 1px solid #eee;
+            vertical-align: middle;
+        }
+        .table-custom tbody tr:nth-child(odd) { background-color: #F8F8F8; }
+        .table-custom tbody tr:nth-child(even) { background-color: #EEEEEE; }
+        .table-custom tbody tr:hover { background-color: #e0e0e0; }
+
+        .btn-custom-secondary {
+            background-color: #6c757d;
+            color: white;
+            padding: 8px 15px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: background-color 0.2s;
+        }
+        .btn-custom-secondary:hover { background-color: #5a6268; }
+
+        .badge-accion {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 140px; 
+            height: 40px; 
+            padding: 2px 4px;
+            border-radius: 4px;
+            color: white;
+            font-weight: bold;
+            font-size: 0.70em;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            text-align: center;
+            line-height: 1.1; 
+            box-sizing: border-box;
+            white-space: normal; 
+            word-break: break-word;
+            overflow: hidden;
+        }
+
+        .badge-modulo {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 120px; 
+            height: 30px;
+            background-color: #e9ecef;
+            color: #495057;
+            padding: 2px 5px;
+            border-radius: 4px;
+            font-weight: 600;
+            font-size: 0.85em;
+            border: 1px solid #ced4da;
+            text-align: center;
+            box-sizing: border-box;
+            white-space: nowrap; 
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+    </style>
+{% endblock %}
+
+{% block header %}BITÁCORA DE AUDITORÍA{% endblock %}
+
+{% block content %}
+<div id="app">
+    <main class="main-content" id="main-content">
+        <div class="contenido">
+            <div class="container_admin">
+                <h1 style="color: #981a28; margin-bottom: 20px;"><i class="fas fa-history me-2"></i> Registro de Actividades del Sistema</h1>
+
+                <div class="card-custom">
+                    <div class="card-header-custom">
+                        <i class="fas fa-filter me-1"></i> Filtros de Búsqueda
+                    </div>
+                    <div class="card-body-custom" style="display: flex; gap: 15px; flex-wrap: wrap; align-items: flex-end;">
+                        
+                        <div style="flex: 1 1 200px;">
+                            <label class="form-label-custom">Búsqueda general</label>
+                            <div style="position: relative;">
+                                <span style="position: absolute; left: 10px; top: 9px; color: #888;"><i class="fas fa-search"></i></span>
+                                <input type="text" id="filtro-texto" class="form-control-custom" placeholder="Usuario, acción o detalles..." style="padding-left: 35px;">
+                            </div>
+                        </div>
+
+                        <div style="flex: 1 1 150px;">
+                            <label class="form-label-custom">Módulo</label>
+                            <select id="filtro-modulo" class="form-select-custom">
+                                <option value="TODOS">Todos los módulos</option>
+                                <option value="Autenticación">Autenticación</option>
+                                <option value="Mesas">Mesas</option>
+                                <option value="Menú">Menú</option>
+                                <option value="Inventario">Inventario</option>
+                                <option value="Facturación">Facturación</option>
+                                <option value="Pedidos">Pedidos</option>
+                                <option value="Cocina">Cocina</option>
+                                <option value="Empleados">Empleados</option>
+                                <option value="Proveedores">Proveedores</option>
+                                <option value="Sucursales">Sucursales</option>
+                                <option value="Sistema">Sistema</option>
+                            </select>
+                        </div>
+
+                        <div style="flex: 1 1 130px;">
+                            <label class="form-label-custom">Fecha Desde</label>
+                            <input type="date" id="filtro-fecha-inicio" class="form-control-custom">
+                        </div>
+
+                        <div style="flex: 1 1 130px;">
+                            <label class="form-label-custom">Fecha Hasta</label>
+                            <input type="date" id="filtro-fecha-fin" class="form-control-custom">
+                        </div>
+
+                        <div style="flex: 0 0 auto;">
+                            <button type="button" class="btn-custom-secondary" onclick="limpiarFiltros()">
+                                <i class="fas fa-eraser me-1"></i> Limpiar
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card-custom" style="padding: 0; overflow-x: auto;">
+                    <table class="table-custom" id="tabla-auditoria">
+                        <thead>
+                            <tr>
+                                <th style="width: 140px;">Fecha y Hora</th>
+                                <th style="width: 150px;">Usuario</th>
+                                <th style="width: 130px;">Módulo</th>
+                                <th style="width: 155px;">Acción</th>
+                                <th>Detalles del Evento</th>
+                                <!-- LÓGICA DE COLUMNA INTELIGENTE -->
+                                {% if not user.sucursal_id and request.session.sucursal_activa_id == 'todas' or not user.sucursal_id and not request.session.sucursal_activa_id %}
+                                    <th style="width: 110px;">Sucursal</th>
+                                {% endif %}
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <!-- Llenado por JS -->
+                        </tbody>
+                    </table>
+                    <div id="mensaje-vacio" style="display: none; text-align: center; padding: 30px; color: #666; font-weight: bold;">
+                        No se encontraron registros que coincidan con los filtros aplicados.
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    const API_URL = '/api/auditoria-general/';
+    let auditoriaData = []; 
+    
+    // Lógica para que el JavaScript sepa si dibujar o esconder la celda de sucursal
+    const esGlobalAdmin = {% if not user.sucursal_id and request.session.sucursal_activa_id == 'todas' or not user.sucursal_id and not request.session.sucursal_activa_id %}true{% else %}false{% endif %};
+
+    document.addEventListener("DOMContentLoaded", () => {
+        cargarAuditoria();
+
+        document.getElementById('filtro-texto').addEventListener('input', aplicarFiltros);
+        document.getElementById('filtro-modulo').addEventListener('change', aplicarFiltros);
+        document.getElementById('filtro-fecha-inicio').addEventListener('change', aplicarFiltros);
+        document.getElementById('filtro-fecha-fin').addEventListener('change', aplicarFiltros);
+    });
+
+    async function cargarAuditoria() {
+        try {
+            const res = await fetch(API_URL);
+            auditoriaData = await res.json();
+            aplicarFiltros(); 
+        } catch (error) {
+            console.error('Error al cargar auditoría:', error);
+            const cols = esGlobalAdmin ? 6 : 5;
+            document.querySelector('#tabla-auditoria tbody').innerHTML = `<tr><td colspan="${cols}" class="text-center text-danger fw-bold">Error de conexión con el servidor.</td></tr>`;
+        }
+    }
+
+    function aplicarFiltros() {
+        const texto = document.getElementById('filtro-texto').value.toLowerCase();
+        const modulo = document.getElementById('filtro-modulo').value;
+        const fechaInicio = document.getElementById('filtro-fecha-inicio').value; 
+        const fechaFin = document.getElementById('filtro-fecha-fin').value; 
+
+        const datosFiltrados = auditoriaData.filter(reg => {
+            const contenido = `${reg.usuario_nombre} ${reg.rol} ${reg.accion} ${reg.detalles}`.toLowerCase();
+            const pasaTexto = texto === '' || contenido.includes(texto);
+
+            const pasaModulo = modulo === 'TODOS' || reg.modulo === modulo;
+
+            let pasaFechas = true;
+            if (fechaInicio || fechaFin) {
+                const [fechaStr] = reg.fecha_accion.split(' '); 
+                const [dia, mes, anio] = fechaStr.split('/');
+                const fechaRegistro = parseInt(`${anio}${mes}${dia}`); 
+
+                if (fechaInicio) {
+                    const inicioInt = parseInt(fechaInicio.replace(/-/g, ''));
+                    if (fechaRegistro < inicioInt) pasaFechas = false;
+                }
+                if (fechaFin) {
+                    const finInt = parseInt(fechaFin.replace(/-/g, ''));
+                    if (fechaRegistro > finInt) pasaFechas = false;
+                }
+            }
+
+            return pasaTexto && pasaModulo && pasaFechas;
+        });
+
+        renderTabla(datosFiltrados);
+    }
+
+    function renderTabla(datos) {
+        const tbody = document.querySelector('#tabla-auditoria tbody');
+        const mensajeVacio = document.getElementById('mensaje-vacio');
+        tbody.innerHTML = '';
+
+        if (datos.length === 0) {
+            mensajeVacio.style.display = 'block';
+            return;
+        }
+        mensajeVacio.style.display = 'none';
+
+        datos.forEach(reg => {
+            const tr = document.createElement('tr');
+            
+            let colorBadge = '#6c757d'; 
+            const accionUpper = reg.accion.toUpperCase();
+            
+            if(accionUpper.includes('CREACIÓN') || accionUpper.includes('INICIO') || accionUpper.includes('PAGO')) {
+                colorBadge = '#198754'; 
+            } else if(accionUpper.includes('ELIMINACIÓN') || accionUpper.includes('ANULA') || accionUpper.includes('MERMA') || accionUpper.includes('DESACTIVACIÓN')) {
+                colorBadge = '#dc3545'; 
+            } else if(accionUpper.includes('ACTUALIZACIÓN') || accionUpper.includes('CAMBIO') || accionUpper.includes('LISTO')) {
+                colorBadge = '#0d6efd'; 
+            }
+
+            const [fechaTxt, horaTxt, ampm] = reg.fecha_accion.split(' ');
+
+            let columnaSucursal = '';
+            if (esGlobalAdmin) {
+                const nombreSucursal = reg.sucursal_id ? `N° ${reg.sucursal_id}` : 'Global';
+                columnaSucursal = `<td style="font-weight: bold; color: #555;">${nombreSucursal}</td>`;
+            }
+
+            tr.innerHTML = `
+                <td>
+                    <strong>${fechaTxt}</strong><br>
+                    <span style="color:#666; font-size:0.85em;">${horaTxt} ${ampm}</span>
+                </td>
+                <td>
+                    <span class="fw-bold">${reg.usuario_nombre}</span><br>
+                    <small class="text-muted">${reg.rol}</small>
+                </td>
+                <td><span class="badge-modulo">${reg.modulo}</span></td>
+                <td><span class="badge-accion" style="background-color: ${colorBadge}">${reg.accion}</span></td>
+                <td style="color: #444;">${reg.detalles}</td>
+                ${columnaSucursal}
+            `;
+            tbody.appendChild(tr);
+        });
+    }
+
+    function limpiarFiltros() {
+        document.getElementById('filtro-texto').value = '';
+        document.getElementById('filtro-modulo').value = 'TODOS';
+        document.getElementById('filtro-fecha-inicio').value = '';
+        document.getElementById('filtro-fecha-fin').value = '';
+        aplicarFiltros();
+    }
+</script>
+{% endblock %}

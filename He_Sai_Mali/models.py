@@ -53,8 +53,6 @@ class Empleado(AbstractBaseUser, PermissionsMixin):
     is_staff = models.BooleanField(default=False)
     date_joined = models.DateTimeField(default=timezone.now)
 
-    history = HistoricalRecords()
-
     objects = EmpleadoManager()
 
     USERNAME_FIELD = 'usuario' 
@@ -74,7 +72,7 @@ class Empleado(AbstractBaseUser, PermissionsMixin):
     class Meta:
         db_table = 'Empleado'
 
-# --- NUEVO: Modelo para auditoría de inicios de sesión y dispositivos ---
+# --- Modelo para auditoría de inicios de sesión y dispositivos ---
 class RegistroSesion(models.Model):
     idRegistro = models.AutoField(primary_key=True)
     empleado = models.ForeignKey(Empleado, on_delete=models.CASCADE)
@@ -96,10 +94,7 @@ class ProductoMenu(models.Model):
     categoria = models.CharField(max_length=20)
     precio = models.DecimalField(max_digits=10, decimal_places=2)
     tiempoPreparacion = models.IntegerField()
-    # Agregado
     disponible = models.BooleanField(default=1)
-
-    history = HistoricalRecords()
 
     def __str__(self):
         return self.nombre
@@ -115,11 +110,7 @@ class Cliente(models.Model):
     identificacion = models.CharField(max_length=20, blank=True, null=True)
     telefono = models.IntegerField(blank=True, null=True)
     correo = models.EmailField(max_length=100, blank=True, null=True)
-
-    # Agregado
     direccion = models.CharField(max_length=1000,blank=True, null=True)
-
-    history = HistoricalRecords()
 
     def __str__(self):
         return self.nombre
@@ -148,28 +139,21 @@ class Proveedor(models.Model):
     telefono = models.IntegerField(blank=True, null=True)
     direccion = models.CharField(max_length=100, unique=True)
 
-    history = HistoricalRecords()
-
     def __str__(self):
         return self.nombre
     
     class Meta:
         db_table = 'Proveedor'
 
-# Se cambio Ingrediente -> ArticuloInventario
-# 6. Modelo Ingrediente
+# 6. Modelo ArticuloInventario
 class ArticuloInventario(models.Model):
     idArticuloInventario = models.AutoField(primary_key=True)
     sucursal = models.ForeignKey(Sucursal, on_delete=models.CASCADE, null=True, blank=True)
     nombre = models.CharField(max_length=100)
     unidad_de_medida = models.CharField(max_length=20)
     stock = models.DecimalField(max_digits=10, decimal_places=2)
-
-    # Agregado
     tipoArticulo = models.CharField(max_length=20)
     ubicacion = models.CharField(max_length=20, blank=True, null=True)
-
-    history = HistoricalRecords()
 
     def __str__(self):
         return f"{self.nombre} ({self.stock} {self.unidad_de_medida})"
@@ -188,11 +172,8 @@ class Pedido(models.Model):
     
     idCliente = models.ForeignKey(Cliente, on_delete=models.CASCADE)
     idMesa = models.ForeignKey(Mesa, on_delete=models.SET_NULL, null=True, blank=True)
-
-    # Agregado
     estadoDePago = models.BooleanField(default=False, blank=True, null=True)
 
-    # --- NUEVO: Control de anulaciones de facturas ---
     ESTADOS_FACTURA = [
         ('VIGENTE', 'Vigente'),
         ('ANULADA', 'Anulada'),
@@ -204,8 +185,6 @@ class Pedido(models.Model):
         default='VIGENTE',
         verbose_name="Estado de la Factura"
     )
-
-    history = HistoricalRecords()
     
     def __str__(self):
         return f"pedido N°{self.idPedido}"
@@ -213,16 +192,12 @@ class Pedido(models.Model):
     class Meta:
         db_table = 'Pedido'
 
-# 8. Modelo Intermedio: Pedido_ProductoMenu (Solicita)
+# 8. Modelo Intermedio: Pedido_ProductoMenu
 class Pedido_ProductoMenu(models.Model):
     idPedido_ProductoMenu = models.AutoField(primary_key=True)
-    # FK IdPedido
     idPedido = models.ForeignKey(Pedido, on_delete=models.CASCADE, related_name='items')
-    
-    # FK IdProductoMenu
     idProductoMenu = models.ForeignKey(ProductoMenu, on_delete=models.CASCADE)
     
-    # Campo 'Estado'
     ESTADOS = [
         ('Registrado', 'Registrado'),
         ('Listo', 'Listo'),
@@ -234,43 +209,32 @@ class Pedido_ProductoMenu(models.Model):
     estado = models.CharField(max_length=20, choices=ESTADOS, default='Registrado')
     cantidad = models.IntegerField(default=1)
 
-    history = HistoricalRecords()
-
     def __str__(self):
         return f"{self.cantidad}x {self.idProductoMenu.nombre} en Pedido {self.idPedido.idPedido} ({self.estado})"
 
     class Meta:
         db_table = 'Pedido_ProductoMenu'
 
-# 9. Modelo Intermedio: Empleado_Pedido (Atiende)
+# 9. Modelo Intermedio: Empleado_Pedido
 class Empleado_Pedido(models.Model):
     idEmpleado_Pedido = models.AutoField(primary_key=True)
-
-    # FK IdEmpleado (Mesero)
     idEmpleado = models.ForeignKey(Empleado, on_delete=models.PROTECT)
-    
-    # FK IdPedido
     idPedido = models.ForeignKey(Pedido, on_delete=models.CASCADE)
-    
     fechaAsignacion = models.DateTimeField(default=timezone.now)
 
     def __str__(self):
         return f"{self.idEmpleado.usuario} atiende Pedido N°{self.idPedido.idPedido}"
 
     class Meta:
-        # Clave compuesta (Empleado, Pedido)
         unique_together = (('idEmpleado', 'idPedido'),) 
         db_table = 'Empleado_Pedido'
 
-# 10. Modelo Intermedio: ProductoMenu_Ingrediente (contiene)
+# 10. Modelo Intermedio: ProductoMenu_ArticuloInventario
 class ProductoMenu_ArticuloInventario(models.Model):
     idProductoMenu_ArticuloInventario = models.AutoField(primary_key=True)
-
     idProductoMenu = models.ForeignKey(ProductoMenu, on_delete=models.CASCADE)
     idArticuloInventario = models.ForeignKey(ArticuloInventario, on_delete=models.CASCADE)
     cantidad_usada = models.DecimalField(max_digits=10, decimal_places=2)
-
-    history = HistoricalRecords()
 
     def __str__(self):
         return f"Receta: {self.ProductoMenu.nombre} usa {self.cantidad_usada} de {self.ArticuloInventario.nombre}"
@@ -279,20 +243,14 @@ class ProductoMenu_ArticuloInventario(models.Model):
         unique_together = ('idProductoMenu', 'idArticuloInventario')
         db_table = 'ProductoMenu_ArticuloInventario'
     
-# 11. Modelo Intermedio: Ingrediente_Proveedor (suministra)
+# 11. Modelo Intermedio: ArticuloInventario_Proveedor
 class ArticuloInventario_Proveedor(models.Model):
     idArticuloInventario_Proveedor = models.AutoField(primary_key=True)
-
     fechaCompra = models.DateTimeField(default=timezone.now)
     precioCompra = models.DecimalField(max_digits=10, decimal_places=2)
-
-    # Agregado
     cantidadCompra = models.DecimalField(max_digits = 10, decimal_places=2)
-
     idArticuloInventario = models.ForeignKey(ArticuloInventario, on_delete=models.CASCADE)
     idProveedor = models.ForeignKey(Proveedor, on_delete=models.CASCADE)
-
-    history = HistoricalRecords()
 
     def __str__(self):
         return f"{self.ArticuloInventario.nombre} suministrado por {self.proveedor.nombre}"
@@ -301,9 +259,8 @@ class ArticuloInventario_Proveedor(models.Model):
         db_table = 'ArticuloInventario_Proveedor'
 
 
-# --- VISTAS DE BASE DE DATOS (NO ADMINISTRADAS POR DJANGO) ---
+# --- VISTAS DE BASE DE DATOS ---
 class VistaPedidosCocina(models.Model):
-    # Usamos idPedido_ProductoMenu como Primary Key para que Django funcione correctamente
     id = models.IntegerField(primary_key=True, db_column='idPedido_ProductoMenu') 
     cantidad = models.IntegerField()
     id_pedido = models.IntegerField(db_column='idPedido_id')
@@ -316,29 +273,43 @@ class VistaPedidosCocina(models.Model):
         managed = False
         db_table = 'vw_pedidos_cocina'
 
-
 class VistaAlertasStock(models.Model):
-    # Usamos idArticuloInventario como Primary Key
     id = models.IntegerField(primary_key=True, db_column='idArticuloInventario')
     ingrediente = models.CharField(max_length=100)
     stock = models.DecimalField(max_digits=10, decimal_places=2)
     unidad_de_medida = models.CharField(max_length=20)
-    porciones_posibles = models.IntegerField() # Calculado por la BD
+    porciones_posibles = models.IntegerField() 
 
     class Meta:
         managed = False
         db_table = 'vw_alertas_stock'
 
-# --- TABLA DE AUDITORÍA (Manejada por Django, llenada por PostgreSQL) ---
-class Auditoria_Mesa(models.Model):
+# --- NUEVO: BITÁCORA GENERAL DE AUDITORÍA ---
+class AuditoriaGeneral(models.Model):
     id_auditoria = models.AutoField(primary_key=True)
-    id_mesa = models.IntegerField()
-    accion = models.CharField(max_length=30) 
-    capacidad_anterior = models.IntegerField(null=True, blank=True)
-    capacidad_nueva = models.IntegerField(null=True, blank=True)
-    usuario = models.CharField(max_length=100) # Nuevo campo
-    rol = models.CharField(max_length=50)      # Nuevo campo
-    fecha_modificacion = models.DateTimeField(auto_now_add=True)
+    
+    # 1. ¿Quién lo hizo?
+    empleado_id = models.IntegerField(null=True, blank=True)
+    usuario_nombre = models.CharField(max_length=100)
+    rol = models.CharField(max_length=50)
+    sucursal_id = models.IntegerField(null=True, blank=True)
+    
+    # 2. ¿Qué y dónde lo hizo?
+    modulo = models.CharField(max_length=50) # Ej. 'Mesas', 'Login', 'Facturación', 'Inventario'
+    accion = models.CharField(max_length=30) # Ej. 'Crear', 'Eliminar', 'Inicio de Sesión', 'Anular'
+    
+    # 3. Detalles específicos
+    detalles = models.TextField() # Aquí guardaremos un resumen, ej: "Se cambió la mesa 5 de capacidad 2 a 4" o "Factura 123 anulada por error de cobro"
+    
+    # 4. ¿Cuándo?
+    fecha_accion = models.DateTimeField(default=timezone.now)
+    
+    # (Opcional) Dirección IP para seguridad
+    ip_address = models.GenericIPAddressField(null=True, blank=True)
 
     class Meta:
-        db_table = 'Auditoria_Mesa'
+        db_table = 'AuditoriaGeneral'
+        ordering = ['-fecha_accion']
+
+    def __str__(self):
+        return f"[{self.fecha_accion.strftime('%Y-%m-%d %H:%M')}] {self.usuario_nombre} - {self.modulo}: {self.accion}"

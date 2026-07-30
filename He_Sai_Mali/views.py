@@ -31,27 +31,25 @@ from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, Tabl
 from reportlab.platypus.flowables import Flowable
 from reportlab.lib import colors
 
+from reportlab.platypus import HRFlowable
+
 # Estructura de tablas y decoradores
 from .models import *
 from .decorators import *
+from .api import registrar_auditoria # <--- Importación de auditoría
 
 @never_cache
 @user_passes_test(es_rol("Administrador"), login_url='login')
 def main_registro_html(request):
     return render(request, 'He_Sai_Mali/registro.html')
 
-# Vista principal (Bienvenida)
 def main(request):
     return render(request, 'He_Sai_Mali/main.html')
 
-# Vista para el login de los empleados
 @never_cache
 def login_view_html(request):
     if request.user.is_authenticated:
-        # El usuario se autentica con la tabla Empleado, su rol se determina
-        # al buscarlo en la tabla Empleado
         rol = (request.user.rol or '').strip().lower()
-        # Redirige a una vista principal para cada tipo de empleado
         if rol == "administrador":
             return redirect('admin_dashboard')
         elif rol == "mesero":
@@ -70,7 +68,6 @@ def calcular_monto_total(pedido_id):
         return float(pedido.montoTotal)
     return 0.0
 
-# Funcion para generar lineas en el PDF
 class Line(Flowable):
     def __init__(self, width, height=0):
         Flowable.__init__(self)
@@ -80,12 +77,8 @@ class Line(Flowable):
     def draw(self):
         self.canv.line(0, self.height, self.width, self.height)
 
-from reportlab.platypus import HRFlowable
-# Funcion para generar PDF de la factura
 def generar_pdf_factura(pedido_id):
-    # 1. Obtener datos
     pedido = get_object_or_404(Pedido, pk=pedido_id)
-    # Asegúrate de que esta función esté disponible en tu archivo
     monto_total_sin_impuesto = calcular_monto_total(pedido_id) 
     monto_total_decimal = Decimal(str(monto_total_sin_impuesto))
     
@@ -96,7 +89,6 @@ def generar_pdf_factura(pedido_id):
     cliente = pedido.idCliente 
     platillos_pedido = Pedido_ProductoMenu.objects.filter(idPedido=pedido).exclude(estado__in=['Merma', 'Anulado']).select_related('idProductoMenu')
     
-    # --- Configuración del PDF ---
     response = HttpResponse(content_type='application/pdf')
     filename = f"factura_pedido_{pedido_id}.pdf"
     response['Content-Disposition'] = f'attachment; filename="{filename}"'
@@ -105,15 +97,12 @@ def generar_pdf_factura(pedido_id):
     story = []
     styles = getSampleStyleSheet()
     
-    # Estilos Personalizados
     style_center_h1 = ParagraphStyle(name='CenterH1', alignment=1, fontSize=18)
     style_center_h2 = ParagraphStyle(name='CenterH2', alignment=1, fontSize=14)
     style_details = styles['Normal'] 
 
-    # Ancho utilizable
     PAGE_WIDTH = 6.5 * inch
     
-    # --- 1. ENCABEZADO ---
     logo_path = find('He_Sai_Mali/logo.png') 
     LOGO_WIDTH = 0.8 * inch 
     LOGO_HEIGHT = 0.8 * inch
@@ -142,11 +131,9 @@ def generar_pdf_factura(pedido_id):
     ]))
     story.append(header_table)
 
-    # --- 2. LÍNEA SEPARADORA (Corregido con HRFlowable) ---
     story.append(HRFlowable(width=PAGE_WIDTH, thickness=1, color=colors.black))
     story.append(Spacer(1, 0.15 * inch))
 
-    # --- 3. DETALLES ---
     detalle_texto = f"""
     <b>ID Pedido:</b> {pedido.idPedido}<br/>
     <b>Cliente:</b> {cliente.nombre} <br/>
@@ -161,11 +148,9 @@ def generar_pdf_factura(pedido_id):
     story.append(Paragraph(detalle_texto, style_details))
     story.append(Spacer(1, 0.15 * inch))
 
-    # --- 4. LÍNEA SEPARADORA ---
     story.append(HRFlowable(width=PAGE_WIDTH, thickness=1, color=colors.black))
     story.append(Spacer(1, 0.15 * inch))
 
-    # --- 5. TABLA DE PRODUCTOS ---
     data = [['Producto', 'Cant.', 'Precio Unit.', 'Subtotal']]
     for item in platillos_pedido:
         nombre = item.idProductoMenu.nombre
@@ -188,7 +173,6 @@ def generar_pdf_factura(pedido_id):
     story.append(table)
     story.append(Spacer(1, 0.25 * inch))
 
-    # --- 6. TOTALES ---
     totales_data = [
         ['Subtotal:', f"C${subtotal:.2f}"],
         [f"Impuesto (IVA {int(TASA_IMPUESTO * 100)}%):", f"C${impuesto:.2f}"],
@@ -213,7 +197,6 @@ def generar_pdf_factura(pedido_id):
     doc.build(story)
     return response
 
-# Vista dedicada solo a generar y servir el archivo PDF
 @user_passes_test(lambda u: u.rol == "Mesero" or u.rol == "Administrador", login_url='login')
 def descargar_pdf_factura(request, pedido_id):
     try:
@@ -222,31 +205,26 @@ def descargar_pdf_factura(request, pedido_id):
         messages.error(request, f"Error al generar PDF: {e}")
         return redirect(request.META.get('HTTP_REFERER', 'historial_facturas'))
 
-# Vista para ver los pedidos activos
 @never_cache
 @user_passes_test(es_rol("Mesero"), login_url='login')
 def vista_mesero_html(request):
     return render(request, 'He_Sai_Mali/pedidos.html') 
 
-# Vista para registrar nuevos pedidos y agregar productos a un pedido existente
 @never_cache
 @user_passes_test(es_rol("Mesero"), login_url='login')
 def vista_registrarpedido_html(request, pedido_id=None):
     return render(request, 'He_Sai_Mali/registrarpedido.html', {'pedido_id': pedido_id})
 
-# Vista de la cocina
 @never_cache
 @user_passes_test(es_rol("Cocinero"), login_url='login')
 def vista_cocinero_html(request):
     return render(request, 'He_Sai_Mali/cocina.html')
 
-# Vistas para el control de los articulos del inventario
 @never_cache
 @user_passes_test(es_rol("Administrador"), login_url='login')
 def admin_ingredientes_html(request):
     return render(request, 'He_Sai_Mali/admin_ingredientes.html')
 
-# Vistas para el control de los productos del menu
 @never_cache
 @user_passes_test(es_rol("Administrador"), login_url='login')
 def admin_platillos_html(request):
@@ -257,7 +235,6 @@ def admin_platillos_html(request):
 def admin_proveedores_html(request):
     return render(request, 'He_Sai_Mali/admin_proveedores.html')
 
-# Vistas para el control de las mesas y ver disponibilidad de mesas en el caso del mesero
 @never_cache
 @user_passes_test(es_rol_y_administrador("Mesero"), login_url='login')
 def admin_mesas_html(request):
@@ -266,7 +243,6 @@ def admin_mesas_html(request):
     }
     return render(request, 'He_Sai_Mali/mesas.html', context)
 
-# Vista del dashboard para el administrador
 @never_cache
 @user_passes_test(es_rol("Administrador"), login_url='login')
 def admin_dashboard_html(request):
@@ -293,7 +269,6 @@ def generate_dashboard_pdf(request):
         end_date = end_date.replace(hour=23, minute=59, second=59, microsecond=999999)
 
     if start_date > end_date:
-        # swap or set default
         start_date = timezone.make_aware(timezone.datetime(today.year, today.month, today.day))
         end_date = start_date + timedelta(days=1) - timedelta(microseconds=1)
 
@@ -330,7 +305,6 @@ def generate_dashboard_pdf(request):
     total_mesas = Mesa.objects.count()
     platillos_en_menu = ProductoMenu.objects.filter(disponible=True).count()
 
-    # Generación del PDF (similar a antes, pero usando start_date_str y end_date_str)
     response = HttpResponse(content_type='application/pdf')
     filename = f"dashboard_{start_date_str}_to_{end_date_str}"
     if search_query:
@@ -346,7 +320,6 @@ def generate_dashboard_pdf(request):
     style_center_h2 = ParagraphStyle(name='CenterH2', alignment=1, fontSize=14)
     PAGE_WIDTH = 6.5 * inch
 
-    # Encabezado...
     logo_path = find('He_Sai_Mali/logo.png')
     LOGO_WIDTH = 0.8 * inch
     LOGO_HEIGHT = 0.8 * inch
@@ -440,22 +413,17 @@ def generate_dashboard_pdf(request):
     doc.build(story)
     return response
 
-# Vista para ver los QR asignados a cada mesa
 def vista_qr_mesas(request, mesa_id):
     mesa = get_object_or_404(Mesa, idMesa=mesa_id)
     
-    # 2. Construir la URL que contendrá el QR (la del temporizador)
-    # 'temporizador_mesa' es el name de la ruta de destino del QR.
     url_to_embed = request.build_absolute_uri(reverse('temporizador_mesa', args=[mesa.idMesa]))
     qr_data = url_to_embed
     
-    # 3. Generar el código QR y codificar en base64
     qr_img = qrcode.make(qr_data)
     buffer = BytesIO()
     qr_img.save(buffer, format="PNG")
     qr_base64 = base64.b64encode(buffer.getvalue()).decode('utf-8')
     
-    # 4. Preparar el contexto para la plantilla (como una lista de 1 elemento)
     mesa_con_qr = {
         'idMesa': mesa.idMesa,
         'nombre': f'Mesa {mesa.idMesa}',
@@ -465,10 +433,9 @@ def vista_qr_mesas(request, mesa_id):
     if request.user.is_authenticated:
         logout(request)
 
-    # 5. Renderizar la plantilla
     return render(request, 'He_Sai_Mali/qr_mesas.html', {
-        'mesas': [mesa_con_qr], # Se pasa una lista con un solo elemento para compatibilidad con el template
-        'titulo': f'Código QR Mesa {mesa.idMesa}' # Título dinámico para la plantilla
+        'mesas': [mesa_con_qr], 
+        'titulo': f'Código QR Mesa {mesa.idMesa}' 
     })
 
 def temporizador_mesa(request, mesa_id):
@@ -481,21 +448,19 @@ def temporizador_mesa(request, mesa_id):
 
     remaining_seconds = 0
     tiempo_total_segundos = 0
-    fase = 'ANTES'  # Fases posibles: ANTES, DURANTE, SERVIDO, COMPLETADO
+    fase = 'ANTES'  
     has_active_pedido = False
-    current_ts = int(time.time()) # Timestamp actual absoluto para cálculos limpios
+    current_ts = int(time.time()) 
 
     if latest_pedido:
         ready_key = f"pedido_ready_{latest_pedido.idPedido}"
         
-        # REGLA 5: Solo aplicamos ventana de gracia si ya fue marcado como "Listo" (SERVIDO)
         if ready_key in request.session and (current_ts - request.session[ready_key]) > 300:
             fase = 'ANTES'
             remaining_seconds = 0
             tiempo_total_segundos = 0
             has_active_pedido = False
         else:
-            # Obtener solo productos válidos
             items_validos = Pedido_ProductoMenu.objects.filter(
                 idPedido=latest_pedido.idPedido
             ).exclude(
@@ -511,46 +476,36 @@ def temporizador_mesa(request, mesa_id):
             total_quantity = agregados.get('total_quantity') or 0
 
             if total_quantity > 0:
-                # REGLA 1: Verificar si TODOS los productos válidos pasaron a 'Listo' o 'Entregado'
                 items_no_listos = items_validos.exclude(estado__in=['Listo', 'Servido', 'Facturado'])
                 todos_listos = not items_no_listos.exists()
 
-                # Tiempos de preparación teóricos
                 tiempo_logistica_segundos = total_quantity * 45
                 tiempo_servicio_segundos = 60
                 tiempo_total_segundos = tiempo_base_segundos + tiempo_logistica_segundos + tiempo_servicio_segundos
 
-                # --- EL CAMBIO ESTÁ AQUÍ ---
-                # Como la BD ya guarda la hora perfecta, simplemente calculamos el tiempo final
-                # y le restamos la hora actual del sistema operativo (timezone.now() directo).
                 end_time = latest_pedido.fecha + timedelta(seconds=tiempo_total_segundos)
                 time_difference = end_time - timezone.now()
                 remaining_seconds_teorico = int(time_difference.total_seconds())
-                # ---------------------------
 
-                # Evaluación de escenarios en tiempo real
                 if todos_listos:
-                    # El pedido se terminó. AQUÍ inicia la ventana de gracia.
                     if ready_key not in request.session:
                         request.session[ready_key] = current_ts
                         request.session.modified = True
                     
                     elapsed_since_ready = current_ts - request.session[ready_key]
                     remaining_seconds = max(0, 300 - elapsed_since_ready)
-                    tiempo_total_segundos = 300  # Redefinimos el total del ciclo a 5 min para la interfaz
+                    tiempo_total_segundos = 300  
                     
                     if remaining_seconds == 0:
-                        fase = 'ANTES'  # REGLA 4: Pasados los 5 minutos de estar SERVIDO, vuelve a ANTES
+                        fase = 'ANTES'  
                         has_active_pedido = False
                     else:
                         fase = 'SERVIDO'
                         has_active_pedido = True
                 else:
-                    # Cuenta regresiva normal en proceso
                     remaining_seconds = max(0, remaining_seconds_teorico)
                     
                     if remaining_seconds == 0:
-                        # El tiempo se agotó de forma natural pero los platillos NO están listos.
                         fase = 'COMPLETADO'
                         has_active_pedido = True 
                         tiempo_total_segundos = 0
@@ -572,25 +527,28 @@ def temporizador_mesa(request, mesa_id):
         
     return render(request, 'He_Sai_Mali/temporizador.html', context)
 
-# Vista para administrar los empleados
 @never_cache
 @user_passes_test(es_rol("Administrador"), login_url='login')
 def admin_empleados_html(request):
     context = {
-        # Roles estáticos que necesita el formulario desplegable en el HTML
         'roles_disponibles': ['Administrador', 'Mesero', 'Cocinero'],
     }
     
     return render(request, 'He_Sai_Mali/admin_empleados.html', context)
 
-# Funcionalidad para ver el historial de facturas (pedidos) en el dashboard del administrador
 @user_passes_test(es_rol("Administrador"), login_url='login')
 def historial_facturas_html(request):
     return render(request, 'He_Sai_Mali/historial_facturas.html')
 
-# Funcionaliad para cerra sesion
 @login_required
 def logout_view(request):
+    if request.user.is_authenticated:
+        registrar_auditoria(
+            request=request, 
+            modulo='Autenticación', 
+            accion='Cierre de Sesión', 
+            detalles=f"El usuario '{request.user.usuario}' cerró sesión exitosamente."
+        )
     logout(request)
     return redirect('login')
 
@@ -598,3 +556,18 @@ def global_sucursales(request):
     if request.user.is_authenticated and request.user.rol == 'Administrador' and not request.user.sucursal_id:
         return {'sucursales_disponibles': Sucursal.objects.filter(is_active=True)}
     return {'sucursales_disponibles': []}
+
+# Vista para la administración de sucursales, solo accesible para el Administrador General
+@never_cache
+@user_passes_test(es_rol("Administrador"), login_url='login')
+def admin_sucursales_html(request):
+    # Seguridad estricta: Si el administrador tiene una sucursal asignada (es local), lo expulsamos
+    if request.user.sucursal_id:
+        return redirect('admin_dashboard')
+    
+    return render(request, 'He_Sai_Mali/admin_sucursales.html')
+
+@never_cache
+@user_passes_test(es_rol("Administrador"), login_url='login')
+def admin_auditoria_html(request):
+    return render(request, 'He_Sai_Mali/admin_auditoria.html')

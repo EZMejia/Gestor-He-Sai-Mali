@@ -5,7 +5,6 @@ from django.core.validators import RegexValidator
 from rest_framework.validators import UniqueValidator
 from .models import *
 
-# Listar los empleados
 class EmpleadoListSerializer(serializers.ModelSerializer):
     nombre_completo = serializers.SerializerMethodField()
 
@@ -16,7 +15,6 @@ class EmpleadoListSerializer(serializers.ModelSerializer):
     def get_nombre_completo(self, obj):
         return f"{obj.nombre} {obj.apellido}"
     
-# Reglas para editar empleado
 class EditarEmpleadoSerializer(serializers.ModelSerializer):
     nueva_password = serializers.CharField(write_only=True, required=False, allow_blank=True, style={'input_type': 'password'})
     confirmar_password = serializers.CharField(write_only=True, required=False, allow_blank=True, style={'input_type': 'password'})
@@ -31,9 +29,8 @@ class EditarEmpleadoSerializer(serializers.ModelSerializer):
         fields = ['nombre', 'apellido', 'telefono', 'correo', 'cedula', 'rol', 'nueva_password', 'confirmar_password']
 
     def validate(self, data):
-        instance = self.instance # El empleado que estamos editando
+        instance = self.instance 
         
-        # 1. Validaciones de Unicidad Manuales (excluyendo la instancia actual)
         correo = data.get('correo')
         telefono = data.get('telefono')
         cedula = data.get('cedula')
@@ -45,7 +42,6 @@ class EditarEmpleadoSerializer(serializers.ModelSerializer):
         if cedula and Empleado.objects.filter(cedula=cedula).exclude(pk=instance.pk).exists():
             raise serializers.ValidationError({"cedula": f"Ya existe un empleado con la cédula '{cedula}'."})
 
-        # 2. Validar contraseñas si se envió 'nueva_password'
         nueva_pass = data.get('nueva_password')
         confirmar_pass = data.get('confirmar_password')
 
@@ -53,7 +49,6 @@ class EditarEmpleadoSerializer(serializers.ModelSerializer):
             if nueva_pass != confirmar_pass:
                 raise serializers.ValidationError({"nueva_password": "Las contraseñas no coinciden."})
             
-            # Replicar criterios de contraseña fuerte
             password_regex = r'^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)[a-zA-Z\d]{8,}$'
             if not re.match(password_regex, nueva_pass):
                 raise serializers.ValidationError({
@@ -63,22 +58,18 @@ class EditarEmpleadoSerializer(serializers.ModelSerializer):
         return data
 
     def update(self, instance, validated_data):
-        # Extraer contraseñas para procesarlas por separado
         nueva_pass = validated_data.pop('nueva_password', None)
         validated_data.pop('confirmar_password', None)
 
-        # Actualizar campos estándar
         for attr, value in validated_data.items():
             setattr(instance, attr, value)
 
-        # Encriptar y asignar contraseña si se incluyó
         if nueva_pass:
             instance.set_password(nueva_pass)
 
         instance.save()
         return instance
 
-# Reglas para registrar nuevo empleado
 class RegistroEmpleadoSerializer(serializers.ModelSerializer):
     nombre = serializers.CharField(
         validators=[RegexValidator(r'^[a-zA-Z\u00C0-\u017F\sñÑ]+$', 'El nombre solo puede contener letras y espacios.')]
@@ -118,7 +109,6 @@ class RegistroEmpleadoSerializer(serializers.ModelSerializer):
 
     rol = serializers.ChoiceField(choices=[('Administrador', 'Administrador'), ('Mesero', 'Mesero'), ('Cocinero', 'Cocinero'),])
 
-    # NUEVO: Declaramos explícitamente el sucursal_id para que el serializador sepa qué hacer con él
     sucursal_id = serializers.IntegerField(required=False, allow_null=True)
 
     contrasena1 = serializers.CharField(write_only=True, required=True, style={'input_type': 'password'})
@@ -126,16 +116,12 @@ class RegistroEmpleadoSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Empleado
-        # NUEVO: Añadimos 'sucursal_id' al final de la lista de fields
         fields = ['nombre', 'apellido', 'telefono', 'correo', 'cedula', 'rol', 'contrasena1', 'contrasena2', 'sucursal_id']
 
     def validate(self, data):
-        # 1. Validar que las contraseñas coincidan
         if data['contrasena1'] != data['contrasena2']:
             raise serializers.ValidationError({"contrasena1": "Las contraseñas no coinciden."})
 
-        # 2. Replicar el Regex de contraseña fuerte del frontend
-        # Mínimo 8 caracteres, 1 mayúscula, 1 minúscula y 1 número
         password_regex = r'^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)[a-zA-Z\d]{8,}$'
         if not re.match(password_regex, data['contrasena1']):
             raise serializers.ValidationError({
@@ -145,7 +131,6 @@ class RegistroEmpleadoSerializer(serializers.ModelSerializer):
         return data
 
     def create(self, validated_data):
-        # Retiramos las contraseñas del diccionario de datos validados
         validated_data.pop('contrasena2')
         contrasena = validated_data.pop('contrasena1')
 
@@ -153,7 +138,6 @@ class RegistroEmpleadoSerializer(serializers.ModelSerializer):
         apellido = validated_data.get('apellido', '').strip()
         rol = validated_data.get('rol', '').strip()
 
-        # Generar nombre de usuario
         def primeras_dos(palabra):
             return re.sub(r'[^a-zA-Z]', '', palabra).lower()[:2]
         
@@ -161,14 +145,10 @@ class RegistroEmpleadoSerializer(serializers.ModelSerializer):
         usuario = base
         contador = 1
 
-        # ORM de Django
         while Empleado.objects.filter(usuario=usuario).exists():
             usuario = f"{base}{contador}"
             contador += 1
 
-        # Utilizamos el EmpleadoManager definido en models.py
-        # Como agregaste sucursal_id a los fields, ya viene dentro de **validated_data.
-        # Django se encarga de inyectarlo automáticamente en tu modelo.
         empleado = Empleado.objects.create_user(
             usuario=usuario,
             contrasena=contrasena,
@@ -177,7 +157,6 @@ class RegistroEmpleadoSerializer(serializers.ModelSerializer):
         
         return empleado
     
-# Reglas de Login
 class LoginSerializer(serializers.Serializer):
     usuario = serializers.CharField(
         required=True,
@@ -189,9 +168,7 @@ class LoginSerializer(serializers.Serializer):
         error_messages={'blank': 'La contraseña no puede quedarse vacía.', 'required': 'La contraseña es obligatoria.'}
     )
 
-# Reglas de Proveedores
 class ProveedorSerializer(serializers.ModelSerializer):
-    # Forzar a que el teléfono sea obligatorio y cumpla con exactamente 8 números
     telefono = serializers.CharField(
         required=False,
         allow_blank=True,
@@ -233,9 +210,7 @@ class ProveedorSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError(f"Ya existe un proveedor con el nombre '{nombre_limpio}'.")
         return nombre_limpio
     
-# Reglas de Mesas
 class MesaSerializer(serializers.ModelSerializer):
-    # Forzar a que sean enteros en la validación de la API
     idMesa = serializers.IntegerField(min_value=1, error_messages={
         'min_value': 'El número de mesa debe ser mayor a cero.',
         'invalid': 'El número de mesa debe ser un número entero válido.'
@@ -252,14 +227,11 @@ class MesaSerializer(serializers.ModelSerializer):
         fields = ['idMesa', 'capacidad', 'ocupada']
 
     def validate_idMesa(self, value):
-        # Validación de unicidad manual solo al CREAR (POST)
         if not self.instance and Mesa.objects.filter(pk=value).exists():
             raise serializers.ValidationError(f"Ya existe una mesa con el número '{value}'.")
         return value
     
-# Reglas para articulo_inventario
 class ArticuloInventarioSerializer(serializers.ModelSerializer):
-    # Validaciones personalizadas con mensajes claros para campos obligatorios
     nombre = serializers.CharField(
         required=True,
         error_messages={
@@ -274,8 +246,6 @@ class ArticuloInventarioSerializer(serializers.ModelSerializer):
             'required': 'El campo unidad de medida es mandatorio.'
         }
     )
-    # Cambiado a FloatField o DecimalField dependiendo de tu modelo, 
-    # se mantiene FloatField pero validando el valor mínimo por seguridad.
     stock = serializers.FloatField(
         required=False, 
         min_value=0.0,
@@ -289,7 +259,6 @@ class ArticuloInventarioSerializer(serializers.ModelSerializer):
         fields = ['idArticuloInventario', 'nombre', 'stock', 'unidad_de_medida', 'tipoArticulo', 'ubicacion']
 
     def validate_nombre(self, value):
-        # Eliminar espacios innecesarios al inicio y al final
         nombre_limpio = value.strip()
         if not nombre_limpio:
             raise serializers.ValidationError("El nombre no puede consistir únicamente de espacios en blanco.")
@@ -297,7 +266,6 @@ class ArticuloInventarioSerializer(serializers.ModelSerializer):
         instance = self.instance
         queryset = ArticuloInventario.objects.filter(nombre__iexact=nombre_limpio)
         
-        # Si estamos editando, excluimos el objeto actual de la búsqueda de duplicados
         if instance:
             queryset = queryset.exclude(pk=instance.pk)
             
@@ -307,7 +275,6 @@ class ArticuloInventarioSerializer(serializers.ModelSerializer):
         return nombre_limpio
 
 
-# Serializador de apoyo para validar los datos estructurados al comprar
 class CompraIngredienteSerializer(serializers.Serializer):
     id_proveedor_fk = serializers.IntegerField(
         required=True,
@@ -327,16 +294,13 @@ class CompraIngredienteSerializer(serializers.Serializer):
     )
 
 
-# Serializador de apoyo para registrar pérdidas o mermas
 class MermaIngredienteSerializer(serializers.Serializer):
     cantidad_merma = serializers.FloatField(
         min_value=0.01, 
         error_messages={'min_value': 'La cantidad de pérdida o merma debe ser un valor positivo mayor a cero.'}
     )
 
-# Serializador para la cantidad de ingreidentes en una receta
 class IngredienteRecetaSerializer(serializers.ModelSerializer):
-    # Permite recibir el id del artículo y leer dinámicamente sus datos básicos
     idArticuloInventario = serializers.PrimaryKeyRelatedField(
         queryset=ArticuloInventario.objects.all()
     )
@@ -353,9 +317,7 @@ class IngredienteRecetaSerializer(serializers.ModelSerializer):
             }
         }
 
-# Serializador para los platillos
 class ProductoMenuSerializer(serializers.ModelSerializer):
-    # Relación inversa usando el manager relacional por defecto de Django[cite: 6]
     ingredientes = IngredienteRecetaSerializer(many=True, source='productomenu_articuloinventario_set')
 
     class Meta:
@@ -407,7 +369,6 @@ class ProductoMenuSerializer(serializers.ModelSerializer):
         ingredientes_data = validated_data.pop('productomenu_articuloinventario_set', [])
         
         try:
-            # Bloque transaccional idéntico a la lógica original[cite: 6]
             with transaction.atomic():
                 nuevo_platillo = ProductoMenu.objects.create(**validated_data)
                 for ing in ingredientes_data:
@@ -435,7 +396,6 @@ class ProductoMenuSerializer(serializers.ModelSerializer):
                 instance.save()
 
                 if ingredientes_data is not None:
-                    # Reemplazar por completo los ingredientes (Lógica de tu vista editar_platillo)[cite: 6]
                     ProductoMenu_ArticuloInventario.objects.filter(idProductoMenu=instance).delete()
                     for ing in ingredientes_data:
                         ProductoMenu_ArticuloInventario.objects.create(
@@ -449,9 +409,7 @@ class ProductoMenuSerializer(serializers.ModelSerializer):
                 raise serializers.ValidationError({"nombre": f"Ya existe un platillo con el nombre '{validated_data.get('nombre')}'."})
             raise serializers.ValidationError({"detail": str(e)})
         
-# Serializador para la vista de historial de facturas
 class FacturaHistorialSerializer(serializers.ModelSerializer):
-    # Obtenemos el nombre del cliente a través de la relación de la llave foránea
     cliente_nombre = serializers.CharField(source='idCliente.nombre', read_only=True)
     monto_con_iva = serializers.SerializerMethodField()
 
@@ -468,7 +426,6 @@ class FacturaHistorialSerializer(serializers.ModelSerializer):
         ]
 
     def get_monto_con_iva(self, obj):
-        # Multiplicamos el monto original por 1.15 para incluir el IVA
         return round(float(obj.montoTotal) * 1.15, 2)
 
 
@@ -499,7 +456,7 @@ class PedidoColaSerializer(serializers.Serializer):
     idPedido = serializers.IntegerField()
     fecha = serializers.DateTimeField(format="%Y-%m-%d %H:%M:%S")
     metodoPago = serializers.CharField()
-    nombre_cliente = serializers.CharField(source='nombre')  # Creado por el AS de la consulta RAW
+    nombre_cliente = serializers.CharField(source='nombre')
     idMesa_id = serializers.IntegerField(allow_null=True)
     montoTotal = serializers.DecimalField(max_digits=10, decimal_places=2)
     platillos = serializers.SerializerMethodField()
@@ -507,7 +464,6 @@ class PedidoColaSerializer(serializers.Serializer):
     puede_eliminar = serializers.SerializerMethodField()
 
     def get_platillos(self, obj):
-        # Obtenemos los platillos pre-procesados desde el contexto de la vista
         platillos_por_pedido = self.context.get('platillos_por_pedido', {})
         items = platillos_por_pedido.get(obj.idPedido, [])
         return PlatilloColaSerializer(items, many=True).data
@@ -520,10 +476,38 @@ class PedidoColaSerializer(serializers.Serializer):
     def get_puede_eliminar(self, obj):
         platillos_por_pedido = self.context.get('platillos_por_pedido', {})
         items = platillos_por_pedido.get(obj.idPedido, [])
-        # Un pedido es eliminable si todos sus ítems están 'Registrado'
-        # o si están 'Listo' pero son productos sin tiempo de cocción (bebidas, etc.)
         return len(items) > 0 and all(
             item.estado == 'Registrado' or 
             (getattr(item.idProductoMenu, 'tiempoPreparacion', 0) == 0 and item.estado == 'Listo')
             for item in items
         )
+
+class AuditoriaGeneralSerializer(serializers.ModelSerializer):
+    fecha_accion = serializers.DateTimeField(format="%d/%m/%Y %I:%M %p")
+    
+    class Meta:
+        model = AuditoriaGeneral
+        fields = '__all__'
+
+class SucursalSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Sucursal
+        fields = '__all__'
+        extra_kwargs = {
+            'nombre_comercial': {
+                'error_messages': {
+                    'required': 'El nombre comercial es obligatorio.', 
+                    'blank': 'El nombre no puede estar vacío.'
+                }
+            },
+            'municipio': {
+                'error_messages': {
+                    'required': 'Debe especificar un municipio.'
+                }
+            },
+            'direccion_exacta': {
+                'error_messages': {
+                    'required': 'La dirección es obligatoria.'
+                }
+            }
+        }

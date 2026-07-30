@@ -1,31 +1,25 @@
 {% extends "He_Sai_Mali/base.html" %}
 {% load static %}
 
-{% block title %}Admin - Proveedores{% endblock %}
+{% block title %}Admin - Sucursales{% endblock %}
 
 {% block extra_style %}
     <style>
         :root {
-            /* Colores del diseño de la APP (He Sai Mali) */
-            --primary-color: #981a28; /* Rojo Oscuro (Header) */
-            --secondary-color: #f3bb67; /* Amarillo (Acento/Border) */
-            --sidebar-bg: #2b3543; /* Gris Oscuro (Usado para el menú lateral) */
-            --bg-page: #2c3038; /* Gris Oscuro (Fondo de página) */
+            --primary-color: #981a28; 
+            --secondary-color: #f3bb67; 
+            --sidebar-bg: #2b3543; 
+            --bg-page: #2c3038; 
             --text-light: #ffffff;
             --text-accent: #dacfb7;
-            --menu-item-hover: #b12131; /* Rojo más claro para hover */
+            --menu-item-hover: #b12131; 
         }
 
         body { height: 100%; overflow: hidden; }
 
-        /* ---------------------------------------------------- */
-        /* --- Contenido Principal (MAIN CONTENT) --- */
-        /* ---------------------------------------------------- */
         .main-content { height: calc(100dvh - 60px); display: flex; flex-direction: column; overflow: hidden; transition: margin-left 0.3s ease;}
-
         .contenido { flex-grow: 1; padding: 20px 20px; overflow-y: auto;}
 
-        /* Estilos principales para el contenido de la administración */
         .container_admin {
             background-color: white;
             box-shadow: 0 0 50px 10px rgba(0, 0, 0, 0.3);
@@ -42,10 +36,10 @@
             box-shadow: 0 2px 4px rgba(0,0,0,0.1);
         }
         .card-header-custom {
-            background-color: #981a28; /* Color principal del diseño */
+            background-color: #981a28; 
             color: white;
             padding: 10px 15px;
-            border-bottom: 3px solid #981a28; /* Color de acento */
+            border-bottom: 3px solid #981a28; 
             border-radius: 5px 5px 0 0;
             font-weight: bold;
         }
@@ -53,7 +47,6 @@
             padding: 15px;
         }
 
-        /* Estilos para el botón Guardar */
         .btn-custom-success {
             text-decoration: none;
             color: white;
@@ -64,16 +57,14 @@
             border: none;
             cursor: pointer;
         }
-        .btn-custom-success:hover {
-            background-color: #274e13;
-        }
+        .btn-custom-success:hover { background-color: #274e13; }
         
         .form-label-custom {
             display: block;
             margin-bottom: 5px;
             font-weight: bold;
         }
-        .form-control {
+        .form-control, .form-control-custom {
             width: 100%;
             padding: 8px;
             margin-bottom: 10px;
@@ -81,51 +72,25 @@
             border-radius: 4px;
             box-sizing: border-box;
         }
-        .form-control-custom {
-            width: 100%;
-            padding: 8px;
-            margin-bottom: 10px;
-            border: 1px solid #ccc;
-            border-radius: 4px;
-            box-sizing: border-box;
-        }
-        textarea.form-control-custom {
-            resize: vertical;
-        }
+        textarea.form-control-custom { resize: vertical; }
 
-        /* Estilos para la tabla */
         .table-custom {
             width: 100%;
             border-collapse: collapse;
             margin-top: 0px;
         }
-        .table-custom thead tr {
-            background-color: #ddd; /* Color claro del diseño */
-        }
+        .table-custom thead tr { background-color: #ddd; }
         .table-custom th, .table-custom td {
             padding: 10px;
             text-align: left;
             border-bottom: 1px solid #eee;
         }
-        .table-custom tbody tr:nth-child(odd) {
-            background-color: #F8F8F8;
-        }
-        .table-custom tbody tr:nth-child(even) {
-            background-color: #EEEEEE;
-        }
-        .table-custom tbody tr:hover {
-            background-color: #e0e0e0;
-        }
-        
-        .card-custom {
-            border: 1px solid #ddd;
-            border-radius: 5px;
-            margin-bottom: 20px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        }
+        .table-custom tbody tr:nth-child(odd) { background-color: #F8F8F8; }
+        .table-custom tbody tr:nth-child(even) { background-color: #EEEEEE; }
+        .table-custom tbody tr:hover { background-color: #e0e0e0; }
 
         .btn-custom-danger {
-            background-color: #f44336; /* Rojo */
+            background-color: #f44336; 
             color: white;
             padding: 10px 15px;
             border: none;
@@ -134,74 +99,92 @@
             font-weight: bold;
             transition: background-color 0.2s;
         }
-
         .btn-custom-danger:hover {
             background-color: #d32f2f;
             color: white;
         }
 
-        .btn-custom-edit:hover { background-color: #0056b3; }
         .btn-custom-edit { background-color: #007bff; }
+        .btn-custom-edit:hover { background-color: #0056b3; }
     </style>
 {% endblock %}
 
-{% block header %}ADMINISTRACIÓN DE PROVEEDORES{% endblock %}
+{% block header %}ADMINISTRACIÓN DE SUCURSALES{% endblock %}
 
 {% block content %}
 <div id="app">
     <main class="main-content" id="main-content">
         <div class="contenido">
             <div class="container_admin">
-                <h1 style="color: #981a28; margin-bottom: 20px;">Administración de Proveedores</h1>
+                <h1 style="color: #981a28; margin-bottom: 20px;">Gestión Operativa de Sucursales</h1>
 
                 <div id="alert-container" class="toast-container position-fixed top-0 end-0 p-4" style="z-index: 9999; pointer-events: none;"></div>
 
                 <div class="card-custom">
                     <div class="card-header-custom">
-                        <h2 id="form-titulo">Agregar Nuevo Proveedor</h2>
+                        <h2 id="form-titulo">Registrar Nueva Sucursal</h2>
                     </div>
                     <div class="card-body-custom">
-                        <form id="form-proveedor">
-                            <input type="hidden" id="prov-id">
+                        <form id="form-sucursal">
+                            <input type="hidden" id="suc-id">
                             <div style="display: flex; gap: 15px; flex-wrap: wrap;">
-                                <div style="flex: 1 1 23%; min-width: 200px;">
-                                    <label class="form-label-custom">Nombre del Proveedor</label>
-                                    <input type="text" id="prov-nombre" class="form-control-custom" required autocomplete="off">
+                                
+                                <!-- Fila 1 -->
+                                <div style="flex: 1 1 30%; min-width: 250px;">
+                                    <label class="form-label-custom">Nombre Comercial *</label>
+                                    <input type="text" id="suc-nombre" class="form-control-custom" required autocomplete="off">
                                 </div>
-                                <div style="flex: 1 1 23%; min-width: 200px;">
+                                <div style="flex: 1 1 30%; min-width: 200px;">
+                                    <label class="form-label-custom">Municipio *</label>
+                                    <input type="text" id="suc-municipio" class="form-control-custom" required autocomplete="off">
+                                </div>
+                                <div style="flex: 1 1 30%; min-width: 200px;">
                                     <label class="form-label-custom">Teléfono</label>
-                                    <input type="text" id="prov-telefono" class="form-control-custom" pattern="[0-9]{8}" oninput="this.value = this.value.replace(/[^0-9]/g, '').slice(0, 8);" autocomplete="off">
+                                    <input type="text" id="suc-telefono" class="form-control-custom" pattern="[0-9]{8}" oninput="this.value = this.value.replace(/[^0-9]/g, '').slice(0, 8);" autocomplete="off">
                                 </div>
-                                <div style="flex: 1 1 23%; min-width: 200px;">
-                                    <label class="form-label-custom">Dirección</label>
-                                    <input type="text" id="prov-direccion" class="form-control-custom" autocomplete="off">
+
+                                <!-- Fila 2 -->
+                                <div style="flex: 1 1 30%; min-width: 200px;">
+                                    <label class="form-label-custom">Número RUC</label>
+                                    <input type="text" id="suc-ruc" class="form-control-custom" autocomplete="off">
                                 </div>
+                                <div style="flex: 1 1 30%; min-width: 200px;">
+                                    <label class="form-label-custom">Matrícula Municipal</label>
+                                    <input type="text" id="suc-matricula" class="form-control-custom" autocomplete="off">
+                                </div>
+                                <div style="flex: 1 1 100%; min-width: 250px;">
+                                    <label class="form-label-custom">Dirección Exacta *</label>
+                                    <textarea id="suc-direccion" class="form-control-custom" rows="2" required></textarea>
+                                </div>
+                                
+                                <!-- Botones -->
                                 <div style="flex: 1 1 100%; display: flex; gap: 10px; justify-content: flex-end; margin-top: 0px;">
                                     <button type="button" id="btn-cancelar" onclick="resetearFormulario()" class="btn-custom-danger" style="display: none; padding: 10px 20px; font-weight: normal;">Cancelar</button>
-                                    <button type="submit" id="btn-guardar" class="btn-custom-success" style="padding: 10px 20px;">Guardar Proveedor</button>
+                                    <button type="submit" id="btn-guardar" class="btn-custom-success" style="padding: 10px 20px;">Guardar Sucursal</button>
                                 </div>
                             </div>
                         </form>
                     </div>
                 </div>
 
-                <h2 style="color: #981a28; margin-top: 30px; border-bottom: 2px solid #981a28; padding-bottom: 5px; margin-bottom: 10px;">Listado de Proveedores</h2>
+                <h2 style="color: #981a28; margin-top: 30px; border-bottom: 2px solid #981a28; padding-bottom: 5px; margin-bottom: 10px;">Red de Sucursales</h2>
                 
-                <label style="font-weight: bold; display: block; margin-bottom: 5px;">Buscar proveedor:</label>
+                <label style="font-weight: bold; display: block; margin-bottom: 5px;">Buscar sucursal:</label>
                 <div style="position: relative; display: flex; align-items: center; margin-bottom: 20px;">
                     <span style="position: absolute; left: 10px; color: #888;"><i class="fas fa-search"></i></span>
-                    <input type="text" id="buscador" class="form-control" placeholder="Escribe el nombre del proveedor..." style="padding-left: 35px;" onkeyup="filtrarProveedor()">
+                    <input type="text" id="buscador" class="form-control" placeholder="Escribe el nombre de la sucursal..." style="padding-left: 35px;" onkeyup="filtrarSucursal()">
                     <span id="btn-limpiar" onclick="limpiarBusqueda()" style="position: absolute; right: 10px; color: #888; cursor: pointer; display: none;"><i class="fas fa-times-circle"></i></span>
                 </div>
 
                 <div class="card-custom" style="padding: 0; overflow-x: auto;">
-                    <table class="table-custom" id="tabla-proveedores">
+                    <table class="table-custom" id="tabla-sucursales">
                         <thead>
                             <tr>
                                 <th>ID</th>
-                                <th>Nombre</th>
+                                <th>Nombre Comercial</th>
+                                <th>Municipio</th>
                                 <th>Teléfono</th>
-                                <th>Dirección</th>
+                                <th>Estado</th>
                                 <th>Acciones</th>
                             </tr>
                         </thead>
@@ -211,19 +194,21 @@
             </div>
         </div>
 
-        <div class="modal fade" id="modalEliminarProveedor" tabindex="-1" aria-hidden="true">
+        <!-- Modal de Eliminación / Desactivación -->
+        <div class="modal fade" id="modalEliminarSucursal" tabindex="-1" aria-hidden="true">
             <div class="modal-dialog modal-dialog-centered">
                 <div class="modal-content">
                     <div class="modal-header" style="background-color: var(--primary-color); color: white;">
-                        <h5 class="modal-title"><i class="fas fa-exclamation-triangle"></i> Confirmar Eliminación</h5>
+                        <h5 class="modal-title"><i class="fas fa-exclamation-triangle"></i> Confirmar Acción</h5>
                         <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                     </div>
                     <div class="modal-body">
-                        <p>¿Está seguro de que desea eliminar al proveedor <strong><span id="modal-nombre"></span></strong> (ID: <span id="modal-id"></span>)?</p>
+                        <p>¿Está seguro de que desea eliminar/desactivar la sucursal <strong><span id="modal-nombre"></span></strong> (ID: <span id="modal-id"></span>)?</p>
+                        <p class="text-muted small">Nota: Si la sucursal ya tiene empleados o registros asociados, será desactivada para proteger la integridad del sistema.</p>
                     </div>
                     <div class="modal-footer">
                         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                        <button type="button" id="btn-confirmar-eliminar" class="btn" style="background-color: var(--primary-color); color: white;">Eliminar permanentemente</button>
+                        <button type="button" id="btn-confirmar-eliminar" class="btn" style="background-color: var(--primary-color); color: white;">Confirmar</button>
                     </div>
                 </div>
             </div>
@@ -234,35 +219,42 @@
 
 {% block extra_js %}
 <script>
-    const API_URL = '/api/proveedores-admin/';
+    const API_URL = '/api/sucursales-admin/';
     let idEliminar = null;
     let modalInstance = null;
 
     document.addEventListener("DOMContentLoaded", () => {
-        cargarProveedores();
-        modalInstance = new bootstrap.Modal(document.getElementById('modalEliminarProveedor'));
-        document.getElementById('form-proveedor').addEventListener('submit', guardarProveedor);
+        cargarSucursales();
+        modalInstance = new bootstrap.Modal(document.getElementById('modalEliminarSucursal'));
+        document.getElementById('form-sucursal').addEventListener('submit', guardarSucursal);
         document.getElementById('btn-confirmar-eliminar').addEventListener('click', ejecutarEliminacion);
     });
 
-    async function cargarProveedores() {
+    async function cargarSucursales() {
         try {
             const res = await fetch(API_URL);
             const data = await res.json();
-            const tbody = document.querySelector('#tabla-proveedores tbody');
+            const tbody = document.querySelector('#tabla-sucursales tbody');
             tbody.innerHTML = '';
 
-            data.forEach(p => {
+            data.forEach(s => {
+                const estadoBadge = s.is_active 
+                    ? `<span class="badge bg-success">Activa</span>` 
+                    : `<span class="badge bg-danger">Inactiva</span>`;
+
                 const tr = document.createElement('tr');
-                tr.className = 'fila-proveedor';
+                tr.className = 'fila-sucursal';
+                
+                // CORRECCIÓN APLICADA: Botón "Eliminar" idéntico al de Proveedores
                 tr.innerHTML = `
-                    <td>${p.idProveedor}</td>
-                    <td class="nombre-proveedor">${p.nombre}</td>
-                    <td>${p.telefono || '—'}</td>
-                    <td>${p.direccion || '—'}</td>
+                    <td>${s.idSucursal}</td>
+                    <td class="nombre-sucursal fw-bold">${s.nombre_comercial}</td>
+                    <td>${s.municipio}</td>
+                    <td>${s.telefono || '—'}</td>
+                    <td>${estadoBadge}</td>
                     <td>
-                        <button onclick="prepararEdicion(${p.idProveedor})" class="btn-custom-edit" style="color:white; font-weight: bold; padding:5px 10px; border:none; border-radius:5px; cursor:pointer;"><i class="fas fa-edit"></i> Editar</button>
-                        <button onclick="prepararEliminar(${p.idProveedor}, '${p.nombre}')" class="btn-custom-danger" style="padding:5px 10px;"><i class="fas fa-trash-alt"></i> Eliminar</button>
+                        <button onclick="prepararEdicion(${s.idSucursal})" class="btn-custom-edit" style="color:white; font-weight: bold; padding:5px 10px; border:none; border-radius:5px; cursor:pointer;"><i class="fas fa-edit"></i> Editar</button>
+                        <button onclick="prepararEliminar(${s.idSucursal}, '${s.nombre_comercial}')" class="btn-custom-danger" style="padding:5px 10px; font-weight: bold; border-radius: 5px;"><i class="fas fa-trash-alt"></i> Eliminar</button>
                     </td>
                 `;
                 tbody.appendChild(tr);
@@ -272,14 +264,16 @@
         }
     }
 
-    // 2. Enviar los datos estructurados al backend (POST/PUT)
-    async function guardarProveedor(e) {
+    async function guardarSucursal(e) {
         e.preventDefault();
-        const id = document.getElementById('prov-id').value;
+        const id = document.getElementById('suc-id').value;
         const datos = {
-            nombre: document.getElementById('prov-nombre').value,
-            telefono: document.getElementById('prov-telefono').value || null,
-            direccion: document.getElementById('prov-direccion').value || null
+            nombre_comercial: document.getElementById('suc-nombre').value,
+            municipio: document.getElementById('suc-municipio').value,
+            direccion_exacta: document.getElementById('suc-direccion').value,
+            numero_ruc: document.getElementById('suc-ruc').value || null,
+            telefono: document.getElementById('suc-telefono').value || null,
+            numero_matricula_municipal: document.getElementById('suc-matricula').value || null
         };
 
         const esEdicion = id !== "";
@@ -289,15 +283,15 @@
         try {
             const res = await fetch(url, {
                 method: metodo,
-                headers: { 'Content-Type': 'application/json', 'X-CSRFToken': '{{ csrf_token }}' },
+                headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCookie('csrftoken') },
                 body: JSON.stringify(datos)
             });
             const data = await res.json();
 
             if (res.ok) {
-                mostrarAlerta('success', esEdicion ? 'Proveedor actualizado con éxito.' : 'Proveedor registrado con éxito.');
+                mostrarAlerta('success', esEdicion ? 'Sucursal actualizada con éxito.' : 'Nueva sucursal registrada.');
                 resetearFormulario();
-                cargarProveedores();
+                cargarSucursales();
             } else {
                 let msg = Object.values(data).flat().join('<br>');
                 mostrarAlerta('danger', msg);
@@ -307,23 +301,25 @@
         }
     }
 
-    // 3. Rellenar los inputs al presionar Editar (GET individual)
     async function prepararEdicion(id) {
         try {
             const res = await fetch(`${API_URL}${id}/`);
-            const p = await res.json();
+            const s = await res.json();
             
-            document.getElementById('prov-id').value = p.idProveedor;
-            document.getElementById('prov-nombre').value = p.nombre;
-            document.getElementById('prov-telefono').value = p.telefono || '';
-            document.getElementById('prov-direccion').value = p.direccion || ''; // Mapeo corregido aquí
+            document.getElementById('suc-id').value = s.idSucursal;
+            document.getElementById('suc-nombre').value = s.nombre_comercial;
+            document.getElementById('suc-municipio').value = s.municipio;
+            document.getElementById('suc-direccion').value = s.direccion_exacta;
+            document.getElementById('suc-ruc').value = s.numero_ruc || '';
+            document.getElementById('suc-telefono').value = s.telefono || '';
+            document.getElementById('suc-matricula').value = s.numero_matricula_municipal || '';
 
-            document.getElementById('form-titulo').textContent = `Modificar Proveedor: ${p.nombre}`;
+            document.getElementById('form-titulo').textContent = `Modificar Sucursal: ${s.nombre_comercial}`;
             document.getElementById('btn-guardar').textContent = "Actualizar Cambios";
             document.getElementById('btn-cancelar').style.display = 'inline-block';
             document.getElementById('form-titulo').scrollIntoView({ behavior: 'smooth' });
         } catch {
-            mostrarAlerta('danger', 'Error al extraer datos del proveedor.');
+            mostrarAlerta('danger', 'Error al extraer datos de la sucursal.');
         }
     }
 
@@ -339,16 +335,18 @@
         try {
             const res = await fetch(`${API_URL}${idEliminar}/`, {
                 method: 'DELETE',
-                headers: { 'X-CSRFToken': '{{ csrf_token }}' }
+                headers: { 'X-CSRFToken': getCookie('csrftoken') }
             });
             const data = await res.json();
             modalInstance.hide();
 
             if (res.status === 200) {
-                mostrarAlerta('success', data.message);
-                cargarProveedores();
+                const tipoAlerta = data.warning ? 'warning' : 'success';
+                const msg = data.warning || data.message;
+                mostrarAlerta(tipoAlerta, msg);
+                cargarSucursales();
             } else {
-                mostrarAlerta('danger', data.error);
+                mostrarAlerta('danger', data.error || 'No se pudo completar la operación.');
             }
         } catch {
             mostrarAlerta('danger', 'Error de red en la comunicación.');
@@ -356,10 +354,10 @@
     }
 
     function resetearFormulario() {
-        document.getElementById('form-proveedor').reset();
-        document.getElementById('prov-id').value = "";
-        document.getElementById('form-titulo').textContent = "Agregar Nuevo Proveedor";
-        document.getElementById('btn-guardar').textContent = "Guardar Proveedor";
+        document.getElementById('form-sucursal').reset();
+        document.getElementById('suc-id').value = "";
+        document.getElementById('form-titulo').textContent = "Registrar Nueva Sucursal";
+        document.getElementById('btn-guardar').textContent = "Guardar Sucursal";
         document.getElementById('btn-cancelar').style.display = 'none';
     }
 
@@ -371,31 +369,35 @@
         alertDiv.style.minWidth = '320px';
         alertDiv.style.marginBottom = '10px';
 
+        let icon = 'fa-check-circle';
+        if (tipo === 'danger') icon = 'fa-exclamation-circle';
+        if (tipo === 'warning') icon = 'fa-exclamation-triangle';
+
         alertDiv.innerHTML = `
             <div class="d-flex align-items-center" style="padding-right: 25px;">
-                <i class="fa ${tipo === 'danger' ? 'fa-exclamation-circle' : 'fa-check-circle'} me-2" style="font-size: 1.2rem;"></i>
+                <i class="fa ${icon} me-2" style="font-size: 1.2rem;"></i>
                 <span>${mensaje}</span>
             </div>
             <button type="button" class="btn-close shadow-none" data-bs-dismiss="alert" aria-label="Close"></button>
         `;
         container.insertBefore(alertDiv, container.firstChild);
-        setTimeout(() => { if(alertDiv && alertDiv.parentNode) alertDiv.remove(); }, 5000);
+        setTimeout(() => { if(alertDiv && alertDiv.parentNode) alertDiv.remove(); }, 6000);
     }
 
-    function filtrarProveedor() {
+    function filtrarSucursal() {
         const input = document.getElementById('buscador').value.toLowerCase();
         const btn = document.getElementById('btn-limpiar');
-        const filas = document.querySelectorAll('.fila-proveedor');
+        const filas = document.querySelectorAll('.fila-sucursal');
         btn.style.display = input.length > 0 ? "block" : "none";
         filas.forEach(f => {
-            const txt = f.querySelector('.nombre-proveedor').textContent.toLowerCase();
+            const txt = f.querySelector('.nombre-sucursal').textContent.toLowerCase();
             f.style.display = txt.includes(input) ? "" : "none";
         });
     }
 
     function limpiarBusqueda() {
         document.getElementById('buscador').value = "";
-        filtrarProveedor();
+        filtrarSucursal();
     }
 </script>
 {% endblock %}

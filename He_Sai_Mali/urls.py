@@ -10,6 +10,7 @@ router.register(r'proveedores-admin', api.ProveedorViewSet, basename='api_admin_
 router.register(r'mesas-admin', api.MesaViewSet, basename='api_admin_mesas')
 router.register(r'articulos-inventario', api.ArticuloInventarioViewSet, basename='api_articulos_inventario')
 router.register(r'platillos-admin', api.ProductoMenuViewSet, basename='api_admin_platillos')
+router.register(r'sucursales-admin', api.SucursalAdminViewSet, basename='sucursales-admin')
 
 urlpatterns = [
     path('', views.main, name='main'),
@@ -96,4 +97,13 @@ urlpatterns = [
 
     # --- API para establecer la sucursal activa ---
     path('api/set-sucursal-activa/', SetSucursalActivaAPIView.as_view(), name='set_sucursal_activa'),
+
+    # --- Vistas de administracion de sucursales (solo para el admin general) ---
+    path('sucursales/', views.admin_sucursales_html, name='admin_sucursales'),
+
+    # --- Auditoría ---
+    path('auditoria/', views.admin_auditoria_html, name='admin_auditoria'),
+
+    # --- API Auditoría ---
+    path('api/auditoria-general/', api.AuditoriaGeneralAPIView.as_view(), name='api_auditoria_general'),
 ]

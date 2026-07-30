@@ -29,11 +29,42 @@ def obtener_sucursal_contexto(request):
             return int(sucursal_sesion)
     return None
 
-# Consulta a la API para mostrar, eliminar o actualizar un empleado
+# Función auxiliar para registrar acciones en la bitácora centralizada
+def registrar_auditoria(request, modulo, accion, detalles, sucursal_afectada_id=None):
+    try:
+        ip_address = request.META.get('HTTP_X_FORWARDED_FOR')
+        if ip_address:
+            ip_address = ip_address.split(',')[0]
+        else:
+            ip_address = request.META.get('REMOTE_ADDR')
+
+        if request and request.user.is_authenticated:
+            empleado_id = request.user.idEmpleado
+            usuario_nombre = f"{request.user.nombre} {request.user.apellido}"
+            rol = request.user.rol
+            sucursal_id = sucursal_afectada_id if sucursal_afectada_id else obtener_sucursal_contexto(request)
+        else:
+            empleado_id = None
+            usuario_nombre = 'Sistema / No autenticado'
+            rol = 'N/A'
+            sucursal_id = None
+
+        AuditoriaGeneral.objects.create(
+            empleado_id=empleado_id,
+            usuario_nombre=usuario_nombre,
+            rol=rol,
+            sucursal_id=sucursal_id,
+            modulo=modulo,
+            accion=accion,
+            detalles=detalles,
+            ip_address=ip_address
+        )
+    except Exception as e:
+        print(f"Error al registrar auditoría: {str(e)}")
+
 class EmpleadoAdminViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
 
-    # NUEVO: Filtro dinámico por sucursal
     def get_queryset(self):
         queryset = Empleado.objects.all().order_by('apellido', 'nombre')
         sucursal_filtro = obtener_sucursal_contexto(self.request)
@@ -42,15 +73,17 @@ class EmpleadoAdminViewSet(viewsets.ModelViewSet):
         return queryset
 
     def get_serializer_class(self):
-        # Asigna el serializador dinámicamente según la acción de la API
         if self.action in ['update', 'partial_update']:
             return EditarEmpleadoSerializer 
         return EmpleadoListSerializer
 
+    def perform_update(self, serializer):
+        empleado = serializer.save()
+        registrar_auditoria(self.request, 'Empleados', 'Actualización', f"Se actualizaron los datos del empleado '{empleado.usuario}'.", sucursal_afectada_id=empleado.sucursal_id)
+
     def destroy(self, request, *bind, **kwargs):
         empleado = self.get_object()
 
-        # Validación: Evitar que el administrador se elimine a sí mismo
         if empleado.idEmpleado == request.user.idEmpleado:
             return Response(
                 {"error": "No puedes eliminar o desactivar tu propia cuenta de administrador."},
@@ -58,18 +91,19 @@ class EmpleadoAdminViewSet(viewsets.ModelViewSet):
             )
 
         nombre_completo = f"{empleado.nombre} {empleado.apellido}"
+        sucursal_id = empleado.sucursal_id
 
         try:
-            # Opción 1: Eliminación permanente
             empleado.delete()
+            registrar_auditoria(request, 'Empleados', 'Eliminación', f"Se eliminó permanentemente al empleado '{nombre_completo}'.", sucursal_afectada_id=sucursal_id)
             return Response(
                 {"message": f'El empleado "{nombre_completo}" ha sido ELIMINADO permanentemente.'},
                 status=status.HTTP_200_OK
             )
         except ProtectedError:
-            # Opción 2: Desactivación preventiva por integridad referencial
             empleado.is_active = False
             empleado.save()
+            registrar_auditoria(request, 'Empleados', 'Desactivación', f"Se desactivó al empleado '{nombre_completo}' por integridad referencial.", sucursal_afectada_id=sucursal_id)
             return Response(
                 {"warning": f'El empleado "{nombre_completo}" no pudo ser eliminado por registros asociados. Ha sido DESACTIVADO.'},
                 status=status.HTTP_200_OK
@@ -80,21 +114,18 @@ class EmpleadoAdminViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
 
-# Consulta a la API para registrar un empleado
 class RegistroEmpleadoAPIView(APIView):
     permission_classes = [IsAuthenticated]
 
     def post(self, request):
         sucursal_id = obtener_sucursal_contexto(request)
         
-        # Bloqueo 1: No puede registrar si no hay sucursal en contexto
         if not sucursal_id:
             return Response(
                 {"error": ["Debes seleccionar una sucursal específica en el menú superior para registrar un empleado."]}, 
                 status=status.HTTP_400_BAD_REQUEST
             )
 
-        # BLOQUEO 2:Prevenir que un Admin Local cree otro Administrador
         rol_solicitado = request.data.get('rol')
         if request.user.sucursal_id and rol_solicitado == 'Administrador':
             return Response(
@@ -102,15 +133,14 @@ class RegistroEmpleadoAPIView(APIView):
                 status=status.HTTP_403_FORBIDDEN
             )
 
-        # Continuamos con el registro normal
         serializer = RegistroEmpleadoSerializer(data=request.data)
         if serializer.is_valid():
-            serializer.save(sucursal_id=sucursal_id)
+            empleado = serializer.save(sucursal_id=sucursal_id)
+            registrar_auditoria(request, 'Empleados', 'Creación', f"Se registró el nuevo empleado '{empleado.usuario}' con rol {empleado.rol}.", sucursal_afectada_id=sucursal_id)
             return Response({"status": "success"}, status=status.HTTP_201_CREATED)
             
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
     
-# Consulta API para iniciar sesión
 class LoginAPIView(APIView):
     permission_classes = [AllowAny]
 
@@ -128,10 +158,10 @@ class LoginAPIView(APIView):
             if not user.is_active:
                 return Response({'error': 'Este usuario se encuentra inactivo.'}, status=status.HTTP_400_BAD_REQUEST)
                 
-            # Mantiene el ciclo de sesión tradicional en la cookie del navegador
             login(request, user)
             
-            # Determinamos la redirección según el rol de tu modelo Empleado
+            registrar_auditoria(request, 'Autenticación', 'Inicio de Sesión', f"El usuario '{user.usuario}' inició sesión exitosamente.", sucursal_afectada_id=user.sucursal_id)
+            
             rol = (user.rol or '').strip().lower()
             if rol == "administrador":
                 redirect_url = reverse('admin_dashboard')
@@ -146,17 +176,25 @@ class LoginAPIView(APIView):
             
         return Response({'error': 'Usuario o contraseña incorrectos.'}, status=status.HTTP_400_BAD_REQUEST)
     
-# Consulta API a proveedores
 class ProveedorViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
     serializer_class = ProveedorSerializer
     queryset = Proveedor.objects.all().order_by('idProveedor')
+
+    def perform_create(self, serializer):
+        prov = serializer.save()
+        registrar_auditoria(self.request, 'Proveedores', 'Creación', f"Se registró el proveedor '{prov.nombre}'.")
+
+    def perform_update(self, serializer):
+        prov = serializer.save()
+        registrar_auditoria(self.request, 'Proveedores', 'Actualización', f"Se actualizaron los datos del proveedor '{prov.nombre}'.")
 
     def destroy(self, request, *args, **kwargs):
         instance = self.get_object()
         nombre = instance.nombre
         try:
             instance.delete()
+            registrar_auditoria(request, 'Proveedores', 'Eliminación', f"Se eliminó el proveedor '{nombre}'.")
             return Response(
                 {"message": f'El proveedor "{nombre}" ha sido eliminado correctamente.'},
                 status=status.HTTP_200_OK
@@ -167,13 +205,11 @@ class ProveedorViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_400_BAD_REQUEST
             )
         
-# Consulta API a mesas
 class MesaViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
     serializer_class = MesaSerializer
     lookup_field = 'idMesa'
 
-    # NUEVO: Filtro dinámico por sucursal
     def get_queryset(self):
         queryset = Mesa.objects.all().order_by('idMesa')
         sucursal_filtro = obtener_sucursal_contexto(self.request)
@@ -182,54 +218,23 @@ class MesaViewSet(viewsets.ModelViewSet):
         return queryset
 
     def perform_create(self, serializer):
-        if self.request.user.is_authenticated:
-            # Aquí extraemos SOLO EL NOMBRE
-            usuario_actual = f"{self.request.user.nombre} {self.request.user.apellido}"
-            # Aquí extraemos SOLO EL ROL
-            rol_actual = self.request.user.rol
-        else:
-            usuario_actual = 'Sistema'
-            rol_actual = 'Sistema'
-            
-        with transaction.atomic():
-            with connection.cursor() as cursor:
-                # Enviamos las DOS variables a PostgreSQL por separado
-                cursor.execute("SELECT set_config('restaurante.usuario_actual', %s, true);", [usuario_actual])
-                cursor.execute("SELECT set_config('restaurante.rol_actual', %s, true);", [rol_actual])
-            serializer.save()
+        mesa = serializer.save()
+        registrar_auditoria(self.request, 'Mesas', 'Creación', f"Se registró la Mesa N°{mesa.idMesa} con capacidad para {mesa.capacidad} personas.", sucursal_afectada_id=mesa.sucursal_id)
 
     def perform_update(self, serializer):
-        if self.request.user.is_authenticated:
-            usuario_actual = f"{self.request.user.nombre} {self.request.user.apellido}"
-            rol_actual = self.request.user.rol
-        else:
-            usuario_actual = 'Sistema'
-            rol_actual = 'Sistema'
-            
-        with transaction.atomic():
-            with connection.cursor() as cursor:
-                cursor.execute("SELECT set_config('restaurante.usuario_actual', %s, true);", [usuario_actual])
-                cursor.execute("SELECT set_config('restaurante.rol_actual', %s, true);", [rol_actual])
-            serializer.save()
+        capacidad_anterior = self.get_object().capacidad
+        mesa = serializer.save()
+        if capacidad_anterior != mesa.capacidad:
+            registrar_auditoria(self.request, 'Mesas', 'Actualización', f"Mesa N°{mesa.idMesa}: Capacidad modificada de {capacidad_anterior} a {mesa.capacidad}.", sucursal_afectada_id=mesa.sucursal_id)
 
     def destroy(self, request, *args, **kwargs):
         instance = self.get_object()
         id_mesa = instance.idMesa
+        suc_id = instance.sucursal_id
         
-        if request.user.is_authenticated:
-            usuario_actual = f"{request.user.nombre} {request.user.apellido}"
-            rol_actual = request.user.rol
-        else:
-            usuario_actual = 'Sistema'
-            rol_actual = 'Sistema'
-
         try:
-            with transaction.atomic():
-                with connection.cursor() as cursor:
-                    cursor.execute("SELECT set_config('restaurante.usuario_actual', %s, true);", [usuario_actual])
-                    cursor.execute("SELECT set_config('restaurante.rol_actual', %s, true);", [rol_actual])
-                instance.delete()
-                
+            instance.delete()
+            registrar_auditoria(request, 'Mesas', 'Eliminación', f"Mesa N°{id_mesa} eliminada del sistema.", sucursal_afectada_id=suc_id)
             return Response(
                 {"message": f"Mesa '{id_mesa}' eliminada exitosamente."},
                 status=status.HTTP_200_OK
@@ -240,33 +245,37 @@ class MesaViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_400_BAD_REQUEST
             )
 
-# Consulta API par articulo_inventario 
 class ArticuloInventarioViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
     serializer_class = ArticuloInventarioSerializer
 
-    # Filtrado dinámico según la sucursal activa del usuario
     def get_queryset(self):
-        # Traemos todos por defecto
         queryset = ArticuloInventario.objects.all().order_by('nombre')
-        
-        # Consultamos qué sucursal nos toca ver
         sucursal_filtro = obtener_sucursal_contexto(self.request)
-        
-        # Si hay una sucursal específica filtramos el inventario
         if sucursal_filtro:
             queryset = queryset.filter(sucursal_id=sucursal_filtro)
-            
         return queryset
 
-    # POST: /api/articulos-inventario/<pk>/comprar/
+    def perform_create(self, serializer):
+        art = serializer.save()
+        registrar_auditoria(self.request, 'Inventario', 'Creación', f"Artículo '{art.nombre}' registrado con stock inicial de {art.stock} {art.unidad_de_medida}.", sucursal_afectada_id=art.sucursal_id)
+
+    def perform_update(self, serializer):
+        art = serializer.save()
+        registrar_auditoria(self.request, 'Inventario', 'Actualización', f"Datos del artículo '{art.nombre}' actualizados.", sucursal_afectada_id=art.sucursal_id)
+
+    def perform_destroy(self, instance):
+        nombre = instance.nombre
+        suc = instance.sucursal_id
+        instance.delete()
+        registrar_auditoria(self.request, 'Inventario', 'Eliminación', f"Artículo '{nombre}' eliminado del inventario.", sucursal_afectada_id=suc)
+
     @action(detail=True, methods=['post'], url_path='comprar')
     def comprar(self, request, pk=None):
         articulo = self.get_object()
         serializer = CompraIngredienteSerializer(data=request.data)
         
         if not serializer.is_valid():
-            # Devolvemos los errores formateados de manera que JavaScript los procese fácilmente
             return Response({'error': serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
             
         id_proveedor = serializer.validated_data['id_proveedor_fk']
@@ -276,7 +285,6 @@ class ArticuloInventarioViewSet(viewsets.ModelViewSet):
         
         try:
             with transaction.atomic():
-                # 1. Registro directo en la tabla intermedia autogestionada usando SQL crudo
                 with connection.cursor() as cursor:
                     sql_insert_compra = """
                         INSERT INTO "ArticuloInventario_Proveedor" 
@@ -291,11 +299,11 @@ class ArticuloInventarioViewSet(viewsets.ModelViewSet):
                         fecha_compra
                     ])
 
-                # 2. Incremento del stock usando expresión F() para evitar condiciones de carrera concurrentes
                 ArticuloInventario.objects.filter(pk=articulo.pk).update(
                     stock=F('stock') + cantidad_comprada
                 )
                 
+            registrar_auditoria(request, 'Inventario', 'Compra', f"Se registraron {cantidad_comprada} {articulo.unidad_de_medida} al stock de '{articulo.nombre}'.", sucursal_afectada_id=articulo.sucursal_id)
             return Response({
                 'success': True, 
                 'message': f'Compra registrada exitosamente. Se agregaron {cantidad_comprada} {articulo.unidad_de_medida} al stock.'
@@ -306,7 +314,6 @@ class ArticuloInventarioViewSet(viewsets.ModelViewSet):
                 'error': f'Error al procesar la transacción en la base de datos: {str(e)}'
             }, status=status.HTTP_400_BAD_REQUEST)
 
-    # POST: /api/articulos-inventario/<pk>/registrar-merma/
     @action(detail=True, methods=['post'], url_path='registrar-merma')
     def registrar_merma(self, request, pk=None):
         serializer = MermaIngredienteSerializer(data=request.data)
@@ -317,10 +324,8 @@ class ArticuloInventarioViewSet(viewsets.ModelViewSet):
         
         try:
             with transaction.atomic():
-                # select_for_update() bloquea la fila en la BD evitando modificaciones simultáneas externas
                 articulo = ArticuloInventario.objects.select_for_update().get(pk=pk)
                 
-                # Conversión segura a Decimal para evitar TypeErrors si la base de datos guarda Decimal
                 stock_actual = Decimal(str(articulo.stock))
                 descuento_merma = Decimal(str(cantidad_merma))
                 
@@ -332,6 +337,7 @@ class ArticuloInventarioViewSet(viewsets.ModelViewSet):
                 articulo.stock = stock_actual - descuento_merma
                 articulo.save()
                 
+            registrar_auditoria(request, 'Inventario', 'Merma', f"Se registró pérdida de {cantidad_merma} {articulo.unidad_de_medida} en el stock de '{articulo.nombre}'.", sucursal_afectada_id=articulo.sucursal_id)
             return Response({
                 'success': True,
                 'message': f'Pérdida registrada: Se descontaron {cantidad_merma} {articulo.unidad_de_medida} de "{articulo.nombre}".'
@@ -342,24 +348,30 @@ class ArticuloInventarioViewSet(viewsets.ModelViewSet):
                 'error': f'Ocurrió un error inesperado al procesar el descuento de merma: {str(e)}'
             }, status=status.HTTP_400_BAD_REQUEST)
         
-# Consulta API para platillos
 class ProductoMenuViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
     queryset = ProductoMenu.objects.all().order_by('idProductoMenu')
     serializer_class = ProductoMenuSerializer
 
+    def perform_create(self, serializer):
+        prod = serializer.save()
+        registrar_auditoria(self.request, 'Menú', 'Creación', f"Se registró el platillo '{prod.nombre}'.")
+
+    def perform_update(self, serializer):
+        prod = serializer.save()
+        registrar_auditoria(self.request, 'Menú', 'Actualización', f"Se actualizaron los datos del platillo '{prod.nombre}'.")
+
     def destroy(self, request, *args, **kwargs):
-        # Lógica adaptada de la vista eliminar_platillo
         instance = self.get_object()
         nombre_platillo = instance.nombre
         try:
             self.perform_destroy(instance)
+            registrar_auditoria(request, 'Menú', 'Eliminación', f"Se eliminó el platillo '{nombre_platillo}'.")
             return Response(
                 {"detail": f'El platillo "{nombre_platillo}" ha sido eliminado exitosamente.'},
                 status=status.HTTP_200_OK
             )
         except ProtectedError:
-            # Captura si el platillo posee dependencias con pedidos en el sistema
             return Response(
                 {"detail": f'No se puede eliminar el platillo "{nombre_platillo}" porque tiene pedidos asociados. Debe eliminar los pedidos relacionados primero.'},
                 status=status.HTTP_400_BAD_REQUEST
@@ -372,13 +384,13 @@ class ProductoMenuViewSet(viewsets.ModelViewSet):
 
     @action(detail=True, methods=['post'], url_path='toggle-disponibilidad')
     def toggle_disponibilidad(self, request, pk=None):
-        # Lógica adaptada de la vista toggle_disponibilidad_platillo
         platillo = self.get_object()
         try:
             platillo.disponible = not platillo.disponible
             platillo.save()
             
             estado = "Disponible" if platillo.disponible else "No Disponible"
+            registrar_auditoria(request, 'Menú', 'Cambio Disponibilidad', f"El platillo '{platillo.nombre}' ahora está {estado}.")
             return Response({
                 "detail": f'Estado de "{platillo.nombre}" cambiado a: {estado}.',
                 "disponible": platillo.disponible
@@ -391,16 +403,13 @@ class ProductoMenuViewSet(viewsets.ModelViewSet):
 
     @action(detail=False, methods=['get'], url_path='categorias')
     def obtener_categorias(self, request):
-        # Retorna el listado de categorías únicas presentes para llenar los filtros dinámicos
         categorias = ProductoMenu.objects.values_list('categoria', flat=True).distinct()
         return Response(list(categorias), status=status.HTTP_200_OK)
     
-# API dashboard
 class AdminDashboardAPIView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request, format=None):
-        # --- LÓGICA DE ALERTA DE STOCK PARA MENOS DE 5 PLATOS ---
         ingredientes_insuficientes = VistaAlertasStock.objects.filter(porciones_posibles__lt=5).values(
             'ingrediente', 'stock', 'unidad_de_medida'
         )
@@ -414,10 +423,8 @@ class AdminDashboardAPIView(APIView):
         ]
 
         hoy_str = date.today().isoformat()
-        # Detectamos si viene algún parámetro en la URL
         is_search = bool(request.query_params) 
 
-        # --- BÚSQUEDA INTELIGENTE ---
         if not is_search:
             start_date_str = hoy_str
             end_date_str = hoy_str
@@ -427,14 +434,12 @@ class AdminDashboardAPIView(APIView):
             end_date_str = request.query_params.get('end_date', '')
             search_query = request.query_params.get('search', '').strip()
 
-            # OVERRIDE INTELIGENTE
             if search_query and start_date_str == hoy_str and end_date_str == hoy_str:
                 start_date_str = ''
                 end_date_str = ''
 
         today_dt = timezone.localtime(timezone.now())
 
-        # Procesar Fecha de Inicio
         if start_date_str:
             try:
                 start_date = timezone.make_aware(datetime.strptime(start_date_str, '%Y-%m-%d'))
@@ -443,7 +448,6 @@ class AdminDashboardAPIView(APIView):
         else:
             start_date = timezone.make_aware(datetime(2000, 1, 1))
 
-        # Procesar Fecha de Fin
         if end_date_str:
             try:
                 end_date = timezone.make_aware(datetime.strptime(end_date_str, '%Y-%m-%d'))
@@ -461,7 +465,6 @@ class AdminDashboardAPIView(APIView):
         if start_date > end_date:
             start_date = end_date.replace(hour=0, minute=0, second=0, microsecond=0)
 
-        # Valores por defecto
         total_sales = 0.00
         total_orders = 0
         top_products_labels, top_products_data = [], []
@@ -471,9 +474,6 @@ class AdminDashboardAPIView(APIView):
         search_results = []
         search_results_count = 0
 
-        # =============================================
-        # USO DEL PROCEDIMIENTO ALMACENADO
-        # =============================================
         try:
             with transaction.atomic():
                 with connection.cursor() as cursor:
@@ -530,9 +530,6 @@ class AdminDashboardAPIView(APIView):
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
 
-        # =============================================
-        # HISTORIAL DE COMPRAS DE INVENTARIO
-        # =============================================
         search_compras = request.query_params.get('search_compras', '').strip()
         compras_query = ArticuloInventario_Proveedor.objects.select_related(
             'idArticuloInventario', 'idProveedor'
@@ -549,7 +546,6 @@ class AdminDashboardAPIView(APIView):
                 'total': float(compra.precioCompra),
             })
 
-        # Estructura final del JSON de respuesta
         data = {
             'metricas': {
                 'total_sales': total_sales,
@@ -587,7 +583,6 @@ class AdminDashboardAPIView(APIView):
 
         return Response(data, status=status.HTTP_200_OK)
     
-# Endpoint para listar el historial de facturas, metricas y aplicar filtros.
 class HistorialFacturasAPIView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -595,7 +590,6 @@ class HistorialFacturasAPIView(APIView):
         hoy_str = date.today().isoformat()
         is_search = bool(request.query_params)
         
-        # --- BÚSQUEDA INTELIGENTE ---
         q = request.query_params.get('q', '').strip()
         estado = request.query_params.get('estado', 'TODOS')
         
@@ -606,46 +600,38 @@ class HistorialFacturasAPIView(APIView):
             fecha_inicio = request.query_params.get('fecha_inicio', '')
             fecha_fin = request.query_params.get('fecha_fin', '')
             
-            # OVERRIDE INTELIGENTE
             if q and fecha_inicio == hoy_str and fecha_fin == hoy_str:
                 fecha_inicio = ''
                 fecha_fin = ''
 
-        # 1. Consulta base: Solo pedidos pagados o anulados
         facturas = Pedido.objects.filter(
             Q(estadoDePago=True, estado_factura='VIGENTE') | 
             Q(estado_factura='ANULADA')
         ).order_by('-fecha')
 
-        # --- NUEVO: Filtro por Sucursal Activa ---
         sucursal_filtro = obtener_sucursal_contexto(request)
         if sucursal_filtro:
             facturas = facturas.filter(sucursal_id=sucursal_filtro)
             
-        # 2. Filtro por Cliente o ID
         if q:
             if q.isdigit():
                 facturas = facturas.filter(idPedido=q)
             else:
                 facturas = facturas.filter(idCliente__nombre__icontains=q)
 
-        # 3. Rango de Fechas
         if fecha_inicio:
             facturas = facturas.filter(fecha__date__gte=fecha_inicio)
         if fecha_fin:
             facturas = facturas.filter(fecha__date__lte=fecha_fin)
 
-        # 4. Filtro por estado
         if estado != 'TODOS':
             facturas = facturas.filter(estado_factura=estado)
 
-        # --- CÁLCULO DE MÉTRICAS ---
         suma_base = facturas.filter(estado_factura='VIGENTE').aggregate(Sum('montoTotal'))['montoTotal__sum'] or 0.00
         ventas_totales = float(suma_base) * 1.15
         total_facturas = facturas.count()
         total_clientes = facturas.values('idCliente').distinct().count()
 
-        # Serialización de los datos
         serializer = FacturaHistorialSerializer(facturas, many=True)
 
         return Response({
@@ -663,20 +649,16 @@ class HistorialFacturasAPIView(APIView):
             'facturas': serializer.data
         }, status=status.HTTP_200_OK)
 
-# Endpoint transaccional para anular una factura
-# Ajusta el inventario físico
 class AnularFacturaAPIView(APIView):
     permission_classes = [IsAuthenticated]
 
     def post(self, request, pedido_id):
-        # 1. Validar la entrada usando el serializador
         serializer = AnularFacturaSerializer(data=request.data)
         if not serializer.is_valid():
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
             
         motivo = serializer.validated_data['motivo_anulacion']
         
-        # 2. Buscar la factura (pedido)
         try:
             pedido = Pedido.objects.get(pk=pedido_id)
         except Pedido.DoesNotExist:
@@ -689,24 +671,25 @@ class AnularFacturaAPIView(APIView):
             )
             
         try:
-            # transaction.atomic() previene datos corruptos si la lógica del stock falla
             with transaction.atomic():
-                # Cambiamos estado
                 pedido.estado_factura = 'ANULADA'
                 pedido.estadoDePago = False
                 pedido.save()
                 
-                # Evaluamos los escenarios operativos
+                # --- MEJORA PARA LA AUDITORÍA ---
                 if motivo == 'error_cobro':
                     mensaje = f'Factura N°{pedido.idPedido} anulada por error de cobro. Inventario físico intacto.'
                     tipo_alerta = 'success'
+                    motivo_legible = 'Error de cobro / Refacturación'
+                    accion_inventario = 'Inventario físico intacto'
                     
                 elif motivo == 'rechazo':
                     mensaje = f'Factura N°{pedido.idPedido} anulada. Los insumos se registran como merma.'
                     tipo_alerta = 'warning'
+                    motivo_legible = 'Comida devuelta / Desperdicio'
+                    accion_inventario = 'Insumos registrados como merma'
                     
                 elif motivo == 'duplicado':
-                    # Revertir stock según modelo de base de datos
                     platillos_vendidos = Pedido_ProductoMenu.objects.filter(idPedido=pedido)
                     
                     for item_pedido in platillos_vendidos:
@@ -719,13 +702,21 @@ class AnularFacturaAPIView(APIView):
                             cantidad_a_devolver = ingrediente.cantidad_usada * cantidad_pedida
                             articulo = ingrediente.idArticuloInventario
                             
-                            # Uso de F() para asegurar la atomicidad a nivel de DB
                             articulo.stock = F('stock') + cantidad_a_devolver
                             articulo.save()
                             
                     mensaje = f'Factura N°{pedido.idPedido} anulada. Insumos devueltos al stock (Orden duplicada).'
                     tipo_alerta = 'success'
+                    motivo_legible = 'Pedido duplicado por error'
+                    accion_inventario = 'Insumos devueltos al stock'
                     
+            registrar_auditoria(
+                request, 
+                'Facturación', 
+                'Anulación de Factura', 
+                f"Factura N°{pedido.idPedido} anulada. Motivo: {motivo_legible}. Acción: {accion_inventario}.", 
+                sucursal_afectada_id=pedido.sucursal_id
+            )
             return Response({'mensaje': mensaje, 'tipo_alerta': tipo_alerta}, status=status.HTTP_200_OK)
             
         except Exception as e:
@@ -734,27 +725,20 @@ class AnularFacturaAPIView(APIView):
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
 
-# API para la vista de cocina     
 class CocinaColaAPIView(APIView):
     permission_classes = [IsAuthenticated]
-    """
-    GET: Devuelve la cola de pedidos pendientes en la cocina.
-    """
     def get(self, request):
         pedidos_pendientes = VistaPedidosCocina.objects.all().order_by('fecha', 'id')
         id_mas_antiguo = pedidos_pendientes.first().id_pedido if pedidos_pendientes.exists() else None
 
         ahora = timezone.now()
         pedidos_activos = {}
-        alertas = [] # Las alertas ahora se envían en el JSON en lugar de usar messages/sessions
+        alertas = []
 
         for pp in pedidos_pendientes:
             pedido_id = pp.id_pedido
             
-            # --- OPTIMIZACIÓN Y CÁLCULO DE TIEMPO ÚNICO POR PEDIDO ---
             if pedido_id not in pedidos_activos:
-                
-                # 1. Obtener ítems para calcular el tiempo dinámico del pedido completo
                 items_validos = Pedido_ProductoMenu.objects.filter(
                     idPedido=pedido_id
                 ).exclude(
@@ -773,16 +757,12 @@ class CocinaColaAPIView(APIView):
                 tiempo_servicio_segundos = 60
                 tiempo_total_segundos = tiempo_base_segundos + tiempo_logistica_segundos + tiempo_servicio_segundos
                 
-                # 2. Calcular tiempo límite general del pedido
                 tiempo_limite = pp.fecha + timedelta(seconds=tiempo_total_segundos) 
                 
-                # 3. Evaluar alerta
                 retrasado = ahora > tiempo_limite
                 if retrasado:
-                    # Empujamos la alerta a la lista para que el frontend la procese (ej. mostrar Toast)
                     alertas.append(f"¡El Pedido #{pedido_id} lleva mucho tiempo de retraso!")
 
-                # 4. Inicializar la estructura del pedido
                 numero_mesa = f"Mesa: {pp.id_mesa}" if pp.id_mesa else "Sin Mesa"
                 pedidos_activos[pedido_id] = {
                     'id': pedido_id,
@@ -794,7 +774,6 @@ class CocinaColaAPIView(APIView):
                     'platillos': []
                 }
             
-            # --- AGRUPACIÓN DE PLATILLOS ---
             pedidos_activos[pedido_id]['platillos'].append({
                 'id_pp': pp.id,
                 'nombre': pp.nombre_platillo,
@@ -806,17 +785,11 @@ class CocinaColaAPIView(APIView):
             'alertas': alertas
         }, status=status.HTTP_200_OK)
 
-# API para la vista de cocina: Marca un platillo como 'Listo'
 class PlatilloListoAPIView(APIView):
     permission_classes = [IsAuthenticated]
-    """
-    POST/PATCH: Marca un platillo específico dentro de un pedido como 'Listo'.
-    """
     def post(self, request, pedido_platillo_id):
         try:
-            # USO DE CURSOR PARA SELECT Y UPDATE
             with connection.cursor() as cursor:
-                # 1. Verificar si existe y está en estado 'Registrado'
                 sql_select = """
                     SELECT p."idProductoMenu_id", p."idPedido_id" FROM "Pedido_ProductoMenu" p
                     WHERE "idPedido_ProductoMenu" = %s AND "estado" = 'Registrado';
@@ -832,20 +805,20 @@ class PlatilloListoAPIView(APIView):
                 platillo_id = result[0]
                 pedido_id = result[1]
                 
-                # Obtener el nombre del platillo para el mensaje
                 sql_get_nombre = """
                     SELECT "nombre" FROM "ProductoMenu" WHERE "idProductoMenu" = %s;
                 """
                 cursor.execute(sql_get_nombre, [platillo_id])
                 nombre_platillo = cursor.fetchone()[0]
 
-                # 2. Cambiar el estado del platillo
                 sql_update = """
                     UPDATE "Pedido_ProductoMenu"
                     SET "estado" = 'Listo'
                     WHERE "idPedido_ProductoMenu" = %s;
                 """
                 cursor.execute(sql_update, [pedido_platillo_id])
+                
+            registrar_auditoria(request, 'Cocina', 'Platillo Listo', f"Platillo '{nombre_platillo}' del Pedido N°{pedido_id} marcado como listo.")
 
             return Response({
                 "message": f"El platillo '{nombre_platillo}' para el Pedido N°{pedido_id} ha sido marcado como LISTO."
@@ -854,15 +827,10 @@ class PlatilloListoAPIView(APIView):
         except Exception as e:
             return Response({"error": f"Error al marcar como listo: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-# API para la vista de pedidos
 class VistaMeseroAPIView(APIView):
-    """
-    Retorna la cola de pedidos activos del mesero autenticado en formato JSON.
-    """
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        # 1. Obtener los pedidos activos asignados a este mesero
         cola_pedidos = list(Pedido.objects.raw("""
             SELECT p."idPedido", p."fecha", p."metodoPago", c."nombre", p."idMesa_id", p."montoTotal"
             FROM "Pedido" p
@@ -879,21 +847,18 @@ class VistaMeseroAPIView(APIView):
 
         pedidos_ids = [p.idPedido for p in cola_pedidos]
 
-        # 2. Obtener platillos asociados a estos pedidos
         ProductoMenu_query = Pedido_ProductoMenu.objects.filter(
             idPedido__in=pedidos_ids
         ).exclude(
             estado__in=['Merma', 'Anulado']
         ).select_related('idProductoMenu').order_by('idPedido_id')
 
-        # Agrupar platillos por ID de pedido
         platillos_por_pedido = {}
         for pp in ProductoMenu_query:
             if pp.idPedido_id not in platillos_por_pedido:
                 platillos_por_pedido[pp.idPedido_id] = []
             platillos_por_pedido[pp.idPedido_id].append(pp)
 
-        # 3. Serializar la información estructurada
         serializer = PedidoColaSerializer(
             cola_pedidos, 
             many=True, 
@@ -909,9 +874,6 @@ class VistaMeseroAPIView(APIView):
 
 
 class CambiarEstadoPlatilloAPIView(APIView):
-    """
-    Cambia el estado de un ProductoMenu dentro de un Pedido (Registrado -> Listo -> Servido).
-    """
     permission_classes = [IsAuthenticated]
 
     def post(self, request, pedido_platillo_id):
@@ -930,7 +892,6 @@ class CambiarEstadoPlatilloAPIView(APIView):
                 status=status.HTTP_400_BAD_REQUEST
             )
 
-        # Ejecutar actualización mediante SQL (Manteniendo tu lógica original)
         with connection.cursor() as cursor:
             sql_update_estado = """
                 UPDATE "Pedido_ProductoMenu"
@@ -938,6 +899,8 @@ class CambiarEstadoPlatilloAPIView(APIView):
                 WHERE "idPedido_ProductoMenu" = %s;
             """
             cursor.execute(sql_update_estado, [next_state, pedido_platillo_id])
+            
+        registrar_auditoria(request, 'Pedidos', 'Cambio Estado', f"El platillo '{pedido_ProductoMenu.idProductoMenu.nombre}' en Pedido N°{pedido_ProductoMenu.idPedido.idPedido} avanzó a estado '{next_state}'.", sucursal_afectada_id=pedido_ProductoMenu.idPedido.sucursal_id)
 
         return Response({
             "message": f"Estado de {pedido_ProductoMenu.idProductoMenu.nombre} cambiado a '{next_state}'.",
@@ -947,23 +910,16 @@ class CambiarEstadoPlatilloAPIView(APIView):
 
 
 class EliminarPedidoAPIView(APIView):
-    """
-    Elimina un pedido completo y devuelve al inventario únicamente los insumos
-    de los platillos que estaban en estado 'Registrado'.
-    Permite eliminar si los platillos están Registrados, Anulados o en Merma.
-    """
     permission_classes = [IsAuthenticated]
 
     def post(self, request, pedido_id):
         pedido = get_object_or_404(Pedido, pk=pedido_id)
+        suc_id = pedido.sucursal_id
 
         try:
             with transaction.atomic():
                 with connection.cursor() as cursor:
                     
-                    # 1. VERIFICACIÓN CORREGIDA: 
-                    # Solo bloqueamos si hay platillos 'Listo' o 'Servido'.
-                    # (Ignoramos 'Registrado', 'Anulado' y 'Merma')
                     sql_check = """
                         SELECT COUNT(*) FROM "Pedido_ProductoMenu"
                         WHERE "idPedido_id" = %s AND "estado" IN ('Listo', 'Servido');
@@ -977,8 +933,6 @@ class EliminarPedidoAPIView(APIView):
                             status=status.HTTP_400_BAD_REQUEST
                         )
 
-                    # 2. DEVOLVER STOCK (Solo de los que están 'Registrado')
-                    # Los Anulados ya devolvieron stock al anularse, y las Mermas son pérdidas.
                     sql_registrados = """
                         SELECT "idProductoMenu_id", "cantidad" 
                         FROM "Pedido_ProductoMenu"
@@ -988,7 +942,6 @@ class EliminarPedidoAPIView(APIView):
                     platillos_registrados = cursor.fetchall()
 
                     for id_producto, cantidad in platillos_registrados:
-                        # Buscar receta
                         sql_receta = """
                             SELECT "idArticuloInventario_id", "cantidad_usada" 
                             FROM "ProductoMenu_ArticuloInventario" 
@@ -1006,15 +959,14 @@ class EliminarPedidoAPIView(APIView):
                             """
                             cursor.execute(sql_update_stock, [cant_devolver, id_ingrediente])
 
-                    # 3. LIBERAR MESA
                     if pedido.idMesa:
                         mesa = pedido.idMesa
                         mesa.ocupada = False
                         mesa.save()
 
-                    # 4. ELIMINAR EL PEDIDO
-                    # Esto eliminará en cascada los Pedido_ProductoMenu asociados
                     pedido.delete()
+                    
+            registrar_auditoria(request, 'Pedidos', 'Eliminación', f"Pedido N°{pedido_id} eliminado exitosamente. Insumos activos retornados.", sucursal_afectada_id=suc_id)
 
             return Response(
                 {"message": f"Pedido N°{pedido_id} eliminado exitosamente. Los insumos activos regresaron al inventario."}, 
@@ -1028,10 +980,6 @@ class EliminarPedidoAPIView(APIView):
             )
         
 class RegistrarMermaPlatilloAPIView(APIView):
-    """
-    Registra un platillo como merma (pérdida física) o anulación (devolución al stock)
-    según su estado actual de preparación y libera la mesa si no quedan ítems activos.
-    """
     permission_classes = [IsAuthenticated]
 
     def post(self, request, pedido_platillo_id):
@@ -1040,17 +988,14 @@ class RegistrarMermaPlatilloAPIView(APIView):
         nombre_platillo = pedido_platillo.idProductoMenu.nombre
         producto = pedido_platillo.idProductoMenu
         cantidad_pedida = pedido_platillo.cantidad
+        suc_id = pedido_platillo.idPedido.sucursal_id
 
         try:
             with transaction.atomic():
                 with connection.cursor() as cursor:
-                    
-                    # --- CONTROL DE INVENTARIO INTELIGENTE ---
-                    # Anulado (Devuelve stock) si está únicamente Registrado o si es directo (tiempo 0) y no servido.
                     if estado_actual == 'Registrado' or (getattr(producto, 'tiempoPreparacion', 0) == 0 and estado_actual != 'Servido'):
                         nuevo_estado = 'Anulado'
                         
-                        # Buscar receta y devolver stock
                         sql_receta = """
                             SELECT "idArticuloInventario_id", "cantidad_usada" 
                             FROM "ProductoMenu_ArticuloInventario" 
@@ -1068,10 +1013,8 @@ class RegistrarMermaPlatilloAPIView(APIView):
                             """
                             cursor.execute(sql_update_stock, [cantidad_a_devolver, id_ingrediente])
                     else:
-                        # Si ya se cocinó/sirvió, se envía a Merma (Pérdida de stock)
                         nuevo_estado = 'Merma'
 
-                    # --- REGISTRO DEL NUEVO ESTADO ---
                     sql_update = """
                         UPDATE "Pedido_ProductoMenu"
                         SET "estado" = %s
@@ -1079,7 +1022,6 @@ class RegistrarMermaPlatilloAPIView(APIView):
                     """
                     cursor.execute(sql_update, [nuevo_estado, pedido_platillo_id])
                     
-                # --- LIBERAR MESA SI YA NO QUEDAN PLATILLOS ACTIVOS ---
                 pedido = pedido_platillo.idPedido
                 items_activos = Pedido_ProductoMenu.objects.filter(
                     idPedido=pedido
@@ -1092,13 +1034,14 @@ class RegistrarMermaPlatilloAPIView(APIView):
                     mesa_a_liberar.save()
                     mesa_liberada = True
 
-            # Respuestas dinámicas
             if nuevo_estado == 'Anulado':
                 message = f"'{nombre_platillo}' cancelado con éxito. Los productos se devolvieron al inventario."
                 tipo_notificacion = "success"
             else:
                 message = f"'{nombre_platillo}' enviado a Mermas (Pérdida de inventario)."
                 tipo_notificacion = "warning"
+
+            registrar_auditoria(request, 'Pedidos', f'Registro de {nuevo_estado}', f"Platillo '{nombre_platillo}' en Pedido N°{pedido.idPedido} modificado a {nuevo_estado}.", sucursal_afectada_id=suc_id)
 
             return Response({
                 "message": message,
@@ -1121,26 +1064,20 @@ def calcular_monto_total(pedido_id):
     return 0.0
 
 class FacturarPedidoAPIView(APIView):
-    """
-    GET: Retorna el desglose de cobro (subtotal, impuestos, total) e información del pedido.
-    POST: Registra el método de pago elegido.
-    """
     permission_classes = [IsAuthenticated]
 
     def get(self, request, pedido_id):
-        # Validación de rol
         if not request.user.is_authenticated or request.user.rol != 'Mesero':
             return Response({"error": "No tienes permisos de Mesero."}, status=status.HTTP_403_FORBIDDEN)
 
         pedido = get_object_or_404(Pedido, pk=pedido_id)
         
-        # Cálculos requeridos
         monto_total = calcular_monto_total(pedido_id)
         platillos_pedido = Pedido_ProductoMenu.objects.filter(
             idPedido=pedido
         ).exclude(estado__in=['Merma', 'Anulado']).select_related('idProductoMenu')
         
-        TASA_IMPUESTO = Decimal('0.15') # 15% de impuesto (1 + 0.15)
+        TASA_IMPUESTO = Decimal('0.15')
         monto_total_decimal = Decimal(str(monto_total))
 
         if monto_total_decimal:
@@ -1152,7 +1089,6 @@ class FacturarPedidoAPIView(APIView):
         
         cliente = pedido.idCliente
 
-        # Serialización manual de los platillos para el JSON
         platillos_data = [{
             'producto': item.idProductoMenu.nombre,
             'cantidad': item.cantidad,
@@ -1160,7 +1096,6 @@ class FacturarPedidoAPIView(APIView):
             'total_platillo': round(item.cantidad * item.idProductoMenu.precio, 2)
         } for item in platillos_pedido]
 
-        # Respuesta estructurada
         return Response({
             'factura': {
                 'id_pedido': pedido.idPedido,
@@ -1182,13 +1117,11 @@ class FacturarPedidoAPIView(APIView):
         }, status=status.HTTP_200_OK)
 
     def post(self, request, pedido_id):
-        # Validación de rol
         if not request.user.is_authenticated or request.user.rol != 'Mesero':
             return Response({"error": "No tienes permisos de Mesero."}, status=status.HTTP_403_FORBIDDEN)
 
         pedido = get_object_or_404(Pedido, pk=pedido_id)
         
-        # En DRF los datos vienen en request.data en lugar de request.POST
         metodo_pago = request.data.get('metodo_pago')
         
         if not metodo_pago:
@@ -1198,6 +1131,8 @@ class FacturarPedidoAPIView(APIView):
             pedido.metodoPago = metodo_pago
             pedido.save()
 
+        registrar_auditoria(request, 'Facturación', 'Método de Pago Asignado', f"Se asignó '{metodo_pago}' al Pedido N°{pedido.idPedido}.", sucursal_afectada_id=pedido.sucursal_id)
+
         return Response({
             "status": "success", 
             "message": f"Método de pago '{metodo_pago}' asignado exitosamente."
@@ -1205,14 +1140,9 @@ class FacturarPedidoAPIView(APIView):
 
 
 class PagarFacturaAPIView(APIView):
-    """
-    POST: Marca la factura como pagada, actualiza los productos y libera la mesa.
-    """
-
     permission_classes = [IsAuthenticated]
     
     def post(self, request, pedido_id):
-        # Validación de rol
         if not request.user.is_authenticated or request.user.rol != 'Mesero':
             return Response({"error": "No tienes permisos de Mesero."}, status=status.HTTP_403_FORBIDDEN)
 
@@ -1220,12 +1150,10 @@ class PagarFacturaAPIView(APIView):
 
         try:
             with transaction.atomic():
-                # 1. Actualizar el estado de pago del Pedido a pagado y VIGENTE[cite: 7]
                 pedido.estadoDePago = 1 
                 pedido.estado_factura = 'VIGENTE' 
                 pedido.save()
                 
-                # 2. Actualizar el estado de todos los platillos servidos a 'Facturado'[cite: 7]
                 with connection.cursor() as cursor:
                     sql_update_facturar = """
                         UPDATE "Pedido_ProductoMenu"
@@ -1234,11 +1162,12 @@ class PagarFacturaAPIView(APIView):
                     """
                     cursor.execute(sql_update_facturar, [pedido_id])
                         
-                # 3. Liberar la mesa si hay una asignada[cite: 7]
                 if pedido.idMesa:
                     mesa_a_liberar = pedido.idMesa
                     mesa_a_liberar.ocupada = False
                     mesa_a_liberar.save()
+
+            registrar_auditoria(request, 'Facturación', 'Pago Completado', f"El Pedido N°{pedido.idPedido} ha sido marcado como pagado exitosamente.", sucursal_afectada_id=pedido.sucursal_id)
 
             return Response({
                 "status": "success", 
@@ -1252,18 +1181,12 @@ class PagarFacturaAPIView(APIView):
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
         
 class RegistrarPedidoAPIView(APIView):
-    """
-    GET: Retorna el menú agrupado, mesas disponibles, inventario, recetas y detalles de un pedido previo (si aplica).
-    POST: Registra un nuevo pedido o agrega platillos a uno existente, validando stock y asignando mesa.
-        Aplica validaciones estrictas sobre el tipo de cliente y su identificación (RUC).
-    """
     permission_classes = [IsAuthenticated]
 
     def get(self, request, pedido_id=None):
         if request.user.rol != "Mesero":
             return Response({"error": "No tienes permisos para acceder a esta vista."}, status=status.HTTP_403_FORBIDDEN)
 
-        # 1. Obtener inventario actual y recetas
         inventario_actual = {
             art.idArticuloInventario: float(art.stock)
             for art in ArticuloInventario.objects.all()
@@ -1279,7 +1202,6 @@ class RegistrarPedidoAPIView(APIView):
                 'cantidad': float(rel.cantidad_usada)
             })
 
-        # 2. Obtener y agrupar platillos
         all_menu = list(ProductoMenu.objects.raw("""
             SELECT * FROM "ProductoMenu" WHERE "disponible" = 'true' ORDER BY "categoria", "nombre"
         """))
@@ -1296,7 +1218,6 @@ class RegistrarPedidoAPIView(APIView):
             for categoria, platillos in groupby(all_menu, key=attrgetter('categoria'))
         }
 
-        # 3. Evaluar si es un pedido existente
         pedido_existente_data = None
         platillos_previos = []
 
@@ -1334,7 +1255,6 @@ class RegistrarPedidoAPIView(APIView):
                 columns = [col[0] for col in cursor.description]
                 platillos_previos = [dict(zip(columns, row)) for row in cursor.fetchall()]
 
-        # 4. Mesas disponibles
         mesas_disponibles = list(Mesa.objects.filter(ocupada=False).order_by('idMesa').values('idMesa', 'capacidad'))
 
         return Response({
@@ -1356,8 +1276,6 @@ class RegistrarPedidoAPIView(APIView):
             return Response({"error": "Acceso denegado."}, status=status.HTTP_403_FORBIDDEN)
 
         data = request.data
-
-        # --- Extracción de datos del JSON ---
         cliente_data = data.get('cliente', {})
         nombre_cliente = cliente_data.get('nombre_cliente')
         telefono_cliente = cliente_data.get('telefono_cliente') or None
@@ -1368,20 +1286,15 @@ class RegistrarPedidoAPIView(APIView):
         id_mesa_seleccionada = data.get('mesa')
         productos_req = data.get('productos', [])
 
-        # ==========================================
-        # VALIDACIONES DE NEGOCIO (CLIENTE)
-        # ==========================================
         if not nombre_cliente:
             return Response({'error': 'El nombre del cliente es obligatorio.'}, status=status.HTTP_400_BAD_REQUEST)
         
-        # 1. El tipo de cliente debe ser estrictamente 'Persona' o 'Empresa'
         if tipo_cliente not in ["Persona", "Empresa"]:
             return Response(
                 {'error': 'El tipo de cliente es inválido. Debe ser "Persona" o "Empresa".'}, 
                 status=status.HTTP_400_BAD_REQUEST
             )
         
-        # 2. Si es 'Empresa', la identificación (RUC) no puede ser nula ni vacía
         if tipo_cliente == "Empresa":
             if not identificacion_cliente or not str(identificacion_cliente).strip():
                 return Response(
@@ -1389,7 +1302,6 @@ class RegistrarPedidoAPIView(APIView):
                     status=status.HTTP_400_BAD_REQUEST
                 )
 
-        # --- Validaciones de productos ---
         productos_a_registrar = {
             item['idProductoMenu']: int(item['cantidad']) 
             for item in productos_req 
@@ -1405,9 +1317,6 @@ class RegistrarPedidoAPIView(APIView):
 
         try:
             with transaction.atomic():
-                # ==========================================
-                # 1. GESTIÓN DE PEDIDO, CLIENTE Y MESA
-                # ==========================================
                 if pedido_id:
                     pedido_obj = get_object_or_404(Pedido, pk=pedido_id)
                     mesa_actual = pedido_obj.idMesa
@@ -1427,7 +1336,6 @@ class RegistrarPedidoAPIView(APIView):
                         
                         pedido_obj.save()
                 else:
-                    # Crear o buscar cliente según reglas
                     with connection.cursor() as cursor:
                         cursor.execute('SELECT "idCliente" FROM "Cliente" WHERE "nombre" = %s LIMIT 1;', [nombre_cliente])
                         cliente_existente = cursor.fetchone()
@@ -1448,7 +1356,6 @@ class RegistrarPedidoAPIView(APIView):
                             ])
                             cliente_a_usar_id = cursor.fetchone()[0]
 
-                    # Mesa
                     mesa_id_para_sql = None
                     if id_mesa_seleccionada and id_mesa_seleccionada != 'ninguna':
                         mesa_asignada_obj = get_object_or_404(Mesa, pk=id_mesa_seleccionada)
@@ -1456,7 +1363,6 @@ class RegistrarPedidoAPIView(APIView):
                         mesa_asignada_obj.save()
                         mesa_id_para_sql = mesa_asignada_obj.idMesa
 
-                    # Pedido y Empleado
                     with connection.cursor() as cursor:
                         sql_insert_pedido = """
                             INSERT INTO "Pedido" ("idCliente_id", "idMesa_id", "montoTotal", "fecha", "estadoDePago", "estado_factura")
@@ -1471,9 +1377,6 @@ class RegistrarPedidoAPIView(APIView):
                         """
                         cursor.execute(sql_insert_empleado_pedido, [request.user.idEmpleado, id_pedido_a_usar])
 
-                # ==========================================
-                # 2. VALIDACIÓN DE STOCK
-                # ==========================================
                 ingredientes_requeridos = {}
                 if productos_a_registrar:
                     with connection.cursor() as cursor:
@@ -1493,9 +1396,6 @@ class RegistrarPedidoAPIView(APIView):
                                 if cantidad_requerida > stock_decimal:
                                     raise ValueError(f"Stock insuficiente para '{nombre_ingrediente}'. Requerido: {cantidad_requerida:.2f}, Disponible: {stock_decimal:.2f}.")
 
-                # ==========================================
-                # 3. REGISTRO DE DETALLES Y DESCARGO DE STOCK
-                # ==========================================
                 items_registrados = 0
                 all_menu_objs = ProductoMenu.objects.filter(idProductoMenu__in=productos_a_registrar.keys())
                 
@@ -1519,9 +1419,6 @@ class RegistrarPedidoAPIView(APIView):
 
                         items_registrados += cantidad
 
-                # ==========================================
-                # 4. REVERSIÓN SI ES PEDIDO NUEVO SIN ITEMS
-                # ==========================================
                 if items_registrados == 0 and not pedido_id:
                     with connection.cursor() as cursor:
                         cursor.execute('DELETE FROM "Pedido" WHERE "idPedido" = %s;', [id_pedido_a_usar])
@@ -1530,6 +1427,12 @@ class RegistrarPedidoAPIView(APIView):
                         mesa_asignada_obj.save()
                     
                     return Response({'error': "Debe seleccionar al menos un platillo para registrar el pedido."}, status=status.HTTP_400_BAD_REQUEST)
+
+            # --- SEPARACIÓN DE AUDITORÍA (Creación vs Modificación) ---
+            if pedido_id:
+                registrar_auditoria(request, 'Pedidos', 'Modificación', f"Se agregaron platillos a la orden existente N°{id_pedido_a_usar}.", sucursal_afectada_id=obtener_sucursal_contexto(request))
+            else:
+                registrar_auditoria(request, 'Pedidos', 'Creación', f"Se registró el nuevo Pedido N°{id_pedido_a_usar}.", sucursal_afectada_id=obtener_sucursal_contexto(request))
 
             return Response({
                 "status": "success",
@@ -1542,11 +1445,119 @@ class RegistrarPedidoAPIView(APIView):
         except Exception as e:
             return Response({'error': f"Ocurrió un error interno: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
+# ---------------------------- VISTAS DE SUCURSALES Y AUDITORÍA ----------------------------
 class SetSucursalActivaAPIView(APIView):
     permission_classes = [IsAuthenticated]
 
     def post(self, request):
         sucursal_id = request.data.get('sucursal_id')
-        # Guardamos la elección temporalmente en la sesión del navegador
         request.session['sucursal_activa_id'] = sucursal_id
+        
+        # --- MEJORA PARA LA AUDITORÍA ---
+        nombre_vista = "Todas las sucursales"
+        if sucursal_id and str(sucursal_id) != 'todas':
+            sucursal = Sucursal.objects.filter(pk=sucursal_id).first()
+            if sucursal:
+                nombre_vista = sucursal.nombre_comercial
+                
+        registrar_auditoria(
+            request, 
+            'Sistema', 
+            'Cambio de Vista', 
+            f"El administrador cambió la vista en el panel a: {nombre_vista}."
+        )
+        
         return Response({"status": "success", "mensaje": "Sucursal actualizada"})
+
+
+class AuditoriaGeneralAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        if request.user.rol != 'Administrador':
+            return Response(
+                {"error": "No tienes permisos para visualizar la auditoría."}, 
+                status=status.HTTP_403_FORBIDDEN
+            )
+
+        auditoria = AuditoriaGeneral.objects.all().order_by('-fecha_accion')
+
+        if request.user.sucursal_id:
+            auditoria = auditoria.filter(sucursal_id=request.user.sucursal_id)
+        else:
+            sucursal_filtro = obtener_sucursal_contexto(request)
+            if sucursal_filtro:
+                auditoria = auditoria.filter(sucursal_id=sucursal_filtro)
+
+        serializer = AuditoriaGeneralSerializer(auditoria, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+class SucursalAdminViewSet(viewsets.ModelViewSet):
+    permission_classes = [IsAuthenticated]
+    serializer_class = SucursalSerializer
+    queryset = Sucursal.objects.all().order_by('idSucursal')
+
+    def perform_create(self, serializer):
+        # Medida de seguridad extra
+        if self.request.user.rol != 'Administrador' or self.request.user.sucursal_id:
+            raise serializers.ValidationError({"error": "Solo el Administrador Global puede crear sucursales."})
+        
+        sucursal = serializer.save()
+        
+        # CORRECCIÓN: Inyectamos el ID de la sucursal recién creada
+        registrar_auditoria(
+            self.request, 
+            'Sucursales', 
+            'Creación', 
+            f"Se registró la nueva sucursal '{sucursal.nombre_comercial}'.",
+            sucursal_afectada_id=sucursal.idSucursal
+        )
+
+    def perform_update(self, serializer):
+        sucursal = serializer.save()
+        
+        # CORRECCIÓN: Inyectamos el ID de la sucursal que se está editando
+        registrar_auditoria(
+            self.request, 
+            'Sucursales', 
+            'Actualización', 
+            f"Se actualizaron los datos de la sucursal '{sucursal.nombre_comercial}'.",
+            sucursal_afectada_id=sucursal.idSucursal
+        )
+
+    def destroy(self, request, *args, **kwargs):
+        instance = self.get_object()
+        nombre = instance.nombre_comercial
+        suc_id = instance.idSucursal # Guardamos el ID antes de eliminar
+        
+        # Bloqueo: No eliminar la sucursal si el usuario está actualmente "parado" sobre ella en el navbar
+        if str(request.session.get('sucursal_activa_id')) == str(instance.idSucursal):
+             return Response({"error": "No puedes eliminar una sucursal mientras la tienes activa en el menú superior."}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            instance.delete()
+            # CORRECCIÓN: Inyectamos el ID afectado
+            registrar_auditoria(
+                request, 
+                'Sucursales', 
+                'Eliminación', 
+                f"Se eliminó permanentemente la sucursal '{nombre}'.",
+                sucursal_afectada_id=suc_id
+            )
+            return Response({"message": f'La sucursal "{nombre}" ha sido eliminada permanentemente.'}, status=status.HTTP_200_OK)
+        
+        except ProtectedError:
+            # Si ya tiene mesas, empleados o pedidos, solo la desactivamos
+            instance.is_active = False
+            instance.save()
+            
+            # CORRECCIÓN: Inyectamos el ID afectado
+            registrar_auditoria(
+                request, 
+                'Sucursales', 
+                'Desactivación', 
+                f"La sucursal '{nombre}' fue desactivada por tener registros asociados.",
+                sucursal_afectada_id=suc_id
+            )
+            return Response({"warning": f'La sucursal "{nombre}" tiene registros asociados. Ha sido desactivada para preservar la historia.'}, status=status.HTTP_200_OK)
