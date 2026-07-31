@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f4f4; margin: 0; padding: 20px; }
+        .container { background-color: #ffffff; max-width: 550px; margin: 0 auto; padding: 30px; border-radius: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); }
+        .header { text-align: center; border-bottom: 2px solid #f3bb67; padding-bottom: 20px; margin-bottom: 25px; }
+        .header h1 { color: #981a28; margin: 0; font-size: 24px; letter-spacing: 1px; }
+        .content { color: #444444; font-size: 16px; line-height: 1.6; }
+        .btn-container { text-align: center; margin: 35px 0; }
+        .btn { background-color: #981a28; color: #ffffff !important; padding: 14px 28px; text-decoration: none; border-radius: 6px; font-weight: bold; font-size: 16px; border: 2px solid #f3bb67; display: inline-block; }
+        .footer { text-align: center; font-size: 12px; color: #888888; margin-top: 30px; border-top: 1px solid #eeeeee; padding-top: 20px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Gestor Hé Sāî Mālî</h1>
+        </div>
+        <div class="content">
+            <p>Hola <strong>{{ nombre }}</strong>,</p>
+            <p>Recibimos una solicitud para restablecer la contraseña de tu cuenta de empleado en nuestro sistema.</p>
+            <p>Para crear una nueva contraseña y recuperar tu acceso, haz clic en el siguiente botón:</p>
+            
+            <div class="btn-container">
+                <a href="{{ enlace }}" class="btn">Restablecer mi contraseña</a>
+            </div>
+            
+            <p>Si no realizaste esta solicitud, puedes ignorar este correo de forma segura. El enlace caducará automáticamente.</p>
+        </div>
+        <div class="footer">
+            <p>&copy; 2026 Restaurante He Sai Mali. Este es un mensaje generado automáticamente.</p>
+        </div>
+    </div>
+</body>
+</html>

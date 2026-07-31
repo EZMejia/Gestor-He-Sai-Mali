@@ -1,5 +1,4 @@
 {% load static %}
-{% load custom_filters %}
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -30,7 +29,7 @@
     <div class="factura-container">
         <div id="loading-msg">Cargando datos de la factura...</div>
         
-        <div id="contenido-factura">
+        <div id="contenido-factura" style="display:none;">
             <div class="header-factura">
                 <h2>Hê Sãî Mãlî - Factura</h2>
                 <p><strong>Pedido N°:</strong> <span id="lbl-pedido-id"></span></p>

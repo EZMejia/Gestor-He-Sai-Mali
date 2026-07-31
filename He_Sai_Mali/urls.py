@@ -106,4 +106,12 @@ urlpatterns = [
 
     # --- API Auditoría ---
     path('api/auditoria-general/', api.AuditoriaGeneralAPIView.as_view(), name='api_auditoria_general'),
+
+    # Vistas HTML de Recuperación
+    path('recuperar-password/', views.recuperar_password_html, name='recuperar_password'),
+    path('reset-password/<str:uidb64>/<str:token>/', views.reset_password_html, name='reset_password_confirm'),
+    
+    # APIs de Recuperación
+    path('api/solicitar-recuperacion/', api.SolicitarRecuperacionAPIView.as_view(), name='api_solicitar_recuperacion'),
+    path('api/restablecer-password/', api.RestablecerPasswordAPIView.as_view(), name='api_restablecer_password'),
 ]

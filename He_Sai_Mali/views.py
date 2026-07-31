@@ -571,3 +571,11 @@ def admin_sucursales_html(request):
 @user_passes_test(es_rol("Administrador"), login_url='login')
 def admin_auditoria_html(request):
     return render(request, 'He_Sai_Mali/admin_auditoria.html')
+
+def recuperar_password_html(request):
+    return render(request, 'He_Sai_Mali/recuperar_password.html')
+
+def reset_password_html(request, uidb64, token):
+    # Le pasamos el uid y el token al HTML para que el JS sepa a dónde enviar la nueva clave
+    context = {'uidb64': uidb64, 'token': token}
+    return render(request, 'He_Sai_Mali/reset_password.html', context)

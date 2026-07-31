@@ -49,10 +49,11 @@ class EditarEmpleadoSerializer(serializers.ModelSerializer):
             if nueva_pass != confirmar_pass:
                 raise serializers.ValidationError({"nueva_password": "Las contraseñas no coinciden."})
             
-            password_regex = r'^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)[a-zA-Z\d]{8,}$'
+            # Nueva validación: 10 caracteres, mayúscula, minúscula, número y símbolo
+            password_regex = r'^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[\W_]).{10,}$'
             if not re.match(password_regex, nueva_pass):
                 raise serializers.ValidationError({
-                    "nueva_password": "La contraseña debe tener al menos 8 caracteres, incluyendo una mayúscula, una minúscula y un número."
+                    "nueva_password": "La contraseña debe tener al menos 10 caracteres, incluyendo una mayúscula, una minúscula, un número y un símbolo especial."
                 })
 
         return data
@@ -122,10 +123,11 @@ class RegistroEmpleadoSerializer(serializers.ModelSerializer):
         if data['contrasena1'] != data['contrasena2']:
             raise serializers.ValidationError({"contrasena1": "Las contraseñas no coinciden."})
 
-        password_regex = r'^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)[a-zA-Z\d]{8,}$'
+        # Nueva validación: 10 caracteres, mayúscula, minúscula, número y símbolo
+        password_regex = r'^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[\W_]).{10,}$'
         if not re.match(password_regex, data['contrasena1']):
             raise serializers.ValidationError({
-                "contrasena1": "La contraseña debe tener al menos 8 caracteres, incluyendo una mayúscula, una minúscula y un número."
+                "contrasena1": "La contraseña debe tener al menos 10 caracteres, incluyendo una mayúscula, una minúscula, un número y un símbolo especial."
             })
 
         return data

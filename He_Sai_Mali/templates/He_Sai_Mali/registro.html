@@ -40,20 +40,20 @@
             width: 100%;
         }
 
-        .He_Sai_Mali .logo-texto{
+        .He_Sai_Mali .logo-texto {
             display: flex;
             align-items: center;
         }
 
-        .He_Sai_Mali .logo{
+        .He_Sai_Mali .logo {
             height: 40px;
             margin-right: 3px;
         }
 
-        .He_Sai_Mali h2{
+        .He_Sai_Mali h2 {
             margin: 0;
             padding: 0;
-            font-size:large;
+            font-size: large;
             color: #981a28;
         }
 
@@ -131,13 +131,16 @@
             display: none;
             margin: 10px;
         }
+
         #step-1 {
             display: block;
         }
+
         .botones {
             display: flex;
             justify-content: flex-end;
             gap: 5px;
+            margin-top: 15px;
         }
 
         .Continuar {
@@ -188,13 +191,22 @@
             -ms-user-select: none;
             user-select: none;
         }
+
+        .help-text { 
+            font-size: 0.8em; 
+            color: #666; 
+            margin-top: -2px; 
+            margin-bottom: 10px; 
+            display: block; 
+            line-height: 1.2;
+        }
     </style>
 </head>
 <body>
     <form id="registrationForm" method="post">
         <div class="He_Sai_Mali">
             <a href="{% url 'pedidos' %}">
-                <img href="{% url 'pedidos' %}" src="{% static 'He_Sai_Mali/flecha.png' %}" class="flechaRegresar" alt="regresar">
+                <img src="{% static 'He_Sai_Mali/flecha.png' %}" class="flechaRegresar" alt="regresar">
             </a>
 
             <div class="logo-texto">
@@ -204,7 +216,6 @@
         </div>
 
         <h2>Registro de Empleado</h2>
-        <h2>Se está registrando en la sucursal SOY GAY </h2>
         <!-- El token se genera aquí de todos modos para protección básica del formulario -->
         {% csrf_token %}
         
@@ -261,6 +272,7 @@
             <p>
                 <label>Contraseña:</label>
                 <input type="password" name="contrasena1" id="contrasena1" placeholder="••••••••" required autocomplete="off">
+                <span class="help-text">Mínimo 10 caracteres, una mayúscula, una minúscula, un número y un símbolo.</span>
             </p>
             <p>
                 <label>Confirmar contraseña:</label>
@@ -314,10 +326,10 @@
             document.getElementById(`step-${stepNumber}`).style.display = 'block';
         }
 
-        // Función para mostrar el error (corregida para usar innerHTML)
+        // Función para mostrar el error 
         function displayError(message) {
             const errorDiv = document.getElementById('form-error-message');
-            errorDiv.innerHTML = message; // Se usa innerHTML para renderizar los <br> y permitir mensajes multilínea
+            errorDiv.innerHTML = message; 
             errorDiv.style.display = 'block';
         }
 
@@ -386,9 +398,6 @@
                     const telefono = document.getElementById('telefono').value.trim();
                     const cedula = document.getElementById('cedula').value.trim();
                     
-                    // Convertir el teléfono a número para asegurar la comparación de tipo
-                    const telefonoNum = Number(telefono); 
-                    
                     // RegEx para formato de correo electrónico estándar
                     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/; 
                     // RegEx para solo 8 dígitos
@@ -416,8 +425,8 @@
                     const pass1 = document.getElementById('contrasena1').value;
                     const pass2 = document.getElementById('contrasena2').value;
                     
-                    // RegEx para contraseña fuerte: Mínimo 8 caracteres, al menos 1 mayúscula, 1 minúscula y 1 número
-                    const strongPasswordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)[a-zA-Z\d]{8,}$/;
+                    // Nueva RegEx robusta: Mínimo 10 caracteres, 1 mayúscula, 1 minúscula, 1 número y 1 símbolo especial
+                    const strongPasswordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[\W_]).{10,}$/;
 
                     if (pass1 !== pass2) {
                         isValid = false;
@@ -427,7 +436,7 @@
                         if (!firstInvalidInput) firstInvalidInput = document.getElementById('contrasena1');
                     } else if (!strongPasswordRegex.test(pass1)) {
                         isValid = false;
-                        errorMessage = "La contraseña debe tener al menos 8 caracteres, incluyendo una mayúscula, una minúscula y un número.";
+                        errorMessage = "La contraseña debe tener al menos 10 caracteres, incluyendo una mayúscula, una minúscula, un número y un símbolo especial.";
                         document.getElementById('contrasena1').classList.add('error-highlight');
                         document.getElementById('contrasena2').classList.add('error-highlight');
                         if (!firstInvalidInput) firstInvalidInput = document.getElementById('contrasena1');
@@ -468,7 +477,7 @@
             const telefono = document.getElementById('telefono').value;
             const cedula = document.getElementById('cedula').value;
 
-            // 2. Mostrar la demás información en el resumen
+            // Mostrar la demás información en el resumen
             document.getElementById('summary-nombre').textContent = `${nombre} ${apellido}`;
             document.getElementById('summary-rol').textContent = rolSelect.options[rolSelect.selectedIndex].text;
             document.getElementById('summary-correo').textContent = correo;
@@ -501,7 +510,6 @@
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    // La inyección sugerida por Erick
                     'X-CSRFToken': '{{ csrf_token }}' 
                 },
                 body: JSON.stringify(data)

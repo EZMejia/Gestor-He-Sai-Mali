@@ -17,14 +17,27 @@
             --menu-item-hover: #b12131; /* Rojo más claro para hover */
         }
 
-        body { height: 100%; overflow: hidden; }
+        body { 
+            height: 100%; 
+            overflow: hidden; 
+        }
 
         /* ---------------------------------------------------- */
         /* --- Contenido Principal (MAIN CONTENT) --- */
         /* ---------------------------------------------------- */
-        .main-content { height: calc(100dvh - 60px); display: flex; flex-direction: column; overflow: hidden; transition: margin-left 0.3s ease;}
+        .main-content { 
+            height: calc(100dvh - 60px); 
+            display: flex; 
+            flex-direction: column; 
+            overflow: hidden; 
+            transition: margin-left 0.3s ease;
+        }
 
-        .contenido { flex-grow: 1; padding: 20px 20px; overflow-y: auto;}
+        .contenido { 
+            flex-grow: 1; 
+            padding: 20px 20px; 
+            overflow-y: auto;
+        }
 
         /* Estilos principales para el contenido de la administración */
         .container_admin {
@@ -42,6 +55,7 @@
             margin-bottom: 20px;
             box-shadow: 0 2px 4px rgba(0,0,0,0.1);
         }
+
         .card-header-custom {
             background-color: #981a28; 
             color: white;
@@ -50,6 +64,7 @@
             border-radius: 5px 5px 0 0;
             font-weight: bold;
         }
+
         .card-body-custom {
             padding: 15px;
         }
@@ -65,6 +80,7 @@
             border: none;
             cursor: pointer;
         }
+
         .btn-custom-success:hover {
             background-color: #274e13;
         }
@@ -74,6 +90,7 @@
             margin-bottom: 5px;
             font-weight: bold;
         }
+
         .form-control-custom {
             width: 100%;
             padding: 8px;
@@ -82,6 +99,7 @@
             border-radius: 4px;
             box-sizing: border-box;
         }
+
         textarea.form-control-custom {
             resize: vertical;
         }
@@ -92,31 +110,29 @@
             border-collapse: collapse;
             margin-top: 0px;
         }
+
         .table-custom thead tr {
             background-color: #ddd; 
         }
+
         .table-custom th, .table-custom td {
             padding: 10px;
             text-align: left;
             border-bottom: 1px solid #eee;
         }
+
         .table-custom tbody tr:nth-child(odd) {
             background-color: #F8F8F8;
         }
+
         .table-custom tbody tr:nth-child(even) {
             background-color: #EEEEEE;
         }
+
         .table-custom tbody tr:hover {
             background-color: #e0e0e0;
         }
         
-        .card-custom {
-            border: 1px solid #ddd;
-            border-radius: 5px;
-            margin-bottom: 20px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        }
-
         .btn-custom-danger {
             background-color: #f44336; 
             color: white;
@@ -133,8 +149,13 @@
             color: white;
         }
 
-        .btn-custom-edit:hover { background-color: #0056b3; }
-        .btn-custom-edit { background-color: #007bff; }
+        .btn-custom-edit {
+            background-color: #007bff;
+        }
+
+        .btn-custom-edit:hover { 
+            background-color: #0056b3; 
+        }
     </style>
 {% endblock %}
 
@@ -200,12 +221,16 @@
                                     </div>
 
                                     <div style="flex: 1 1 50%; min-width: 200px;">
-                                            <label class="form-label-custom">Nueva Contraseña (dejar en blanco para no cambiar):</label>
-                                            <input type="password" id="edit-password" class="form-control-custom" placeholder="********">
+                                        <label class="form-label-custom">Nueva Contraseña (dejar en blanco para no cambiar):</label>
+                                        <input type="password" id="edit-password" class="form-control-custom" placeholder="********">
+                                        <span style="font-size: 0.8em; color: #666; display: block; margin-top: -5px; margin-bottom: 10px;">
+                                            Mínimo 10 caracteres, mayúscula, minúscula, número y símbolo.
+                                        </span>
                                     </div>
+
                                     <div style="flex: 1 1 50%; min-width: 200px;">
-                                            <label class="form-label-custom">Confirmar Nueva Contraseña:</label>
-                                            <input type="password" id="edit-confirm-password" class="form-control-custom" placeholder="********">
+                                        <label class="form-label-custom">Confirmar Nueva Contraseña:</label>
+                                        <input type="password" id="edit-confirm-password" class="form-control-custom" placeholder="********">
                                     </div>
                                     
                                     <div style="flex: 1 1 100%; display: flex; align-items: flex-end; min-width: 250px;">
@@ -254,7 +279,7 @@
                                 </tr>
                             </thead>
                             <tbody>
-                                </tbody>
+                            </tbody>
                         </table>
                     </div>
                 </div>
@@ -376,19 +401,41 @@
             e.preventDefault();
             const id = document.getElementById('edit-id').value;
 
+            // Validación de Correo en JS
+            const correo = document.getElementById('edit-correo').value;
+            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            
+            if (!emailRegex.test(correo)) {
+                mostrarAlerta('danger', 'El formato del correo electrónico es inválido.');
+                return;
+            }
+
             const datos = {
                 nombre: document.getElementById('edit-nombre').value,
                 apellido: document.getElementById('edit-apellido').value,
                 rol: document.getElementById('edit-rol').value,
                 telefono: document.getElementById('edit-telefono').value,
-                correo: document.getElementById('edit-correo').value,
+                correo: correo,
                 cedula: document.getElementById('edit-cedula').value,
             };
 
             const pass = document.getElementById('edit-password').value;
             const confirmPass = document.getElementById('edit-confirm-password').value;
             
+            // Validación local de contraseña si el administrador decidió cambiarla
             if (pass || confirmPass) {
+                if (pass !== confirmPass) {
+                    mostrarAlerta('danger', 'Las contraseñas no coinciden. Por favor, verifícalas.');
+                    return;
+                }
+
+                // Validación estricta: 10 chars, mayúscula, minúscula, número, símbolo
+                const passRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[\W_]).{10,}$/;
+                if (!passRegex.test(pass)) {
+                    mostrarAlerta('danger', 'La contraseña debe tener al menos 10 caracteres, una mayúscula, una minúscula, un número y un símbolo especial.');
+                    return;
+                }
+                
                 datos.nueva_password = pass;
                 datos.confirmar_password = confirmPass;
             }
@@ -466,9 +513,9 @@
 
             // Creamos el elemento contenedor del Toast de forma nativa
             const alertDiv = document.createElement('div');
+            
             // Usamos clases estándar de alertas con soporte para descartar dinámicamente
             alertDiv.className = `alert alert-${tipo === 'danger' ? 'danger' : tipo} alert-dismissible fade show shadow-lg d-flex align-items-center justify-content-between`;
-            
             alertDiv.style.pointerEvents = 'auto';
     
             // El contenido HTML: separamos el mensaje del botón de cierre para que no colisionen

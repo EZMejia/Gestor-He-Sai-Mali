@@ -18,6 +18,17 @@ from operator import attrgetter
 from .serializers import *
 from .models import *
 
+# Importaciones adicionales para la funcionalidad de restablecimiento de contraseña
+from django.core.mail import send_mail
+from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
+from django.utils.encoding import force_bytes, force_str
+from django.contrib.auth.tokens import default_token_generator
+from django.conf import settings
+from django.core.mail import EmailMultiAlternatives
+from django.template.loader import render_to_string
+from django.utils.html import strip_tags
+import re
+
 # Función auxiliar para obtener la sucursal activa del usuario
 def obtener_sucursal_contexto(request):
     usuario = request.user
@@ -1561,3 +1572,104 @@ class SucursalAdminViewSet(viewsets.ModelViewSet):
                 sucursal_afectada_id=suc_id
             )
             return Response({"warning": f'La sucursal "{nombre}" tiene registros asociados. Ha sido desactivada para preservar la historia.'}, status=status.HTTP_200_OK)
+
+class SolicitarRecuperacionAPIView(APIView):
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        correo = request.data.get('correo', '').strip()
+        if not correo:
+            return Response({'error': 'El correo es obligatorio.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        empleado = Empleado.objects.filter(correo=correo, is_active=True).first()
+
+        if empleado:
+            uid = urlsafe_base64_encode(force_bytes(empleado.pk))
+            token = default_token_generator.make_token(empleado)
+            dominio = request.get_host()
+            enlace = f"http://{dominio}/reset-password/{uid}/{token}/"
+
+            # Renderizamos el HTML elegante
+            html_content = render_to_string('He_Sai_Mali/emails/recuperacion.html', {
+                'nombre': empleado.nombre,
+                'enlace': enlace
+            })
+            text_content = strip_tags(html_content)
+
+            try:
+                email = EmailMultiAlternatives(
+                    'Restablecer Contraseña - He Sai Mali',
+                    text_content,
+                    settings.EMAIL_HOST_USER,
+                    [empleado.correo]
+                )
+                email.attach_alternative(html_content, "text/html")
+                email.send(fail_silently=False)
+
+                # Auditoría manual forzando la identidad del empleado (porque no hay sesión activa)
+                ip_address = request.META.get('HTTP_X_FORWARDED_FOR', request.META.get('REMOTE_ADDR', ''))
+                if ip_address: ip_address = ip_address.split(',')[0]
+                
+                AuditoriaGeneral.objects.create(
+                    empleado_id=empleado.idEmpleado,
+                    usuario_nombre=f"{empleado.nombre} {empleado.apellido}",
+                    rol=empleado.rol,
+                    sucursal_id=empleado.sucursal_id,
+                    modulo='Autenticación',
+                    accion='Solicitud Recuperación',
+                    detalles=f"Solicitó un enlace de recuperación al correo: {correo}",
+                    ip_address=ip_address
+                )
+            except Exception as e:
+                return Response({'error': 'Error de conexión con el servidor de correos.'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+        # Mensaje amigable y nada técnico
+        return Response({
+            'message': 'Si el correo está asociado a una cuenta, recibirás un enlace de recuperación en los próximos minutos.'
+        }, status=status.HTTP_200_OK)
+
+
+class RestablecerPasswordAPIView(APIView):
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        uidb64 = request.data.get('uid')
+        token = request.data.get('token')
+        nueva_password = request.data.get('password')
+
+        if not all([uidb64, token, nueva_password]):
+            return Response({'error': 'Faltan datos para procesar la solicitud.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Validación backend de contraseña fuerte (10 chars, upper, lower, num, symbol)
+        password_regex = r'^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[\W_]).{10,}$'
+        if not re.match(password_regex, nueva_password):
+            return Response({'error': 'La contraseña no cumple con los requisitos mínimos de seguridad.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            uid = force_str(urlsafe_base64_decode(uidb64))
+            empleado = Empleado.objects.get(pk=uid)
+        except (TypeError, ValueError, OverflowError, Empleado.DoesNotExist):
+            empleado = None
+
+        if empleado is not None and default_token_generator.check_token(empleado, token):
+            empleado.set_password(nueva_password)
+            empleado.save()
+
+            # Auditoría manual al restablecer
+            ip_address = request.META.get('HTTP_X_FORWARDED_FOR', request.META.get('REMOTE_ADDR', ''))
+            if ip_address: ip_address = ip_address.split(',')[0]
+            
+            AuditoriaGeneral.objects.create(
+                empleado_id=empleado.idEmpleado,
+                usuario_nombre=f"{empleado.nombre} {empleado.apellido}",
+                rol=empleado.rol,
+                sucursal_id=empleado.sucursal_id,
+                modulo='Autenticación',
+                accion='Contraseña Restablecida',
+                detalles=f"Restableció su contraseña con éxito mediante enlace de correo.",
+                ip_address=ip_address
+            )
+            
+            return Response({'message': 'Contraseña actualizada exitosamente. Redirigiendo...'}, status=status.HTTP_200_OK)
+        else:
+            return Response({'error': 'El enlace es inválido o ya expiró. Por favor, solicita uno nuevo.'}, status=status.HTTP_400_BAD_REQUEST)
