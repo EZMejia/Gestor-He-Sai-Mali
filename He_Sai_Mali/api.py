@@ -215,7 +215,8 @@ class ProveedorViewSet(viewsets.ModelViewSet):
                 {"error": f'Error al intentar eliminar: Asegúrate de que no haya ingredientes asociados a este proveedor.'},
                 status=status.HTTP_400_BAD_REQUEST
             )
-        
+
+
 class MesaViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
     serializer_class = MesaSerializer
@@ -232,7 +233,7 @@ class MesaViewSet(viewsets.ModelViewSet):
         # 1. Obtenemos la sucursal actual
         sucursal_id = obtener_sucursal_contexto(self.request)
         
-        # 2. Validación de seguridad: no permitir registrar si no hay sucursal seleccionada
+        # 2. Validación de seguridad
         if not sucursal_id:
             raise serializers.ValidationError({"error": "Debes seleccionar una sucursal en el menú superior antes de registrar una mesa."})
 
@@ -241,6 +242,35 @@ class MesaViewSet(viewsets.ModelViewSet):
         
         registrar_auditoria(self.request, 'Mesas', 'Creación', f"Se registró la Mesa N°{mesa.idMesa} con capacidad para {mesa.capacidad} personas.", sucursal_afectada_id=sucursal_id)
 
+    def perform_update(self, serializer):
+        # 1. Guardamos los cambios
+        mesa = serializer.save()
+        
+        # 2. Registramos la actualización
+        registrar_auditoria(
+            self.request, 
+            'Mesas', 
+            'Actualización', 
+            f"Se actualizaron los datos de la Mesa N°{mesa.idMesa}.", 
+            sucursal_afectada_id=mesa.sucursal_id
+        )
+
+    def perform_destroy(self, instance):
+        # 1. Guardamos los datos antes de borrar la instancia
+        id_mesa = instance.idMesa
+        suc_id = instance.sucursal_id
+        
+        # 2. Registramos la eliminación (antes de que desaparezca de la BD)
+        registrar_auditoria(
+            self.request, 
+            'Mesas', 
+            'Eliminación', 
+            f"Se eliminó la Mesa N°{id_mesa} del sistema.", 
+            sucursal_afectada_id=suc_id
+        )
+        
+        # 3. Ejecutamos el borrado
+        instance.delete()
 class ArticuloInventarioViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
     serializer_class = ArticuloInventarioSerializer
