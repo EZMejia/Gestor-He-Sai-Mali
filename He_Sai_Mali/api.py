@@ -229,32 +229,17 @@ class MesaViewSet(viewsets.ModelViewSet):
         return queryset
 
     def perform_create(self, serializer):
-        mesa = serializer.save()
-        registrar_auditoria(self.request, 'Mesas', 'Creación', f"Se registró la Mesa N°{mesa.idMesa} con capacidad para {mesa.capacidad} personas.", sucursal_afectada_id=mesa.sucursal_id)
-
-    def perform_update(self, serializer):
-        capacidad_anterior = self.get_object().capacidad
-        mesa = serializer.save()
-        if capacidad_anterior != mesa.capacidad:
-            registrar_auditoria(self.request, 'Mesas', 'Actualización', f"Mesa N°{mesa.idMesa}: Capacidad modificada de {capacidad_anterior} a {mesa.capacidad}.", sucursal_afectada_id=mesa.sucursal_id)
-
-    def destroy(self, request, *args, **kwargs):
-        instance = self.get_object()
-        id_mesa = instance.idMesa
-        suc_id = instance.sucursal_id
+        # 1. Obtenemos la sucursal actual
+        sucursal_id = obtener_sucursal_contexto(self.request)
         
-        try:
-            instance.delete()
-            registrar_auditoria(request, 'Mesas', 'Eliminación', f"Mesa N°{id_mesa} eliminada del sistema.", sucursal_afectada_id=suc_id)
-            return Response(
-                {"message": f"Mesa '{id_mesa}' eliminada exitosamente."},
-                status=status.HTTP_200_OK
-            )
-        except ProtectedError:
-            return Response(
-                {"error": f"No se puede eliminar la Mesa '{id_mesa}' porque está relacionada con pedidos existentes."},
-                status=status.HTTP_400_BAD_REQUEST
-            )
+        # 2. Validación de seguridad: no permitir registrar si no hay sucursal seleccionada
+        if not sucursal_id:
+            raise serializers.ValidationError({"error": "Debes seleccionar una sucursal en el menú superior antes de registrar una mesa."})
+
+        # 3. Guardamos pasando la sucursal_id explícitamente
+        mesa = serializer.save(sucursal_id=sucursal_id)
+        
+        registrar_auditoria(self.request, 'Mesas', 'Creación', f"Se registró la Mesa N°{mesa.idMesa} con capacidad para {mesa.capacidad} personas.", sucursal_afectada_id=sucursal_id)
 
 class ArticuloInventarioViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]

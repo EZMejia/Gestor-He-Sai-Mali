@@ -223,10 +223,12 @@ class MesaSerializer(serializers.ModelSerializer):
     })
 
     ocupada = serializers.BooleanField(read_only=True)
+    # Agregamos sucursal_id como solo lectura para que el backend lo maneje
+    sucursal_id = serializers.IntegerField(read_only=True)
 
     class Meta:
         model = Mesa
-        fields = ['idMesa', 'capacidad', 'ocupada']
+        fields = ['idMesa', 'capacidad', 'ocupada', 'sucursal_id']
 
     def validate_idMesa(self, value):
         if not self.instance and Mesa.objects.filter(pk=value).exists():
