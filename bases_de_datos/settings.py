@@ -34,6 +34,13 @@ DEBUG = os.getenv('DEBUG') == 'True'
 
 ALLOWED_HOSTS = ['*']    
 
+# CACHES configuration
+CACHES = {
+    'default': {
+        'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+        'LOCATION': 'dashboard_cache',
+    }
+}
 
 # Application definition
 

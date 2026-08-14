@@ -13,7 +13,8 @@ class Sucursal(models.Model):
     telefono = models.CharField(max_length=20, blank=True, null=True)
     numero_matricula_municipal = models.CharField(max_length=50, blank=True, null=True) 
     
-    is_active = models.BooleanField(default=True)
+    # Índice añadido: para filtrar las sucursales activas
+    is_active = models.BooleanField(default=True, db_index=True)
 
     def __str__(self):
         return f"{self.nombre_comercial} - {self.municipio}"
@@ -46,10 +47,12 @@ class Empleado(AbstractBaseUser, PermissionsMixin):
     telefono = models.IntegerField(unique=True)
     correo = models.EmailField(unique=True)
     cedula = models.CharField(max_length=16, unique=True)
-    rol = models.CharField(max_length=20)
+    # Índice añadido: Útil si hacemos búsquedas por rol (ej: Empleado.objects.filter(rol='Mesero'))
+    rol = models.CharField(max_length=20, db_index=True)
     usuario = models.CharField(max_length=30, unique=True)
 
-    is_active = models.BooleanField(default=True)
+    # Índice añadido: Para el login o listados de personal activo
+    is_active = models.BooleanField(default=True, db_index=True)
     is_staff = models.BooleanField(default=False)
     date_joined = models.DateTimeField(default=timezone.now)
 
@@ -62,7 +65,6 @@ class Empleado(AbstractBaseUser, PermissionsMixin):
     def __str__(self):
         return self.usuario
 
-    # Necesario para admin
     def has_perm(self, perm, obj=None):
         return True
 
@@ -78,7 +80,8 @@ class RegistroSesion(models.Model):
     empleado = models.ForeignKey(Empleado, on_delete=models.CASCADE)
     ip_address = models.GenericIPAddressField(null=True, blank=True)
     user_agent = models.CharField(max_length=255, null=True, blank=True)
-    fecha_login = models.DateTimeField(default=timezone.now)
+    # Índice añadido: Las auditorías siempre se ordenan o filtran por fecha
+    fecha_login = models.DateTimeField(default=timezone.now, db_index=True)
     fecha_logout = models.DateTimeField(null=True, blank=True)
 
     def __str__(self):
@@ -91,10 +94,12 @@ class RegistroSesion(models.Model):
 class ProductoMenu(models.Model):
     idProductoMenu = models.AutoField(primary_key=True)
     nombre = models.CharField(max_length=100, unique=True)
-    categoria = models.CharField(max_length=20)
+    # Índice añadido: Muy común cargar el menú por categorías (Bebidas, Postres, etc.)
+    categoria = models.CharField(max_length=20, db_index=True)
     precio = models.DecimalField(max_digits=10, decimal_places=2)
     tiempoPreparacion = models.IntegerField()
-    disponible = models.BooleanField(default=1)
+    # Índice añadido: Para mostrar solo lo que hay disponible en la app/caja
+    disponible = models.BooleanField(default=1, db_index=True)
 
     def __str__(self):
         return self.nombre
@@ -107,7 +112,8 @@ class Cliente(models.Model):
     idCliente = models.AutoField(primary_key=True)
     tipoCliente = models.CharField(max_length=10)
     nombre = models.CharField(max_length=100)
-    identificacion = models.CharField(max_length=20, blank=True, null=True)
+    # Índice añadido: Búsqueda rápida de clientes al momento de facturar
+    identificacion = models.CharField(max_length=20, blank=True, null=True, db_index=True)
     telefono = models.IntegerField(blank=True, null=True)
     correo = models.EmailField(max_length=100, blank=True, null=True)
     direccion = models.CharField(max_length=1000,blank=True, null=True)
@@ -123,7 +129,8 @@ class Mesa(models.Model):
     idMesa = models.IntegerField(primary_key=True)
     sucursal = models.ForeignKey(Sucursal, on_delete=models.CASCADE, null=True, blank=True)
     capacidad = models.IntegerField()
-    ocupada = models.BooleanField(default=False)
+    # Índice añadido: Para que el sistema sepa rapidísimo qué mesas están libres
+    ocupada = models.BooleanField(default=False, db_index=True)
 
     def __str__(self):
         return f"Mesa {self.idMesa} ({self.ocupada})"
@@ -132,7 +139,7 @@ class Mesa(models.Model):
         db_table = 'Mesa'
         unique_together = ('idMesa', 'sucursal')
 
-# 5. Modelo Proveedor
+# 5. Modelo Proveedor (Se mantiene igual)
 class Proveedor(models.Model):
     idProveedor = models.AutoField(primary_key=True)
     nombre = models.CharField(max_length=100, unique=True)
@@ -152,7 +159,8 @@ class ArticuloInventario(models.Model):
     nombre = models.CharField(max_length=100)
     unidad_de_medida = models.CharField(max_length=20)
     stock = models.DecimalField(max_digits=10, decimal_places=2)
-    tipoArticulo = models.CharField(max_length=20)
+    # Índice añadido: Por si filtramos entre "Insumos", "Bebidas", "Limpieza", etc.
+    tipoArticulo = models.CharField(max_length=20, db_index=True)
     ubicacion = models.CharField(max_length=20, blank=True, null=True)
 
     def __str__(self):
@@ -166,7 +174,8 @@ class ArticuloInventario(models.Model):
 class Pedido(models.Model):
     idPedido = models.AutoField(primary_key=True)
     sucursal = models.ForeignKey(Sucursal, on_delete=models.PROTECT, null=True, blank=True)
-    fecha = models.DateTimeField(default=timezone.now)
+    # Índice añadido: Fundamental. Todos los reportes de ventas se agruparán por fecha
+    fecha = models.DateTimeField(default=timezone.now, db_index=True)
     montoTotal = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
     metodoPago = models.CharField(max_length=50, blank=True, null=True)
     
@@ -179,11 +188,13 @@ class Pedido(models.Model):
         ('ANULADA', 'Anulada'),
     ]
     
+    # Índice añadido: Para calcular ventas sumando solo facturas 'VIGENTES'
     estado_factura = models.CharField(
         max_length=10, 
         choices=ESTADOS_FACTURA, 
         default='VIGENTE',
-        verbose_name="Estado de la Factura"
+        verbose_name="Estado de la Factura",
+        db_index=True
     )
     
     def __str__(self):
@@ -206,7 +217,8 @@ class Pedido_ProductoMenu(models.Model):
         ('Merma', 'Merma'),
         ('Anulado', 'Anulado'),
     ]
-    estado = models.CharField(max_length=20, choices=ESTADOS, default='Registrado')
+    # Índice añadido: VITAL. La pantalla de cocina estará filtrando todo el tiempo por 'Registrado'
+    estado = models.CharField(max_length=20, choices=ESTADOS, default='Registrado', db_index=True)
     cantidad = models.IntegerField(default=1)
 
     def __str__(self):
@@ -215,7 +227,7 @@ class Pedido_ProductoMenu(models.Model):
     class Meta:
         db_table = 'Pedido_ProductoMenu'
 
-# 9. Modelo Intermedio: Empleado_Pedido
+# 9. Modelo Intermedio: Empleado_Pedido (Se mantiene igual, unique_together genera índice)
 class Empleado_Pedido(models.Model):
     idEmpleado_Pedido = models.AutoField(primary_key=True)
     idEmpleado = models.ForeignKey(Empleado, on_delete=models.PROTECT)
@@ -229,7 +241,7 @@ class Empleado_Pedido(models.Model):
         unique_together = (('idEmpleado', 'idPedido'),) 
         db_table = 'Empleado_Pedido'
 
-# 10. Modelo Intermedio: ProductoMenu_ArticuloInventario
+# 10. Modelo Intermedio: ProductoMenu_ArticuloInventario (Se mantiene igual)
 class ProductoMenu_ArticuloInventario(models.Model):
     idProductoMenu_ArticuloInventario = models.AutoField(primary_key=True)
     idProductoMenu = models.ForeignKey(ProductoMenu, on_delete=models.CASCADE)
@@ -246,7 +258,7 @@ class ProductoMenu_ArticuloInventario(models.Model):
 # 11. Modelo Intermedio: ArticuloInventario_Proveedor
 class ArticuloInventario_Proveedor(models.Model):
     idArticuloInventario_Proveedor = models.AutoField(primary_key=True)
-    fechaCompra = models.DateTimeField(default=timezone.now)
+    fechaCompra = models.DateTimeField(default=timezone.now, db_index=True) # Añadido para reportes de gastos
     precioCompra = models.DecimalField(max_digits=10, decimal_places=2)
     cantidadCompra = models.DecimalField(max_digits = 10, decimal_places=2)
     idArticuloInventario = models.ForeignKey(ArticuloInventario, on_delete=models.CASCADE)
@@ -288,23 +300,22 @@ class VistaAlertasStock(models.Model):
 class AuditoriaGeneral(models.Model):
     id_auditoria = models.AutoField(primary_key=True)
     
-    # 1. ¿Quién lo hizo?
-    empleado_id = models.IntegerField(null=True, blank=True)
+    # Índice añadido: Como no usamos ForeignKey aquí 
+    # Django no le pone índice automático. Se lo ponemos manual para buscar rápido qué hizo un empleado.
+    empleado_id = models.IntegerField(null=True, blank=True, db_index=True)
     usuario_nombre = models.CharField(max_length=100)
     rol = models.CharField(max_length=50)
-    sucursal_id = models.IntegerField(null=True, blank=True)
+    sucursal_id = models.IntegerField(null=True, blank=True, db_index=True)
     
-    # 2. ¿Qué y dónde lo hizo?
-    modulo = models.CharField(max_length=50) # Ej. 'Mesas', 'Login', 'Facturación', 'Inventario'
-    accion = models.CharField(max_length=30) # Ej. 'Crear', 'Eliminar', 'Inicio de Sesión', 'Anular'
+    # Índices añadidos: Si queremos ver "Todo lo que pasó en Facturación" o "Todos los Delete"
+    modulo = models.CharField(max_length=50, db_index=True) 
+    accion = models.CharField(max_length=30, db_index=True) 
     
-    # 3. Detalles específicos
-    detalles = models.TextField() # Aquí guardaremos un resumen, ej: "Se cambió la mesa 5 de capacidad 2 a 4" o "Factura 123 anulada por error de cobro"
+    detalles = models.TextField() 
     
-    # 4. ¿Cuándo?
-    fecha_accion = models.DateTimeField(default=timezone.now)
+    # Índice añadido: Fundamental porque tenemos un ordering=['-fecha_accion'] en Meta
+    fecha_accion = models.DateTimeField(default=timezone.now, db_index=True)
     
-    # (Opcional) Dirección IP para seguridad
     ip_address = models.GenericIPAddressField(null=True, blank=True)
 
     class Meta:
