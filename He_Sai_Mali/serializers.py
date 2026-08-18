@@ -169,6 +169,7 @@ class LoginSerializer(serializers.Serializer):
         write_only=True,
         error_messages={'blank': 'La contraseña no puede quedarse vacía.', 'required': 'La contraseña es obligatoria.'}
     )
+    recordar = serializers.BooleanField(required=False, default=False)
 
 class ProveedorSerializer(serializers.ModelSerializer):
     telefono = serializers.CharField(

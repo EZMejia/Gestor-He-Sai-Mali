@@ -148,6 +148,7 @@ class RegistroEmpleadoAPIView(APIView):
         if serializer.is_valid():
             empleado = serializer.save(sucursal_id=sucursal_id)
             registrar_auditoria(request, 'Empleados', 'Creación', f"Se registró el nuevo empleado '{empleado.usuario}' con rol {empleado.rol}.", sucursal_afectada_id=sucursal_id)
+            messages.success(request, f"Empleado registrado exitosamente. Su usuario asignado es: {empleado.usuario}")
             return Response({"status": "success"}, status=status.HTTP_201_CREATED)
             
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
@@ -164,13 +165,20 @@ class LoginAPIView(APIView):
         contrasena = serializer.validated_data['contrasena']
         
         user = authenticate(request, username=usuario, password=contrasena)
-        
+
+        recordar = serializer.validated_data.get('recordar', False)
+
         if user is not None:
             if not user.is_active:
                 return Response({'error': 'Este usuario se encuentra inactivo.'}, status=status.HTTP_400_BAD_REQUEST)
                 
             login(request, user)
-            
+
+            if recordar:
+                request.session.set_expiry(604800)  # Mantiene la sesión iniciada por 1 semanas (7 días)
+            else:
+                request.session.set_expiry(0)
+
             registrar_auditoria(request, 'Autenticación', 'Inicio de Sesión', f"El usuario '{user.usuario}' inició sesión exitosamente.", sucursal_afectada_id=user.sucursal_id)
             
             rol = (user.rol or '').strip().lower()
