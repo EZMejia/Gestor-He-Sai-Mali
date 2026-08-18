@@ -5,19 +5,12 @@
 
 {% block extra_style %}
     <style>
-        :root {
-            /* Colores del diseño de la APP (He Sai Mali) */
-            --primary-color: #981a28; /* Rojo Oscuro (Header) */
-            --secondary-color: #f3bb67; /* Amarillo (Acento/Border) */
-            --sidebar-bg: #2b3543; /* Gris Oscuro (Usado para el menú lateral) */
-            --bg-page: #2c3038; /* Gris Oscuro (Fondo de página) */
-            --text-light: #ffffff;
-            --text-accent: #dacfb7;
-            --menu-item-hover: #b12131; /* Rojo más claro para hover */
-            --progress-bg: #e0e0e0;
+        body { 
+            height: 100%; 
+            overflow: hidden; 
+            background-color: var(--bg-page-claro);
+            scrollbar-color: var(--primary-color) var(--bg-page-claro);
         }
-
-        body { height: 100%; overflow: hidden; }
 
         .btn-nuevo {
             display: flex;
@@ -33,58 +26,60 @@
             margin: 20px 0px;
         }
 
-        .btn-nuevo:hover { background-color:#832630; color: white; text-decoration: none;}
+        .btn-nuevo:hover { background-color:var(--menu-item-hover); color: white; text-decoration: none;}
 
         /* Contenedor General */
         .container_pedidos {
             display: block;
             box-sizing: border-box;
             margin: 10px auto;
-            background-color: white;
+            background-color: var(--table-even);
             width: 100%;
             border-radius: 6px;
+            border: solid 1px var(--table-thead);
             box-shadow: 0 2px 5px rgba(0,0,0,0.1);
         }
         
-        .info { display: flex; justify-content: flex-end; }
+        .info { display: flex; justify-content: flex-end; color: var(--texto-oscuro); }
         .total { align-items: center; display: flex; margin-right: auto; margin-left: 20px; }
         .fecha { justify-content: flex-end; padding: 5px; margin: 5px; border-radius: 5px; }
 
         .pedido_head {
             display: flex;
-            background-color: #f2f2f2;
-            color: #981a28;
+            background-color: var(--table-odd);
+            color: var(--rojo-light);
             border-radius: 5px 5px 0 0;
             padding: 2px;
-            border-bottom: 1px solid #dfe3e6;
+            border-bottom: 1px solid var(--table-thead);
         }
+
         .pedido_head .numero { align-items: center; display: flex; margin-right: auto; margin-left: 10px; }
         .pedido_head .cliente { justify-content: flex-end; padding: 5px; margin: 5px; }
 
         /* Lista de Platillos */
-        h3 { margin-left: 20px; margin-bottom: 0; font-size: 1.1rem; color: #444; }
+        h3 { margin-left: 20px; margin-bottom: 0; font-size: 1.1rem; color: var(--texto-oscuro); }
         .lista_platillos { margin: 20px; margin-top: 10px; padding-left: 0; padding-bottom: 10px; }
         
         .lista_platillos li.platillos {
             display: grid;
             grid-template-columns: 1fr 150px 200px;
             align-items: center;
-            border-bottom: 1px solid #dfe3e6;
+            border-bottom: 1px solid var(--table-thead);
             list-style-type: none;
             padding: 8px 10px;
         }
 
         /* Progress Bar */
-        .progress-container {
+        .table-theadntainer {
             width: 120px;
-            background-color: var(--progress-bg);
+            background-color: var(--table-thead);
             border-radius: 10px;
             height: 10px;
             margin: 0 15px;
             overflow: hidden;
             border: 1px solid #ccc;
         }
-        .progress-bar {
+        .table-theadr {
             height: 100%;
             border-radius: 5px;
             transition: width 0.5s ease-in-out;
@@ -123,8 +118,8 @@
             opacity: 1; /* Asegura que no se vea desvanecido */
         }
 
-        .lista_platillos li.platillos:nth-child(odd) { background-color: #F8F8F8; }
-        .lista_platillos li.platillos:nth-child(even) { background-color: #EEEEEE; }
+        .lista_platillos li.platillos:nth-child(odd) { color: var(--texto-oscuro); background-color: var(--table-odd); }
+        .lista_platillos li.platillos:nth-child(even) { color: var(--texto-oscuro); background-color: var(--table-even); }
 
         /* Botones de acción inferior */
         .action-buttons { display: flex; justify-content: flex-end; gap: 10px; padding: 0 20px 20px 0; margin-left: 20px; }
@@ -147,7 +142,7 @@
         .overlay-custom { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.5); z-index: 1000; }
         .modal-card-custom {
             display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); 
-            z-index: 1001; width: 400px; max-width: 90%; background-color: white; border-radius: 5px;
+            z-index: 1001; width: 400px; max-width: 90%; background-color: var(--bg-claro); border-radius: 5px;
             box-shadow: 0 4px 10px rgba(0, 0, 0, 0.5); border: 3px solid var(--secondary-color);
         }
         .modal-header-custom { background-color: var(--primary-color); color: white; padding: 15px; text-align: center; }
@@ -208,7 +203,7 @@
             }
 
             /* 5. Barra de progreso a ancho completo */
-            .progress-container {
+            .table-theadntainer {
                 width: 100%;
                 margin: 0;
             }
@@ -265,14 +260,14 @@
                             <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
                         </div>
                         <form id="formularioPago">
-                            <div class="modal-body">
-                                <h4 id="montoTotalDisplay" class="mb-3" style="color: #444; font-weight: bold;">Monto Total:</h4>
-                                <label for="metodo_pago" class="form-label" style="font-weight: bold;">Seleccione el método:</label>
-                                <select id="metodo_pago" name="metodo_pago" required class="form-select">
+                            <div class="modal-body" style="background-color: var(--bg-claro);">
+                                <h4 id="montoTotalDisplay" class="mb-3" style="color: var(--muted-text); font-weight: bold;">Monto Total:</h4>
+                                <label for="metodo_pago" class="form-label" style="font-weight: bold; color: var(--texto-oscuro);">Seleccione el método:</label>
+                                <select id="metodo_pago" name="metodo_pago" required class="w-100 py-2 px-3 rounded shadow-none" style="background: var(--table-even); color: var(--texto-oscuro); border: solid 1px var(--table-thead);">
                                     <!-- Cargado por JS -->
                                 </select>
                             </div>
-                            <div class="modal-footer">
+                            <div class="modal-footer" style="background-color: var(--bg-claro);">
                                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
                                 <button type="submit" class="btn" style="background-color: #38761d; color: white;">Confirmar Pago</button>
                             </div>
@@ -291,11 +286,11 @@
                             </h5>
                             <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
                         </div>
-                        <div class="modal-body">
-                            <p>¿Está seguro de que desea eliminar el <strong>Pedido N° <span id="modal-id-pedido-texto"></span></strong>?</p>
-                            <p class="text-muted" style="font-size: 0.9em;">Esta acción eliminará permanentemente la orden y retornará los insumos al almacén.</p>
+                        <div class="modal-body" style="background-color: var(--bg-claro);">
+                            <p style="color: var(--texto-oscuro);">¿Está seguro de que desea eliminar el <strong>Pedido N° <span id="modal-id-pedido-texto"></span></strong>?</p>
+                            <p style="color: var(--muted-text); font-size: 0.9em;">Esta acción eliminará permanentemente la orden y retornará los insumos al almacén.</p>
                         </div>
-                        <div class="modal-footer">
+                        <div class="modal-footer" style="background-color: var(--bg-claro);">
                             <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
                             <form id="form-eliminar-pedido">
                                 <button type="submit" class="btn" style="background-color: var(--primary-color); color: white;">Sí, Eliminar Pedido</button>
@@ -314,12 +309,12 @@
                             <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
                         </div>
                         <form id="form-baja-platillo">
-                            <div class="modal-body">
+                            <div class="modal-body" style="background-color: var(--bg-claro);">
                                 <p id="modal-baja-alerta" class="alert py-2 small"></p>
-                                <strong>Cliente: <span id="modal-baja-cliente" class="fw-normal"></span></strong><br>
-                                <strong>Platillo: <span id="modal-baja-nombre" class="fw-normal"></span></strong>
+                                <strong style="color: var(--texto-oscuro);">Cliente: <span id="modal-baja-cliente" class="fw-normal"></span></strong><br>
+                                <strong style="color: var(--texto-oscuro);">Platillo: <span id="modal-baja-nombre" class="fw-normal"></span></strong>
                             </div>
-                            <div class="modal-footer border-secondary">
+                            <div class="modal-footer border-secondary" style="background-color: var(--bg-claro);">
                                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
                                 <button type="submit" class="btn" id="modal-baja-btn-submit"></button>
                             </div>
@@ -472,8 +467,8 @@
                     platillosHtml += `
                         <li class="platillos">
                             <div class="platillo">${plat.cantidad}x ${plat.nombre}</div>
-                            <div class="progress-container" title="Estado: ${plat.estado}">
-                                <div class="progress-bar" style="width: ${progressWidth};"></div>
+                            <div class="table-theadntainer" title="Estado: ${plat.estado}">
+                                <div class="table-theadr" style="width: ${progressWidth};"></div>
                             </div>
                             <div class="d-flex align-items-center justify-content-end gap-2" style="width: 100%;">
                                 <button type="button" class="platillo_estado btn-cambio-estado ${extraClass}" 

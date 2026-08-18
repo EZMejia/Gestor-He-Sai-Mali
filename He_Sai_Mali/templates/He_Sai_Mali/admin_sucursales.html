@@ -5,24 +5,29 @@
 
 {% block extra_style %}
     <style>
-        :root {
-            --primary-color: #981a28; 
-            --secondary-color: #f3bb67; 
-            --sidebar-bg: #2b3543; 
-            --bg-page: #2c3038; 
-            --text-light: #ffffff;
-            --text-accent: #dacfb7;
-            --menu-item-hover: #b12131; 
+        body { 
+            height: 100%; 
+            overflow: hidden; 
+            background-color: var(--bg-page-claro);
         }
 
-        body { height: 100%; overflow: hidden; }
+        .main-content { 
+            height: calc(100dvh - 60px); 
+            display: flex; 
+            flex-direction: column; 
+            overflow: hidden; 
+            transition: margin-left 0.3s ease;
+        }
 
-        .main-content { height: calc(100dvh - 60px); display: flex; flex-direction: column; overflow: hidden; transition: margin-left 0.3s ease;}
-        .contenido { flex-grow: 1; padding: 20px 20px; overflow-y: auto;}
+        .contenido { 
+            flex-grow: 1; 
+            padding: 20px 20px; 
+            overflow-y: auto;
+        }
 
         .container_admin {
-            background-color: white;
-            box-shadow: 0 0 50px 10px rgba(0, 0, 0, 0.3);
+            background-color: var(--table-even); 
+            box-shadow: 0 0 10px 10px rgba(0, 0, 0, 0.3);
             width: 100%;
             border-radius: 5px;
             padding: 20px;
@@ -30,21 +35,22 @@
         }
 
         .card-custom {
-            border: 1px solid #ddd;
             border-radius: 5px;
             margin-bottom: 20px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
         }
+
         .card-header-custom {
-            background-color: #981a28; 
+            background-color: var(--primary-color); 
             color: white;
             padding: 10px 15px;
-            border-bottom: 3px solid #981a28; 
+            border-bottom: 3px solid var(--primary-color); 
             border-radius: 5px 5px 0 0;
             font-weight: bold;
         }
         .card-body-custom {
             padding: 15px;
+            background-color: var(--bg-claro);
+            border-radius: 0 0 5px 5px;
         }
 
         .btn-custom-success {
@@ -64,7 +70,21 @@
             margin-bottom: 5px;
             font-weight: bold;
         }
-        .form-control, .form-control-custom {
+        .form-control-custom {
+            width: 100%;
+            padding: 8px;
+            margin-bottom: 10px;
+            border: 1px solid #ccc;
+            background: transparent; 
+            color: var(--texto-oscuro);
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        textarea.form-control-custom { resize: vertical; }
+
+        .form-control-busqueda {
+            background: var(--bg-claro);
+            color: var(--texto-oscuro);
             width: 100%;
             padding: 8px;
             margin-bottom: 10px;
@@ -72,22 +92,6 @@
             border-radius: 4px;
             box-sizing: border-box;
         }
-        textarea.form-control-custom { resize: vertical; }
-
-        .table-custom {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 0px;
-        }
-        .table-custom thead tr { background-color: #ddd; }
-        .table-custom th, .table-custom td {
-            padding: 10px;
-            text-align: left;
-            border-bottom: 1px solid #eee;
-        }
-        .table-custom tbody tr:nth-child(odd) { background-color: #F8F8F8; }
-        .table-custom tbody tr:nth-child(even) { background-color: #EEEEEE; }
-        .table-custom tbody tr:hover { background-color: #e0e0e0; }
 
         .btn-custom-danger {
             background-color: #f44336; 
@@ -116,13 +120,13 @@
     <main class="main-content" id="main-content">
         <div class="contenido">
             <div class="container_admin">
-                <h1 style="color: #981a28; margin-bottom: 20px;">Gestión Operativa de Sucursales</h1>
+                <h1 style="color: var(--primary-color); margin-bottom: 20px;">Gestión Operativa de Sucursales</h1>
 
                 <div id="alert-container" class="toast-container position-fixed top-0 end-0 p-4" style="z-index: 9999; pointer-events: none;"></div>
 
-                <div class="card-custom">
-                    <div class="card-header-custom">
-                        <h2 id="form-titulo">Registrar Nueva Sucursal</h2>
+                <div class="card-custom shadow">
+                    <div id="form-titulo" class="card-header-custom">
+                        Registrar Nueva Sucursal
                     </div>
                     <div class="card-body-custom">
                         <form id="form-sucursal">
@@ -131,29 +135,29 @@
                                 
                                 <!-- Fila 1 -->
                                 <div style="flex: 1 1 30%; min-width: 250px;">
-                                    <label class="form-label-custom">Nombre Comercial *</label>
+                                    <label class="form-label-custom" for="suc-nombre" style="color: var(--texto-oscuro);">Nombre Comercial *</label>
                                     <input type="text" id="suc-nombre" class="form-control-custom" required autocomplete="off">
                                 </div>
                                 <div style="flex: 1 1 30%; min-width: 200px;">
-                                    <label class="form-label-custom">Municipio *</label>
+                                    <label class="form-label-custom" for="suc-municipio" style="color: var(--texto-oscuro);">Municipio *</label>
                                     <input type="text" id="suc-municipio" class="form-control-custom" required autocomplete="off">
                                 </div>
                                 <div style="flex: 1 1 30%; min-width: 200px;">
-                                    <label class="form-label-custom">Teléfono</label>
+                                    <label class="form-label-custom" for="suc-telefono" style="color: var(--texto-oscuro);">Teléfono</label>
                                     <input type="text" id="suc-telefono" class="form-control-custom" pattern="[0-9]{8}" oninput="this.value = this.value.replace(/[^0-9]/g, '').slice(0, 8);" autocomplete="off">
                                 </div>
 
                                 <!-- Fila 2 -->
                                 <div style="flex: 1 1 30%; min-width: 200px;">
-                                    <label class="form-label-custom">Número RUC</label>
+                                    <label class="form-label-custom" for="suc-ruc" style="color: var(--texto-oscuro);">Número RUC</label>
                                     <input type="text" id="suc-ruc" class="form-control-custom" autocomplete="off">
                                 </div>
                                 <div style="flex: 1 1 30%; min-width: 200px;">
-                                    <label class="form-label-custom">Matrícula Municipal</label>
+                                    <label class="form-label-custom" for="suc-matricula" style="color: var(--texto-oscuro);">Matrícula Municipal</label>
                                     <input type="text" id="suc-matricula" class="form-control-custom" autocomplete="off">
                                 </div>
                                 <div style="flex: 1 1 100%; min-width: 250px;">
-                                    <label class="form-label-custom">Dirección Exacta *</label>
+                                    <label class="form-label-custom" for="suc-direccion" style="color: var(--texto-oscuro);">Dirección Exacta *</label>
                                     <textarea id="suc-direccion" class="form-control-custom" rows="2" required></textarea>
                                 </div>
                                 
@@ -167,16 +171,28 @@
                     </div>
                 </div>
 
-                <h2 style="color: #981a28; margin-top: 30px; border-bottom: 2px solid #981a28; padding-bottom: 5px; margin-bottom: 10px;">Red de Sucursales</h2>
+                <h2 style="color: var(--primary-color); margin-top: 30px; border-bottom: 2px solid var(--primary-color); padding-bottom: 5px; margin-bottom: 10px;">Red de Sucursales</h2>
                 
-                <label style="font-weight: bold; display: block; margin-bottom: 5px;">Buscar sucursal:</label>
-                <div style="position: relative; display: flex; align-items: center; margin-bottom: 20px;">
-                    <span style="position: absolute; left: 10px; color: #888;"><i class="fas fa-search"></i></span>
-                    <input type="text" id="buscador" class="form-control" placeholder="Escribe el nombre de la sucursal..." style="padding-left: 35px;" onkeyup="filtrarSucursal()">
-                    <span id="btn-limpiar" onclick="limpiarBusqueda()" style="position: absolute; right: 10px; color: #888; cursor: pointer; display: none;"><i class="fas fa-times-circle"></i></span>
+                <!-- Buscador -->
+                <div style="margin-bottom: 20px;">
+                    <label for="buscador" style="font-weight: bold; display: block; margin-bottom: 5px; color: var(--texto-oscuro);">Buscar sucursal:</label>
+                    <div style="position: relative; display: flex; align-items: center;">
+                        <span style="position: absolute; left: 10px; color: #888;">
+                            <i class="fas fa-search"></i>
+                        </span>
+                        <input type="text" id="buscador" class="form-control-busqueda" 
+                            placeholder="Escribe el nombre del producto..." 
+                            style="padding-left: 35px; padding-right: 35px; margin-bottom: 0;" 
+                            autocomplete="off"
+                            onkeyup="filtrarSucursal()">
+                        <span id="btn-limpiar" onclick="limpiarBusqueda()" 
+                            style="position: absolute; right: 10px; color: #888; cursor: pointer; display: none;">
+                            <i class="fas fa-times-circle"></i>
+                        </span>
+                    </div>
                 </div>
 
-                <div class="card-custom" style="padding: 0; overflow-x: auto;">
+                <div class="card-custom shadow-sm" style="padding: 0; overflow-x: auto;">
                     <table class="table-custom" id="tabla-sucursales">
                         <thead>
                             <tr>
@@ -202,11 +218,11 @@
                         <h5 class="modal-title"><i class="fas fa-exclamation-triangle"></i> Confirmar Acción</h5>
                         <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                     </div>
-                    <div class="modal-body">
-                        <p>¿Está seguro de que desea eliminar/desactivar la sucursal <strong><span id="modal-nombre"></span></strong> (ID: <span id="modal-id"></span>)?</p>
-                        <p class="text-muted small">Nota: Si la sucursal ya tiene empleados o registros asociados, será desactivada para proteger la integridad del sistema.</p>
+                    <div class="modal-body" style="background-color: var(--bg-claro);">
+                        <p style="color: var(--texto-oscuro);">¿Está seguro de que desea eliminar/desactivar la sucursal <strong><span id="modal-nombre"></span></strong> (ID: <span id="modal-id"></span>)?</p>
+                        <p style="font-size: 0.9em; color: var(--muted-text);">Nota: Si la sucursal ya tiene empleados o registros asociados, será desactivada para proteger la integridad del sistema.</p>
                     </div>
-                    <div class="modal-footer">
+                    <div class="modal-footer" style="background-color: var(--bg-claro);">
                         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
                         <button type="button" id="btn-confirmar-eliminar" class="btn" style="background-color: var(--primary-color); color: white;">Confirmar</button>
                     </div>
@@ -237,6 +253,19 @@
             const tbody = document.querySelector('#tabla-sucursales tbody');
             tbody.innerHTML = '';
 
+            // ESTADO: No hay registrados
+            if (data.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="6" style="text-align: center; padding: 30px; color: #666;">
+                            <i class="fas fa-store-slash fa-3x" style="margin-bottom: 15px; color: #ccc;"></i>
+                            <br>
+                            <span style="font-size: 1.1em; font-weight: bold;">No hay sucursales registradas.</span>
+                        </td>
+                    </tr>`;
+                return;
+            }
+
             data.forEach(s => {
                 const estadoBadge = s.is_active 
                     ? `<span class="badge bg-success">Activa</span>` 
@@ -245,7 +274,6 @@
                 const tr = document.createElement('tr');
                 tr.className = 'fila-sucursal';
                 
-                // CORRECCIÓN APLICADA: Botón "Eliminar" idéntico al de Proveedores
                 tr.innerHTML = `
                     <td>${s.idSucursal}</td>
                     <td class="nombre-sucursal fw-bold">${s.nombre_comercial}</td>
@@ -385,14 +413,45 @@
     }
 
     function filtrarSucursal() {
-        const input = document.getElementById('buscador').value.toLowerCase();
+        const input = document.getElementById('buscador');
+        const valorBusqueda = input.value.toLowerCase();
         const btn = document.getElementById('btn-limpiar');
         const filas = document.querySelectorAll('.fila-sucursal');
-        btn.style.display = input.length > 0 ? "block" : "none";
+        const tbody = document.querySelector('#tabla-sucursales tbody');
+        
+        btn.style.display = valorBusqueda.length > 0 ? "block" : "none";
+        
+        let coincidencias = 0;
+
         filas.forEach(f => {
             const txt = f.querySelector('.nombre-sucursal').textContent.toLowerCase();
-            f.style.display = txt.includes(input) ? "" : "none";
+            if (txt.includes(valorBusqueda)) {
+                f.style.display = "";
+                coincidencias++;
+            } else {
+                f.style.display = "none";
+            }
         });
+
+        // Limpiar mensaje previo de 'sin resultados' si existe
+        const filaVaciaPrevia = document.getElementById('empty-results-row-sucursales');
+        if (filaVaciaPrevia) filaVaciaPrevia.remove();
+
+        // ESTADO: No se encontraron coincidencias
+        if (coincidencias === 0 && filas.length > 0) {
+            const emptyRow = document.createElement('tr');
+            emptyRow.id = 'empty-results-row-sucursales';
+            emptyRow.innerHTML = `
+                <td colspan="6">
+                    <div class="empty-results" style="padding: 30px; text-align: center; color: #666;">
+                        <i class="fas fa-ban fa-2x" style="margin-bottom: 15px; color: #ccc;"></i>
+                        <p style="font-size: 1.1em; margin-bottom: 0;">
+                            No se encontraron sucursales que coincidan con "<b>${input.value}</b>"
+                        </p>
+                    </div>
+                </td>`;
+            tbody.appendChild(emptyRow);
+        }
     }
 
     function limpiarBusqueda() {

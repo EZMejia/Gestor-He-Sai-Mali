@@ -6,19 +6,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="icon" type="image/png" href="{% static 'He_Sai_Mali/logo.png' %}">
     <title>Códigos QR de Mesas (Temporizador)</title>
-    <style>
-        :root {
-            /* Colores del diseño de la APP (He Sai Mali) */
-            --primary-color: #981a28; /* Rojo Oscuro (Header) */
-            --secondary-color: #f3bb67; /* Amarillo (Acento/Border) */
-            --sidebar-bg: #2b3543; /* Gris Oscuro (Usado para el menú lateral) */
-            --bg-page: #2c3038; /* Gris Oscuro (Fondo de página) */
-            --text-light: #ffffff;
-            --text-accent: #dacfb7;
-            --menu-item-hover: #b12131; /* Rojo más claro para hover */
-        }
+    
+    <!-- styles.css -->
+    <link rel="stylesheet" href="{% static 'He_Sai_Mali/css/styles.css' %}">
 
-        /* Estilos generales y del body */
+    <style>
         * {
             box-sizing: border-box;
             margin: 0;
@@ -27,49 +19,45 @@
         }
 
         body {
-            display: flex;
             min-height: 100vh;
             user-select: none;
+            background-color: var(--bg-page);
         }
 
-        /* Estilos del Contenedor Principal (Layout) */
         #app {
             display: flex;
             flex-direction: column;
+            min-height: 100vh;
             width: 100%;
         }
 
         #app::before {
             content: '';
-            position: fixed; /* Ocupa toda la ventana y se mantiene fijo */
+            position: fixed;
             top: 0;
             left: 0;
             width: 100%;
             height: 100%;
-            
-            /* Aplicamos la imagen de fondo y el filtro aquí */
             background-image: url("{% static 'He_Sai_Mali/fondo.png' %}");
             background-position: center bottom;
             background-size: cover;
             background-attachment: fixed;
-            
-            /* APLICACIÓN DEL FILTRO SOLO A LA IMAGEN DE FONDO */
             filter: grayscale(100%) brightness(110%); 
-            
-            z-index: -1; /* Manda la imagen al fondo, detrás de todo el contenido */
+            z-index: -1; 
         }
         
         .header {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            height: 60px;
+            height: 70px;
             background-color: var(--primary-color);
-            border-bottom: 8px solid var(--primary-color);
             color: var(--text-light);
-            padding: 30px 15px;
+            padding: 0 20px;
             box-shadow: 0 6px 10px black;
             position: fixed;
+            top: 0;
+            left: 0;
             width: 100%;
             z-index: 1000;
         }
@@ -77,64 +65,102 @@
         .header-title {
             display: flex;
             align-items: center;
-            font-size: 1.2em;
+            font-size: 1.2rem;
             font-weight: bold;
             color: var(--text-accent);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
         }
+
         .header-title img {
-            height: 40px;
-            margin-right: 10px;
+            height: 35px;
+            width: auto;
+            margin-right: 12px;
+            flex-shrink: 0;
         }
         
+        /* Contenedor principal ajustado para no ser tapado por el header */
         .qr-list-container {
-            flex-grow: 1; /* Permite que este contenedor use todo el espacio restante */
+            flex: 1;
             display: flex;
             justify-content: center;
-            align-items: center; /* Centra vertical y horizontalmente */
+            align-items: center;
             padding: 20px;
-            overflow: auto; /* Permite scroll si el contenido es demasiado grande */
+            margin-top: 70px;
+            width: 100%;
+        }
+
+        .qr-grid {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+            justify-content: center;
+            align-items: center;
+            width: 100%;
+            max-width: 1200px;
         }
         
-        /* Contenedor individual del QR (que contiene h2, img, p) */
+        /* Estilos de las tarjetas ajustados para pantallas chicas */
         .qr-container {
             display: flex;
             flex-direction: column;
             align-items: center;
-            
-            /* Estilos originales */
-            border: 1px solid #ccc; 
             border-radius: 20px;
-            padding: 15px;
+            padding: 20px;
             text-align: center;
-            
-            /* Colores de texto para contraste */
             background-color: #3f444d; 
             color: var(--text-light);
             border: 2px solid var(--secondary-color);
-            box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
-            max-width: 90vw; /* Máximo 90% del ancho de la ventana */
-            
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4);
+            width: 100%;
+            max-width: 400px; /* Controla el ancho máximo en pantallas grandes */
         }
 
-        /* Estilo para la imagen QR */
         .qr-image {
-            /* Usamos la altura de la ventana (vh) menos el header y el padding. 
-               Se establece un máximo para que sea grande pero no desborde. */
-            max-height: 80vh; 
-            max-width: 80vw;
-            width: auto !important; /* Anula el width fijo de 200px */
-            height: auto !important; /* Anula el height fijo de 200px */
+            max-height: 55vh; 
+            max-width: 100%;
+            width: auto;
+            height: auto;
             border-radius: 10px;
-            /* Asegura que el tamaño esté limitado por el contenedor */
             object-fit: contain; 
+            background-color: #fff; /* Asegura fondo blanco por si la imagen QR es transparente */
+            padding: 10px;
+        }
+
+        .qr-container p {
+            margin-top: 15px;
+            font-size: 0.95rem;
+            line-height: 1.4;
         }
 
         a, img, i {
             -webkit-user-drag: none;
             -webkit-user-select: none;
-            -moz-user-select: none;
-            -ms-user-select: none;
             user-select: none;
+        }
+
+        /* --- MEDIA QUERIES PARA PANTALLAS PEQUEÑAS --- */
+        @media (max-width: 576px) {
+            .header-title {
+                font-size: 1rem;
+            }
+            
+            .header-title img {
+                height: 28px;
+            }
+
+            .qr-container {
+                padding: 15px;
+            }
+
+            .qr-image {
+                max-height: 45vh;
+            }
+
+            .qr-container p {
+                font-size: 0.85rem;
+            }
         }
     </style>
 </head>
@@ -146,16 +172,17 @@
                 {% if titulo %}{{ titulo }}{% endif %}
             </h1>
         </header>
-        <div class="qr-list-container">
-            <div style="display: flex; flex-wrap: wrap; gap: 20px; justify-content: center;">
+        
+        <main class="qr-list-container">
+            <div class="qr-grid">
                 {% for mesa in mesas %}
                     <div class="qr-container">
                         <img src="{{ mesa.qr_data }}" alt="QR Code Mesa {{ mesa.idMesa }}" class="qr-image">
-                        <p style="margin-top: 15px;">Escanea para verificar el estado del servicio.</p>
+                        <p style="color: white;">Escanea para verificar el estado del servicio.</p>
                     </div>
                 {% endfor %}
             </div>
-        </div>
+        </main>
     </div>
 </body>
 </html>

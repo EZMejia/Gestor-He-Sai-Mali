@@ -5,30 +5,29 @@
 
 {% block extra_style %}
     <style>
-        :root {
-            /* Colores del diseño de la APP (He Sai Mali) */
-            --primary-color: #981a28; /* Rojo Oscuro (Header) */
-            --secondary-color: #f3bb67; /* Amarillo (Acento/Border) */
-            --sidebar-bg: #2b3543; /* Gris Oscuro (Usado para el menú lateral) */
-            --bg-page: #2c3038; /* Gris Oscuro (Fondo de página) */
-            --text-light: #ffffff;
-            --text-accent: #dacfb7;
-            --menu-item-hover: #b12131; /* Rojo más claro para hover */
+        body { 
+            height: 100%; 
+            overflow: hidden; 
+            background-color: var(--bg-page-claro);
         }
 
-        body { height: 100%; overflow: hidden; }
+        .main-content { 
+            height: calc(100dvh - 60px); 
+            display: flex; 
+            flex-direction: column; 
+            overflow: hidden; 
+            transition: margin-left 0.3s ease;
+        }
 
-        /* ---------------------------------------------------- */
-        /* --- Contenido Principal (MAIN CONTENT) --- */
-        /* ---------------------------------------------------- */
-        .main-content { height: calc(100dvh - 60px); display: flex; flex-direction: column; overflow: hidden; transition: margin-left 0.3s ease;}
+        .contenido { 
+            flex-grow: 1; 
+            padding: 20px 20px; 
+            overflow-y: auto;
+        }
 
-        .contenido { flex-grow: 1; padding: 20px 20px; overflow-y: auto;}
-
-        /* Estilos principales para el contenido de la administración */
         .container_admin {
-            background-color: white;
-            box-shadow: 0 0 50px 10px rgba(0, 0, 0, 0.3);
+            background-color: var(--table-even); 
+            box-shadow: 0 0 10px 10px rgba(0, 0, 0, 0.3);
             width: 100%;
             border-radius: 5px;
             padding: 20px;
@@ -36,16 +35,14 @@
         }
 
         .card-custom {
-            border: 1px solid #ddd;
             border-radius: 5px;
             margin-bottom: 20px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
         }
         .card-header-custom {
-            background-color: #981a28; /* Color principal del diseño */
+            background-color: var(--primary-color);
             color: white;
             padding: 10px 15px;
-            border-bottom: 3px solid #981a28; /* Color de acento */
+            border-bottom: 3px solid var(--primary-color);
             border-radius: 5px 5px 0 0;
             font-weight: bold;
         }
@@ -92,6 +89,17 @@
             box-sizing: border-box;
         }
 
+        .form-control-busqueda {
+            background: var(--bg-claro);
+            color: var(--texto-oscuro);
+            width: 100%;
+            padding: 8px;
+            margin-bottom: 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+
         .form-label-custom {
             display: block;
             margin-bottom: 5px;
@@ -109,80 +117,12 @@
             resize: vertical;
         }
 
-        /* Estilos para la tabla */
-        .table-custom {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 0px;
-            color: #333; /* Color de texto para la tabla */
-        }
-        .table-custom thead tr {
-            background-color: #ddd; /* Color claro del diseño */
-        }
-        .table-custom th, .table-custom td {
-            padding: 10px;
-            text-align: left;
-            border-bottom: 1px solid #eee;
-        }
-        .table-custom tbody tr:nth-child(odd) {
-            background-color: #F8F8F8;
-        }
-        .table-custom tbody tr:nth-child(even) {
-            background-color: #EEEEEE;
-        }
-        .table-custom tbody tr:hover {
-            background-color: #e0e0e0;
-        }
-
         .form-text-custom {
-            color: #6c757d;
+            color: var(--muted-text);
             display: block;
             margin-top: -5px;
             margin-bottom: 10px;
             font-size: 0.85em;
-        }
-
-        /* Estilos del Modal/Overlay de Compra */
-        .overlay-custom {
-            display: none; 
-            position: fixed; 
-            top: 0; 
-            left: 0; 
-            width: 100%; 
-            height: 100%; 
-            background: rgba(0, 0, 0, 0.5); 
-            z-index: 1000;
-        }
-
-        .modal-card-custom {
-            display: none; 
-            position: fixed; 
-            top: 50%; 
-            left: 50%; 
-            transform: translate(-50%, -50%); 
-            z-index: 1001; 
-            width: 400px; 
-            max-width: 90%; 
-            background-color: white;
-            border-radius: 5px;
-            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.5);
-            border: 3px solid #981a28;
-        }
-
-        .modal-header-custom {
-            background-color: #981a28; 
-            color: white;
-            padding: 15px;
-            border-radius:  0 0;
-            font-weight: bold;
-            font-size: 1.2em;
-        }
-        .modal-body-custom {
-            padding: 15px;
-            color: #333;
-        }
-        .modal-input-group {
-            margin-bottom: 15px;
         }
         
         .btn-custom-edit:hover { background-color: #0056b3; }
@@ -197,7 +137,7 @@
         <main class="main-content" id="main-content">
             <div class="contenido">
                 <div class="container_admin">
-                    <h1 style="color: #981a28; margin-bottom: 20px;">Administración de Inventario</h1>
+                    <h1 style="color: var(--primary-color); margin-bottom: 20px;">Administración de Inventario</h1>
 
                     <div class="toast-container position-fixed top-0 end-0 p-4" style="z-index: 1080;">
                         {% if messages %}
@@ -225,35 +165,35 @@
                                 </div>
                                 <form id="form-comprar-ingrediente">
                                     {% csrf_token %}
-                                    <div class="modal-body" style="color: #333;">
+                                    <div class="modal-body" style="color: var(--texto-oscuro); background-color: var(--bg-claro);">
                                         <input type="hidden" id="idIngredienteInput" name="id_ingrediente" required>
 
                                         <div class="mb-3">
                                             <label for="idProveedorInput" class="form-label" style="font-weight: bold;">Proveedor:</label>
-                                            <select class="form-select" id="idProveedorInput" name="id_proveedor_fk" required>
-                                                <option value="" disabled selected>Seleccione un proveedor...</option>
+                                            <select class="form-select" id="idProveedorInput" name="id_proveedor_fk" style="background: transparent; color: var(--texto-oscuro);" required>
+                                                <option value="" style="background: var(--bg-claro);" disabled selected>Seleccione un proveedor...</option>
                                             </select>
                                         </div>
 
                                         <div class="mb-3">
                                             <label for="precioCompra" class="form-label" style="font-weight: bold;">Precio de Compra (C$):</label>
-                                            <input type="number" step="0.01" min="0.01" class="form-control" id="precioCompra" name="precio_compra" required
+                                            <input type="number" step="0.01" min="0.01" class="form-control" id="precioCompra" name="precio_compra" style="background: transparent; color: var(--texto-oscuro);" required
                                                 onkeydown="if(event.key === '-') event.preventDefault();" oninput="if(this.value < 0) this.value = '';">
                                         </div>
 
                                         <div class="mb-3">
                                             <label for="cantidadComprada" class="form-label" style="font-weight: bold;">Cantidad Comprada:</label>
-                                            <input type="number" step="0.01" min="0.01" class="form-control mb-0" id="cantidadComprada" name="cantidad_comprada" required
+                                            <input type="number" step="0.01" min="0.01" class="form-control mb-0" id="cantidadComprada" name="cantidad_comprada" style="background: transparent; color: var(--texto-oscuro);" required
                                                 onkeydown="if(event.key === '-') event.preventDefault();" oninput="if(this.value < 0) this.value = '';">
-                                            <small id="unidadMedidaTexto" class="text-secondary" style="margin: 0px; padding: 0;"></small>
+                                            <small id="unidadMedidaTexto" style="margin: 0px; padding: 0; color: var(--muted-text);"></small>
                                         </div>
 
                                         <div class="mb-3">
                                             <label for="fechaCompra" class="form-label" style="font-weight: bold;">Fecha de la Compra:</label>
-                                            <input type="date" class="form-control" id="fechaCompra" name="fecha_compra" required>
+                                            <input type="date" class="form-control" id="fechaCompra" name="fecha_compra" style="background: transparent; color: var(--texto-oscuro);" required>
                                         </div>
                                     </div>
-                                    <div class="modal-footer">
+                                    <div class="modal-footer" style="background-color: var(--bg-claro);">
                                         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
                                         <button type="submit" class="btn" style="background-color: var(--primary-color); color: white; font-weight: bold;">Registrar Compra</button>
                                     </div>
@@ -264,7 +204,7 @@
                     {# FIN DE MODAL COMPRA #}
 
                     {# Formulario Agregar/Editar Artículo #}
-                    <div class="card-custom">
+                    <div class="card-custom shadow">
                         <div class="card-header-custom" id="card-header-titulo">
                             Agregar Nuevo Artículo de Inventario
                         </div>
@@ -276,32 +216,32 @@
                                 <input type="hidden" id="idArticulo" value="">
                                 
                                 <div style="flex-grow: 1; min-width: 200px;">
-                                    <label for="nombre" class="form-label-custom">Nombre del Artículo:</label>
-                                    <input type="text" name="nombre" id="nombre" class="form-control-custom" required autocomplete="off">
+                                    <label for="nombre" class="form-label-custom" style="color: var(--texto-oscuro);">Nombre del Artículo:</label>
+                                    <input type="text" name="nombre" id="nombre" class="form-control-custom" style="background: transparent; color: var(--texto-oscuro);" required autocomplete="off">
                                 </div>
                                 
                                 <div style="flex-grow: 0; min-width: 150px;">
-                                    <label for="tipo_articulo" class="form-label-custom">Tipo de Artículo:</label>
-                                    <select name="tipo_articulo" id="tipo_articulo" class="form-control-custom" required>
-                                        <option value="">Seleccione el Tipo</option>
-                                        <option value="Ingrediente">Ingrediente</option>
-                                        <option value="Bebida">Bebida</option>
+                                    <label for="tipo_articulo" class="form-label-custom" style="color: var(--texto-oscuro);">Tipo de Artículo:</label>
+                                    <select name="tipo_articulo" id="tipo_articulo" class="form-control-custom" style="background: transparent; color: var(--texto-oscuro);" required>
+                                        <option value="" style="background: var(--table-even); color: var(--texto-oscuro);">Seleccione el Tipo</option>
+                                        <option value="Ingrediente" style="background: var(--table-even); color: var(--texto-oscuro);">Ingrediente</option>
+                                        <option value="Bebida" style="background: var(--table-even); color: var(--texto-oscuro);">Bebida</option>
                                     </select>
                                 </div>
                                 
                                 <div style="flex-grow: 0; min-width: 100px;">
-                                    <label for="stock" class="form-label-custom">Stock Inicial:</label>
-                                    <input type="number" step="0.01" min="0" name="stock" id="stock" class="form-control-custom" required>
+                                    <label for="stock" class="form-label-custom" style="color: var(--texto-oscuro);">Stock Inicial:</label>
+                                    <input type="number" step="0.01" min="0" name="stock" id="stock" class="form-control-custom" style="background: transparent; color: var(--texto-oscuro);" required>
                                 </div>
                                 
                                 <div style="flex-grow: 0; min-width: 150px;">
-                                    <label for="unidad_de_medida" class="form-label-custom">Unidad de Medida (ej. lb, ml, unidad):</label>
-                                    <input type="text" name="unidad_de_medida" id="unidad_de_medida" class="form-control-custom" required autocomplete="off">
+                                    <label for="unidad_de_medida" class="form-label-custom" style="color: var(--texto-oscuro);">Unidad de Medida (ej. lb, ml, unidad):</label>
+                                    <input type="text" name="unidad_de_medida" id="unidad_de_medida" class="form-control-custom" style="background: transparent; color: var(--texto-oscuro);" required autocomplete="off">
                                 </div>
                                 
                                 <div style="flex-grow: 1; min-width: 200px;">
-                                    <label for="ubicacion" class="form-label-custom">Ubicación:</label>
-                                    <input type="text" name="ubicacion" id="ubicacion" class="form-control-custom" autocomplete="off">
+                                    <label for="ubicacion" class="form-label-custom" style="color: var(--texto-oscuro);">Ubicación:</label>
+                                    <input type="text" name="ubicacion" id="ubicacion" class="form-control-custom" style="background: transparent; color: var(--texto-oscuro);" autocomplete="off">
                                     <small class="form-text-custom">Opcional. Deja en blanco si no aplica.</small>
                                 </div>
                                 
@@ -321,12 +261,12 @@
                     <h2 style="color: #981a28; margin-top: 30px; border-bottom: 2px solid #981a28; padding-bottom: 5px; margin-bottom: 10px;">Listado de Artículos</h2>
 
                     <div style="margin-bottom: 20px;">
-                        <label for="buscador" style="font-weight: bold; display: block; margin-bottom: 5px;">Buscar artículo:</label>
+                        <label for="buscador" style="font-weight: bold; display: block; margin-bottom: 5px; color: var(--texto-oscuro);">Buscar artículo:</label>
                         <div style="position: relative; display: flex; align-items: center;">
                             <span style="position: absolute; left: 10px; color: #888;">
                                 <i class="fas fa-search"></i>
                             </span>
-                            <input type="text" id="buscador" class="form-control" 
+                            <input type="text" id="buscador" class="form-control-busqueda" 
                                 placeholder="Escribe el nombre del artículo..." 
                                 style="padding-left: 35px; padding-right: 35px; margin-bottom: 0;" 
                                 autocomplete="off"
@@ -338,7 +278,7 @@
                         </div>
                     </div>
 
-                    <div class="card-custom" style="padding: 0; overflow-x: auto;">
+                    <div class="card-custom shadow-sm" style="padding: 0; overflow-x: auto;">
                         <table class="table-custom">
                             <thead>
                                 <tr>
@@ -370,14 +310,14 @@
                             <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
                         </div>
                         <form id="form-eliminar-ingrediente">
-                            <div class="modal-body">
+                            <div class="modal-body" style="background-color: var(--bg-claro);">
                                 <input type="hidden" id="modal-delete-id">
-                                <p>¿Está seguro de que desea eliminar el ingrediente <strong><span id="modal-nombre-ingrediente-texto"></span></strong> (ID: <span id="modal-id-ingrediente-texto"></span>)?</p>
-                                <p class="text-muted" style="font-size: 0.9em;">
+                                <p style="color: var(--texto-oscuro);">¿Está seguro de que desea eliminar el ingrediente <strong><span id="modal-nombre-ingrediente-texto"></span></strong> (ID: <span id="modal-id-ingrediente-texto"></span>)?</p>
+                                <p style="font-size: 0.9em; color: var(--muted-text);">
                                     Esta acción no se puede deshacer y fallará si el ingrediente forma parte de la receta de algún platillo activo.
                                 </p>
                             </div>
-                            <div class="modal-footer">
+                            <div class="modal-footer" style="background-color: var(--bg-claro);">
                                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
                                 <button type="submit" class="btn" style="background-color: var(--primary-color); color: white;">Sí, Eliminar</button>
                             </div>
@@ -398,17 +338,17 @@
                         </div>
                         <form id="form-merma-ingrediente">
                             {% csrf_token %}
-                            <div class="modal-body" style="color: #333;">
+                            <div class="modal-body" style="background-color: var(--bg-claro);">
                                 <input type="hidden" id="idIngredienteMermaInput" name="id_ingrediente" required>
 
                                 <div class="mb-3">
-                                    <label for="cantidadMerma" class="form-label" style="font-weight: bold;">Cantidad a descontar:</label>
-                                    <input type="number" step="0.01" min="0.01" class="form-control mb-0" id="cantidadMerma" name="cantidad_merma" required
+                                    <label for="cantidadMerma" class="form-label" style="font-weight: bold; color: var(--texto-oscuro);">Cantidad a descontar:</label>
+                                    <input type="number" step="0.01" min="0.01" class="form-control mb-0" id="cantidadMerma" name="cantidad_merma" style="background: transparent; color: var(--texto-oscuro);" required
                                         onkeydown="if(event.key === '-') event.preventDefault();" oninput="if(this.value < 0) this.value = '';">
-                                    <small id="unidadMedidaMermaTexto" class="text-secondary" style="margin: 0px; padding: 0;"></small>
+                                    <small id="unidadMedidaMermaTexto" style="margin: 0px; padding: 0; color: var(--muted-text);"></small>
                                 </div>
                             </div>
-                            <div class="modal-footer">
+                            <div class="modal-footer" style="background-color: var(--bg-claro);">
                                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
                                 <button type="submit" class="btn" style="background-color: #ff9800; color: white; font-weight: bold;">Descontar Stock</button>
                             </div>
@@ -538,10 +478,11 @@
                 const data = await res.json();
                 const select = document.getElementById('idProveedorInput');
                 
-                select.innerHTML = '<option value="" disabled selected>Seleccione un proveedor...</option>';
+                select.innerHTML = '<option value="" style="background: var(--bg-claro);" disabled selected>Seleccione un proveedor...</option>';
 
                 data.forEach(p => {
                     const option = document.createElement('option');
+                    option.style = 'background: var(--bg-claro);';
                     option.value = p.idProveedor;
                     option.textContent = p.nombre;
                     select.appendChild(option);
@@ -570,7 +511,7 @@
             document.getElementById('btn-submit-ingrediente').textContent = 'Actualizar Artículo';
             document.getElementById('btn-cancelar-edicion').style.display = 'inline-block';
             
-            window.scrollTo({ top: 0, behavior: 'smooth' });
+            document.getElementById('card-header-titulo').scrollIntoView({ behavior: 'smooth' });
         }
 
         function resetFormulario() {

@@ -6,25 +6,12 @@
 
 {% block extra_style %}
     <style>
-        :root {
-            /* Colores del diseño de la APP (He Sai Mali) */
-            --primary-color: #981a28; /* Rojo Oscuro (Header) */
-            --secondary-color: #f3bb67; /* Amarillo (Acento/Border) */
-            --sidebar-bg: #2b3543; /* Gris Oscuro (Usado para el menú lateral) */
-            --bg-page: #2c3038; /* Gris Oscuro (Fondo de página) */
-            --text-light: #ffffff;
-            --text-accent: #dacfb7;
-            --menu-item-hover: #b12131; /* Rojo más claro para hover */
-        }
-
         body { 
             height: 100%; 
             overflow: hidden; 
+            background-color: var(--bg-page-claro);
         }
 
-        /* ---------------------------------------------------- */
-        /* --- Contenido Principal (MAIN CONTENT) --- */
-        /* ---------------------------------------------------- */
         .main-content { 
             height: calc(100dvh - 60px); 
             display: flex; 
@@ -39,10 +26,9 @@
             overflow-y: auto;
         }
 
-        /* Estilos principales para el contenido de la administración */
         .container_admin {
-            background-color: white;
-            box-shadow: 0 0 50px 10px rgba(0, 0, 0, 0.3);
+            background-color: var(--table-even); 
+            box-shadow: 0 0 10px 10px rgba(0, 0, 0, 0.3);
             width: 100%;
             border-radius: 5px;
             padding: 20px;
@@ -50,23 +36,22 @@
         }
 
         .card-custom {
-            border: 1px solid #ddd;
             border-radius: 5px;
             margin-bottom: 20px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
         }
 
         .card-header-custom {
-            background-color: #981a28; 
+            background-color: var(--primary-color); 
             color: white;
             padding: 10px 15px;
-            border-bottom: 3px solid #981a28; 
+            border-bottom: 3px solid var(--primary-color);
             border-radius: 5px 5px 0 0;
             font-weight: bold;
         }
 
         .card-body-custom {
             padding: 15px;
+            background-color: var(--bg-claro);
         }
 
         /* Estilos para el botón Guardar */
@@ -98,41 +83,21 @@
             border: 1px solid #ccc;
             border-radius: 4px;
             box-sizing: border-box;
-        }
-
-        textarea.form-control-custom {
-            resize: vertical;
-        }
-
-        /* Estilos para la tabla */
-        .table-custom {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 0px;
-        }
-
-        .table-custom thead tr {
-            background-color: #ddd; 
-        }
-
-        .table-custom th, .table-custom td {
-            padding: 10px;
-            text-align: left;
-            border-bottom: 1px solid #eee;
-        }
-
-        .table-custom tbody tr:nth-child(odd) {
-            background-color: #F8F8F8;
-        }
-
-        .table-custom tbody tr:nth-child(even) {
-            background-color: #EEEEEE;
-        }
-
-        .table-custom tbody tr:hover {
-            background-color: #e0e0e0;
+            background-color: var(--bg-claro);
+            color: var(--texto-oscuro);
         }
         
+        .form-control-busqueda {
+            background: var(--bg-claro);
+            color: var(--texto-oscuro);
+            width: 100%;
+            padding: 8px;
+            margin-bottom: 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+
         .btn-custom-danger {
             background-color: #f44336; 
             color: white;
@@ -167,35 +132,35 @@
             <div class="contenido">
                 <div class="container_admin">
                     
-                    <h1 style="color: #981a28; margin-bottom: 20px;">Administración de Empleados</h1>
+                    <h1 style="color: var(--primary-color); margin-bottom: 20px;">Administración de Empleados</h1>
 
                     <div id="alert-container" class="toast-container position-fixed top-0 end-0 p-4" style="z-index: 1080;"></div>
                     
-                    <div class="card-custom" id="contenedor-editar" style="display: none;">
-                        <div class="card-header-custom">
-                            <h2 id="titulo-editar">Editar Empleado</h2>
+                    <div class="card-custom shadow" id="contenedor-editar" style="display: none;">
+                        <div class="card-header-custom" id="titulo-editar">
+                            Editar Empleado
                         </div>
-                        <div class="card-body-custom">
+                        <div class="card-body-custom rounded-bottom">
                             <form id="form-editar-empleado">
                                 <input type="hidden" id="edit-id">
                                 <div style="display: flex; gap: 15px; flex-wrap: wrap;">
                                     
                                     <div style="flex: 1 1 30%; min-width: 200px;">
-                                        <label for="nombre" class="form-label-custom">Nombre</label>
+                                        <label for="edit-nombre" class="form-label-custom" style="color: var(--texto-oscuro);">Nombre</label>
                                         <input type="text" class="form-control-custom" id="edit-nombre" required
                                         pattern="[A-Za-zÁéíóúÁÉÍÓÚñÑüÜ\s]+"
                                         oninput="this.value = this.value.replace(/[^A-Za-zÁéíóúÁÉÍÓÚñÑüÜ\s]/g, '');" autocomplete="off">
                                     </div>
                                     
                                     <div style="flex: 1 1 30%; min-width: 200px;">
-                                        <label for="apellido" class="form-label-custom">Apellido</label>
+                                        <label for="edit-apellido" class="form-label-custom" style="color: var(--texto-oscuro);">Apellido</label>
                                         <input type="text" class="form-control-custom" id="edit-apellido" required
                                         pattern="[A-Za-zÁéíóúÁÉÍÓÚñÑüÜ\s]+"
                                         oninput="this.value = this.value.replace(/[^A-Za-zÁéíóúÁÉÍÓÚñÑüÜ\s]/g, '');" autocomplete="off">
                                     </div>
                                     
                                     <div style="flex: 1 1 30%; min-width: 200px;">
-                                        <label for="rol" class="form-label-custom">Rol</label>
+                                        <label for="edit-rol" class="form-label-custom" style="color: var(--texto-oscuro);">Rol</label>
                                         <select class="form-control-custom" id="edit-rol" required>
                                             {% for rol_opcion in roles_disponibles %}
                                                 <option value="{{ rol_opcion }}">{{ rol_opcion }}</option>
@@ -204,32 +169,32 @@
                                     </div>
                                     
                                     <div style="flex: 1 1 30%; min-width: 200px;">
-                                        <label for="telefono" class="form-label-custom">Teléfono</label>
+                                        <label for="edit-telefono" class="form-label-custom" style="color: var(--texto-oscuro);">Teléfono</label>
                                         <input type="text" class="form-control-custom" id="edit-telefono"
                                         pattern="[0-9]{8}" title="El teléfono debe contener exactamente 8 dígitos numéricos."
                                         oninput="this.value = this.value.replace(/[^0-9]/g, '').slice(0, 8);" autocomplete="off">
                                     </div>
 
                                     <div style="flex: 1 1 30%; min-width: 200px;">
-                                        <label for="correo" class="form-label-custom">Correo</label>
+                                        <label for="edit-correo" class="form-label-custom" style="color: var(--texto-oscuro);">Correo</label>
                                         <input type="email" class="form-control-custom" id="edit-correo" required>
                                     </div>
 
                                     <div style="flex: 1 1 30%; min-width: 200px;">
-                                        <label for="cedula" class="form-label-custom">Cédula</label>
+                                        <label for="edit-cedula" class="form-label-custom" style="color: var(--texto-oscuro);">Cédula</label>
                                         <input type="text" class="form-control-custom" id="edit-cedula" required>
                                     </div>
 
                                     <div style="flex: 1 1 50%; min-width: 200px;">
-                                        <label class="form-label-custom">Nueva Contraseña (dejar en blanco para no cambiar):</label>
+                                        <label class="form-label-custom" for="edit-password" style="color: var(--texto-oscuro);">Nueva Contraseña (dejar en blanco para no cambiar):</label>
                                         <input type="password" id="edit-password" class="form-control-custom" placeholder="********">
-                                        <span style="font-size: 0.8em; color: #666; display: block; margin-top: -5px; margin-bottom: 10px;">
+                                        <span style="font-size: 0.8em; color: var(--muted-text); display: block; margin-top: -5px; margin-bottom: 10px;">
                                             Mínimo 10 caracteres, mayúscula, minúscula, número y símbolo.
                                         </span>
                                     </div>
 
                                     <div style="flex: 1 1 50%; min-width: 200px;">
-                                        <label class="form-label-custom">Confirmar Nueva Contraseña:</label>
+                                        <label class="form-label-custom" for="edit-confirm-password" style="color: var(--texto-oscuro);">Confirmar Nueva Contraseña:</label>
                                         <input type="password" id="edit-confirm-password" class="form-control-custom" placeholder="********">
                                     </div>
                                     
@@ -246,14 +211,14 @@
                         </div>
                     </div>
 
-                    <h2 style="color: #981a28; margin-top: 30px; border-bottom: 2px solid #981a28; padding-bottom: 5px; margin-bottom: 10px;">Listado de Empleados</h2>
+                    <h2 style="color: var(--primary-color); margin-top: 30px; border-bottom: 2px solid var(--primary-color); padding-bottom: 5px;">Listado de Empleados</h2>
                     
-                    <label for="buscador" style="font-weight: bold; display: block; margin-bottom: 5px;">Buscar empleado:</label>
+                    <label for="buscador" style="font-weight: bold; display: block; margin-bottom: 5px; color: var(--texto-oscuro);">Buscar empleado:</label>
                     <div style="position: relative; display: flex; align-items: center; margin-bottom: 20px;">
                         <span style="position: absolute; left: 10px; color: #888;">
                             <i class="fas fa-search"></i>
                         </span>
-                        <input type="text" id="buscador" class="form-control" 
+                        <input type="text" id="buscador" class="form-control-busqueda" 
                             placeholder="Escribe el nombre del empleado..." 
                             style="padding-left: 35px; padding-right: 35px; margin-bottom: 0;" 
                             autocomplete="off"
@@ -264,7 +229,7 @@
                         </span>
                     </div>
 
-                    <div class="card-custom" style="padding: 0; overflow-x: auto;">
+                    <div class="card-custom shadow-sm" style="padding: 0; overflow-x: auto;">
                         <table class="table-custom" id="tabla-empleados">
                             <thead>
                                 <tr>
@@ -294,13 +259,13 @@
                             </h5>
                             <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
                         </div>
-                        <div class="modal-body">
-                            <p>¿Está seguro de que desea eliminar al empleado <strong><span id="modal-nombre-empleado-texto"></span></strong> (ID: <span id="modal-id-empleado-texto"></span>)?</p>
-                            <p class="text-muted" style="font-size: 0.9em;">
+                        <div class="modal-body" style="background-color: var(--bg-claro);">
+                            <p style="color: var(--texto-oscuro);">¿Está seguro de que desea eliminar al empleado <strong><span id="modal-nombre-empleado-texto"></span></strong> (ID: <span id="modal-id-empleado-texto"></span>)?</p>
+                            <p style="font-size: 0.9em; color: var(--muted-text);">
                                 Esta acción no se puede deshacer y podría desactivar al usuario si posee registros operativos.
                             </p>
                         </div>
-                        <div class="modal-footer">
+                        <div class="modal-footer" style="background-color: var(--bg-claro);">
                             <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
                             <button type="button" id="btn-confirmar-eliminar" class="btn" style="background-color: var(--primary-color); color: white;">Sí, Eliminar Empleado</button>
                         </div>

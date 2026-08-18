@@ -4,9 +4,18 @@
 <head>
     <meta charset="UTF-8">
     <title>Factura Pedido N°{{ pedido.idPedido }}</title>
+    <link rel="stylesheet" href="{% static 'He_Sai_Mali/css/styles.css' %}">
+
+    <script>
+        (function() {
+            const savedTheme = localStorage.getItem('theme') || 'light';
+            document.documentElement.setAttribute('data-theme', savedTheme);
+        })();
+    </script>
+
     <style>
         /* Estilos básicos de la factura (ajustar a su CSS real) */
-        body { font-family: Arial, sans-serif; margin: 20px; }
+        body { font-family: Arial, sans-serif; margin: 20px; background-color: var(--bg-page-claro);}
         .factura-container { max-width: 600px; margin: 0 auto; border: 1px solid #ccc; padding: 20px; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
         .header-factura { text-align: center; margin-bottom: 20px; }
         table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
@@ -16,17 +25,10 @@
         .btn-accion { padding: 10px 15px; border: none; cursor: pointer; color: white; border-radius: 5px; margin-left: 10px; text-decoration: none; }
         .btn-pagada { background-color: #38761d; font-size: 16px; } /* Verde */
         .btn-cancelar { background-color: #cc0000; } /* Rojo */
-        a, img, i {
-            -webkit-user-drag: none;
-            -webkit-user-select: none;
-            -moz-user-select: none;
-            -ms-user-select: none;
-            user-select: none;
-        }
     </style>
 </head>
 <body>
-    <div class="factura-container">
+    <div class="factura-container" style="background-color: white;">
         <div id="loading-msg">Cargando datos de la factura...</div>
         
         <div id="contenido-factura" style="display:none;">

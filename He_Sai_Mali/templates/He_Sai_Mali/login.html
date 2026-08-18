@@ -1,258 +1,144 @@
 {% load static %}
 <!doctype html>
 <html lang="es">
-  <head>
-    <meta charset="UTF-8" />
-    <link
-      rel="icon"
-      type="image/png"
-      href="{% static 'He_Sai_Mali/logo.png' %}"
-    />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>He Sai Mali - Iniciar Sesión</title>
-    <style>
-      body {
-        font-family: "Roboto", sans-serif;
-        background-image: url("{% static 'He_Sai_Mali/fondo.png' %}");
-        background-position: center bottom;
-        display: flex;
-        justify-content: center; /* Centrar el contenido */
-        align-items: flex-start;
-        min-height: 100vh;
-        margin: 0;
-        user-select: none;
-      }
-
-      form {
-        display: block;
-        margin: 100px auto;
-        padding: 40px;
-        background-color: white;
-        box-shadow: 0 0 50px 10px rgba(0, 0, 0, 0.3);
-        width: 100%;
-        max-width: 450px;
-      }
-
-      .He_Sai_Mali {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        width: 100%;
-      }
-
-      .He_Sai_Mali .logo-texto {
-        display: flex;
-        align-items: center;
-      }
-
-      .He_Sai_Mali .logo {
-        height: 40px;
-        margin-right: 3px;
-      }
-
-      .He_Sai_Mali h2 {
-        margin: 0;
-        padding: 0;
-        font-size: large;
-        color: #981a28;
-      }
-
-      input {
-        width: 100%;
-        padding: 8px;
-        margin: 5px 0;
-        border-width: 0 0 2px 0;
-        border-style: solid;
-        box-sizing: border-box;
-        outline: none;
-        transition: border-color 0.3s;
-      }
-
-      .boton {
-        display: flex;
-        justify-content: flex-end;
-      }
-
-      button {
-        padding: 5px 20px;
-        gap: 5px;
-        background-color: #981a28;
-        color: white;
-        border: 2px solid #f3bb67;
-        border-radius: 5px;
-        user-select: none;
-        transition: background-color 0.3s;
-        cursor: pointer;
-      }
-
-      button:hover {
-        background-color: #832630;
-      }
-
-      button:active {
-        background-color: #b52435;
-        transform: scale(97%);
-      }
-
-      .error {
-        margin-bottom: 15px;
-        padding: 10px;
-        border: 1px solid red;
-        background-color: #ffeaea;
-        color: red;
-        border-radius: 4px;
-      }
-
-      a {
-        color: white;
-      }
-
-      .flechaRegresar {
-        width: 25px;
-        height: 25px;
-        transform: rotate(180deg);
-        filter: brightness(0) saturate(100%) invert(13%) sepia(97%)
-          saturate(700%) hue-rotate(320deg) brightness(130%) contrast(100%);
-      }
-
-      .flechaRegresar:hover {
-        filter: brightness(0) saturate(100%) invert(13%) sepia(97%)
-          saturate(700%) hue-rotate(320deg) brightness(90%) contrast(100%);
-      }
-
-      .flechaRegresar:active {
-        filter: brightness(0) saturate(100%) invert(13%) sepia(97%)
-          saturate(700%) hue-rotate(320deg) brightness(170%) contrast(100%);
-      }
-
-      .Blank {
-        color: white;
-        user-select: none;
-      }
-
-      a,
-      img,
-      i {
-        -webkit-user-drag: none;
-        -webkit-user-select: none;
-        -moz-user-select: none;
-        -ms-user-select: none;
-        user-select: none;
-      }
-    </style>
-  </head>
-  <body>
-    <form method="post">
-      <div class="He_Sai_Mali">
-        <a href="/">
-          <img
-            href="/"
-            src="{% static 'He_Sai_Mali/flecha.png' %}"
-            class="flechaRegresar"
-            alt="regresar"
-          />
-        </a>
-
-        <div class="logo-texto">
-          <img
-            src="{% static 'He_Sai_Mali/logo.png' %}"
-            class="logo"
-            alt="Logo He Sai Mali"
-          />
-          <h2>He Sai Mali</h2>
-        </div>
-      </div>
-      <h2>Iniciar Sesión</h2>
-      <div id="error-container">
-        {% if messages %} {% for message in messages %}
-        <p class="error">{{ message }}</p>
-        {% endfor %} {% endif %}
-      </div>
-      {% csrf_token %}
-      <p>
-        <label>Usuario:</label>
-        <input
-          type="text"
-          name="usuario"
-          placeholder="Usuario"
-          required
-          autocomplete="off"
-        />
-      </p>
-      <p>
-        <label>Contraseña:</label>
-        <input
-          type="password"
-          name="contrasena"
-          placeholder="••••••••"
-          required
-          autocomplete="off"
-        />
-      </p>
-      <div class="boton">
-        <button type="submit">Iniciar sesión</button>
-      </div>
-      <a
-        href="{% url 'recuperar_password' %}"
-        style="
-          display: block;
-          text-align: center;
-          margin-top: 15px;
-          color: #666;
-          font-size: 0.9em;
-          text-decoration: none;
-        "
-        >¿Olvidaste tu contraseña?</a
-      >
-
-      <p class="Blank">Registrarse</p>
-    </form>
+    <link rel="icon" type="image/png" href="{% static 'He_Sai_Mali/logo.png' %}">
 
     <script>
-      document.querySelector("form").addEventListener("submit", function (e) {
-        e.preventDefault(); // Detiene la recarga tradicional
-
-        const formData = new FormData(this);
-        const data = {
-          usuario: formData.get("usuario"),
-          contrasena: formData.get("contrasena"),
-        };
-
-        const errorContainer = document.getElementById("error-container");
-        errorContainer.innerHTML = ""; // Limpia errores previos
-
-        fetch("{% url 'api_login' %}", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "X-CSRFToken": formData.get("csrfmiddlewaretoken"), // Token CSRF obligatorio
-          },
-          body: JSON.stringify(data),
-        })
-          .then((response) => {
-            return response.json().then((json) => {
-              if (!response.ok) {
-                // Si hay un error de validación de campos, se extrae el texto del mensaje
-                let errorMsg = json.error;
-                if (typeof json.error === "object") {
-                  errorMsg = Object.values(json.error).flat().join(" ");
-                }
-                throw new Error(
-                  errorMsg || "Ocurrió un error al intentar iniciar sesión.",
-                );
-              }
-              return json;
-            });
-          })
-          .then((res) => {
-            if (res.success && res.redirect_url) {
-              window.location.href = res.redirect_url; // Redirige según mande el API
-            }
-          })
-          .catch((error) => {
-            errorContainer.innerHTML = `<p class="error">${error.message}</p>`;
-          });
-      });
+        (function() {
+            const savedTheme = localStorage.getItem('theme') || 'light';
+            document.documentElement.setAttribute('data-theme', savedTheme);
+        })();
     </script>
-  </body>
+    
+    <!-- Bootstrap y Awesome Fonts -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+
+    <!-- styles.css -->
+    <link rel="stylesheet" href="{% static 'He_Sai_Mali/css/styles.css' %}">
+</head>
+
+<body class="fondo-imagen container-fluid d-flex justify-content-center align-items-center" style="min-height: 100dvh;">
+    <div class="row rounded overflow-hidden col-11 col-md-9 col-lg-8 shadow-lg">
+        <!-- Columna del formulario -->
+        <form method="post" action="{% url 'api_login' %}" class="bg-claro p-5 d-flex flex-column col-12 col-lg-7">
+            {% csrf_token %}
+            <!-- Boton de regreso y titulo -->
+            <div class="row">
+                <div class="col-4 d-flex align-items-center">
+                    <a href="/">
+                        <i class="fa-solid fa-arrow-left flechaRegresar fs-3"></i>
+                    </a>
+                </div>
+                <div class="col-8 d-flex flex-row align-items-center justify-content-end d-lg-none">
+                    <img src="{% static 'He_Sai_Mali/logo.png' %}" class="logo" alt="Logo He Sai Mali">
+                    <span class="fw-bold m-2 text-rojo">He Sai Mali</span>
+                </div>
+            </div>
+            <h3 class="mt-4 text-center" style="color: var(--texto-oscuro)">Iniciar Sesión</h3>
+
+            <!-- Zona de mensajes -->
+            <div id="error-container">
+                {% if messages %} {% for message in messages %}
+                    <p class="alert alert-danger py-2">{{ message }}</p>
+                {% endfor %} {% endif %}
+            </div>
+
+            <!-- Inputs -->
+            <div class="form-floating input-diseno-imagen mb-3">
+                <i class="fa-solid fa-user input-icon"></i>
+                
+                <input type="text" class="form-control" name="usuario" id="usuario" placeholder="Usuario" autocomplete="off" required>
+                <label for="usuario">Usuario</label>
+            </div>
+
+            <div class="form-floating input-diseno-imagen mb-2">
+                <i class="fa-solid fa-lock input-icon"></i>
+                
+                <input type="password" class="form-control" name="contrasena" id="contrasena" placeholder="••••••••" autocomplete="off" required>
+                <label for="contrasena">Contraseña</label>
+            </div>
+
+            <!-- Seccion de recordar y recuperar contraseña -->
+            <div class="row mt-4 mb-3 mx-1">
+                <div class="col-12 col-lg-6 d-flex align-items-center">
+                    <input type="checkbox" name="recordar" id="recordar" value="" style="accent-color: var(--primary-color); width: 1.2rem; height: 1.2rem;">
+                    <label class="texto-gris ms-1" style="font-size: 0.9em;" for="recordar">
+                        Recordarme                        
+                    </label>
+                </div>
+                <div class="col-12 col-lg-6 mt-4 mt-lg-0 d-flex align-items-center justify-content-center justify-content-lg-end">
+                    <a href="{% url 'recuperar_password' %}" class="texto-gris link" style="font-size: 0.9em; text-decoration: none;">
+                        ¿Olvidaste tu contraseña?
+                    </a>
+                </div>
+            </div>
+
+            <!-- Boton iniciar sesion -->
+            <div class="row d-flex justify-content-center">
+                <button type="submit" class="btn-menu">Iniciar sesión</button>
+            </div>
+        </form>
+
+        <!-- Columna de imagen -->
+        <div class="col-lg-5 bg-gradiente-rojo d-none d-lg-flex align-items-center justify-content-center p-1">
+            <img src="{% static 'He_Sai_Mali/logo.png' %}" 
+                class="img-fluid" 
+                style="min-height: 250px; object-fit: contain;" 
+                alt="Logo He Sai Mali">
+        </div>
+    </div>
+
+    <script>
+        document.querySelector("form").addEventListener("submit", function (e) {
+            e.preventDefault(); // Detiene la recarga tradicional
+
+            const formData = new FormData(this);
+            const data = {
+                usuario: formData.get("usuario"),
+                contrasena: formData.get("contrasena"),
+                recordar: document.getElementById("recordar").checked
+            };
+
+            const errorContainer = document.getElementById("error-container");
+            errorContainer.innerHTML = ""; // Limpia errores previos
+
+            fetch("{% url 'api_login' %}", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "X-CSRFToken": "{{ csrf_token }}" 
+                },
+                body: JSON.stringify(data),
+            })
+                .then((response) => {
+                return response.json().then((json) => {
+                    if (!response.ok) {
+                    // Si hay un error de validación de campos, se extrae el texto del mensaje
+                    let errorMsg = json.error;
+                    if (typeof json.error === "object") {
+                        errorMsg = Object.values(json.error).flat().join(" ");
+                    }
+                    throw new Error(
+                        errorMsg || "Ocurrió un error al intentar iniciar sesión.",
+                    );
+                    }
+                    return json;
+                });
+                })
+                .then((res) => {
+                if (res.success && res.redirect_url) {
+                    window.location.href = res.redirect_url; // Redirige según mande el API
+                }
+                })
+                .catch((error) => {
+                errorContainer.innerHTML = `<p class="alert alert-danger py-2">${error.message}</p>`;
+                });
+        });
+    </script>
+</body>
 </html>

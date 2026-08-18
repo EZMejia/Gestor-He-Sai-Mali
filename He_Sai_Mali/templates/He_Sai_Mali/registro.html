@@ -3,313 +3,221 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <link rel="icon" type="image/png" href="{% static 'He_Sai_Mali/logo.png' %}">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>He Sai Mali - Registro</title>
+    <link rel="icon" type="image/png" href="{% static 'He_Sai_Mali/logo.png' %}">
+
+    <script>
+        (function() {
+            const savedTheme = localStorage.getItem('theme') || 'light';
+            document.documentElement.setAttribute('data-theme', savedTheme);
+        })();
+    </script>
+    
+    <!-- Bootstrap y Awesome Fonts -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+
+    <!-- styles.css -->
+    <link rel="stylesheet" href="{% static 'He_Sai_Mali/css/styles.css' %}">
+
     <style>
-        body { 
-            font-family: 'Roboto', sans-serif;
-            background-image: url("{% static 'He_Sai_Mali/fondo.png' %}");
-            background-position: center bottom;
-            display: flex;
-            justify-content: center; /* Centrar el contenido */
-            align-items: flex-start;
-            min-height: 100dvh;
-            margin: 0;
-            user-select: none;
-        }
-
-        form {
-            display: block;
-            margin: 100px auto;
-            padding: 40px; 
-            background-color: white;
-            box-shadow: 0 0 50px 10px rgba(0, 0, 0, 0.3);
-            width: 100%;
-            max-width: 450px;
-        }
-
-        h2 {
-            margin-top: 10px;
-        }
-        
-        .He_Sai_Mali {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            width: 100%;
-        }
-
-        .He_Sai_Mali .logo-texto {
-            display: flex;
-            align-items: center;
-        }
-
-        .He_Sai_Mali .logo {
-            height: 40px;
-            margin-right: 3px;
-        }
-
-        .He_Sai_Mali h2 {
-            margin: 0;
-            padding: 0;
-            font-size: large;
-            color: #981a28;
-        }
-
-        .flechaRegresar {
-            width: 25px;
-            height: 25px;
-            transform: rotate(180deg);
-            filter: 
-                brightness(0) 
-                saturate(100%) 
-                invert(13%) 
-                sepia(97%) 
-                saturate(700%) 
-                hue-rotate(320deg) 
-                brightness(130%) 
-                contrast(100%);
-        }
-
-        .flechaRegresar:hover {
-            filter: 
-                brightness(0) 
-                saturate(100%) 
-                invert(13%) 
-                sepia(97%) 
-                saturate(700%) 
-                hue-rotate(320deg) 
-                brightness(90%) 
-                contrast(100%);
-        }
-
-        .flechaRegresar:active {
-            filter: 
-                brightness(0) 
-                saturate(100%) 
-                invert(13%) 
-                sepia(97%) 
-                saturate(700%) 
-                hue-rotate(320deg) 
-                brightness(170%) 
-                contrast(100%);
-        }
-
-        input, select { 
-            width: 100%; 
-            padding: 8px; 
-            margin: 5px 0;
-            border-width: 0 0 2px 0; 
-            border-style: solid;
-            box-sizing: border-box;
-            outline: none;
-            transition: border-color 0.3s;
-        }
-        
-        /* Nuevo estilo para resaltar los inputs con error */
-        input.error-highlight, select.error-highlight {
-            border-bottom-color: red !important;
-        }
-
-        /* Estilos de error */
-        .error { color: red; }
-        .success { color: green; }
-
-        /* Estilo para el contenedor de errores internos */
-        #form-error-message {
-            margin-bottom: 15px;
-            padding: 10px;
-            border: 1px solid red;
-            background-color: #ffeaea;
-            color: red;
-            border-radius: 4px;
-            display: none; /* Oculto por defecto */
-        }
-        
         .step-section {
             display: none;
-            margin: 10px;
         }
 
         #step-1 {
             display: block;
         }
 
-        .botones {
-            display: flex;
-            justify-content: flex-end;
-            gap: 5px;
-            margin-top: 15px;
+        /* Estilos adicionales para encajar el select en el diseño de input-diseno-imagen */
+        .input-diseno-imagen .form-select {
+            border: 1.5px solid var(--secondary-color);
+            border-radius: 12px;
+            padding-left: 44px;
+            box-shadow: none;
         }
 
-        .Continuar {
-            padding: 5px 20px;
-            gap: 5px;
-            background-color: #981a28;
-            color: white;
-            border: 2px solid #f3bb67;
-            border-radius: 5px;
-            user-select: none;
-            cursor: pointer;
-            transition: background-color 0.3s;
+        .input-diseno-imagen .form-select:focus {
+            border: 2.5px solid var(--secondary-color);
+            padding-left: 42.5px;
         }
 
-        .Continuar:hover {
-            background-color: #832630;
-        }
-        
-        .Continuar:active {
-            background-color: #b52435;
-            transform: scale(97%);
-        }
-
-        .Registrarse {
-            padding: 5px 20px;
-            background-color: black;
-            color: white;
-            border: 2px solid #f3bb67;
-            border-radius: 5px;
-            user-select: none;
-            cursor: pointer;
-            transition: background-color 0.3s;
-        }
-
-        .Registrarse:hover {
-            background-color: #981a28;
-        }
-
-        .Registrarse:active {
-            background-color: black;
-            transform: scale(97%);
-        }
-
-        a, img, i {
-            -webkit-user-drag: none;
-            -webkit-user-select: none;
-            -moz-user-select: none;
-            -ms-user-select: none;
-            user-select: none;
-        }
-
-        .help-text { 
-            font-size: 0.8em; 
-            color: #666; 
-            margin-top: -2px; 
-            margin-bottom: 10px; 
-            display: block; 
+        .help-text {
+            font-size: 0.8em;
+            color: var(--texto-gris);
+            display: block;
             line-height: 1.2;
+            padding: 0 10px;
+        }
+
+        .summary-label {
+            font-weight: bold;
+            color: var(--primary-color);
+            margin-bottom: 2px;
+        }
+
+        .summary-item {
+            color: var(--texto-oscuro);
+            margin-bottom: 0.8rem;
+        }
+
+        /* Resaltar campos con errores en formato Bootstrap/Personalizado */
+        .error-highlight {
+            border-color: #dc3545 !important;
+            box-shadow: 0 0 0 0.25rem rgba(220, 53, 69, 0.25) !important;
+        }
+
+        /* Botón secundario para regresar */
+        .btn-menu-secundario {
+            background-color: var(--bg-gray);
+            border-color: var(--bg-gray);
+        }
+        .btn-menu-secundario:hover {
+            background-color: var(--bg-sidebar);
         }
     </style>
 </head>
-<body>
-    <form id="registrationForm" method="post">
-        <div class="He_Sai_Mali">
-            <a href="{% url 'pedidos' %}">
-                <img src="{% static 'He_Sai_Mali/flecha.png' %}" class="flechaRegresar" alt="regresar">
-            </a>
 
-            <div class="logo-texto">
-                <img src="{% static 'He_Sai_Mali/logo.png' %}" class="logo" alt="Logo He Sai Mali">
-                <h2>He Sai Mali</h2>
+<body class="fondo-imagen container-fluid d-flex justify-content-center align-items-center" style="min-height: 100dvh;">
+    <form id="registrationForm" method="post" class="rounded bg-claro overflow-hidden col-11 shadow-lg d-flex flex-column py-5" style="max-width: 500px;">
+        <!-- Boton de regreso y titulo -->
+        <div class="row ms-5 me-4">
+            <div class="col-4 d-flex align-items-center">
+                <a href="{% url 'pedidos' %}">
+                    <i class="fa-solid fa-arrow-left flechaRegresar fs-3"></i>
+                </a>
+            </div>
+            <div class="col-8 d-flex flex-row align-items-center justify-content-end">
+                <img src="{% static 'He_Sai_Mali/logo.png' %}" class="logo" style="height: 40px;" alt="Logo He Sai Mali">
+                <span class="fw-bold m-2 text-rojo">He Sai Mali</span>
             </div>
         </div>
-
-        <h2>Registro de Empleado</h2>
-        <!-- El token se genera aquí de todos modos para protección básica del formulario -->
-        {% csrf_token %}
         
-        <div id="form-error-message"></div>
+        <h3 class="mt-4 text-center mx-4" style="color: var(--texto-oscuro)">Registro de Empleado</h3>
 
+        {% csrf_token %}
+
+        <!-- Zona de mensajes de error -->
+        <div id="form-error-message" class="alert mx-5 d-none"></div>
+
+        <!-- ================= PASO 1 ================= -->
         <div class="step-section" id="step-1">
-            <h3>Paso 1: Datos Personales</h3>
-            <p>
-                <label>Nombre:</label>
-                <input type="text" name="nombre" id="nombre" value="{{ valores.nombre }}" placeholder="Nombre" required autocomplete="off">
-            </p>
-            <p>
-                <label>Apellido:</label>
-                <input type="text" name="apellido" id="apellido" value="{{ valores.apellido }}" placeholder="Apellido" required autocomplete="off">
-            </p>
-            <p>
-                <label>Rol:</label>
-                <select name="rol" id="rol" required>
-                    <option value="">Seleccionar rol</option>
+            <h6 class="text-center mx-4 mt-2 mb-4 text-accent">Paso 1: Datos Personales</h6>
+
+            <div class="form-floating input-diseno-imagen my-3 mx-5">
+                <i class="fa-solid fa-user input-icon"></i>
+                <input type="text" class="form-control" name="nombre" id="nombre" value="{{ valores.nombre }}" placeholder="Nombre" required autocomplete="off">
+                <label for="nombre">Nombre</label>
+            </div>
+
+            <div class="form-floating input-diseno-imagen my-3 mx-5">
+                <i class="fa-regular fa-user input-icon"></i>
+                <input type="text" class="form-control" name="apellido" id="apellido" value="{{ valores.apellido }}" placeholder="Apellido" required autocomplete="off">
+                <label for="apellido">Apellido</label>
+            </div>
+
+            <div class="form-floating input-diseno-imagen my-3 mx-5">
+                <i class="fa-solid fa-user-tag input-icon"></i>
+                <select class="form-select" name="rol" id="rol" required>
+                    <option value="" disabled selected>Seleccionar rol</option>
                     {% if not user.sucursal_id %}
                         <option value="Administrador" {% if valores.rol == 'Administrador' %}selected{% endif %}>Administrador</option>
                     {% endif %}
                     <option value="Mesero" {% if valores.rol == 'Mesero' %}selected{% endif %}>Mesero</option>
                     <option value="Cocinero" {% if valores.rol == 'Cocinero' %}selected{% endif %}>Cocinero</option>
                 </select>
-            </p>
-            <div class="botones">
-                <button type="button" onclick="nextStep(1)" class="Continuar">Siguiente</button>
+                <label for="rol">Rol</label>
+            </div>
+
+            <div class="row d-flex justify-content-center mx-5 mt-4">
+                <button type="button" onclick="nextStep(1)" class="btn-menu">Siguiente</button>
             </div>
         </div>
 
+        <!-- ================= PASO 2 ================= -->
         <div class="step-section" id="step-2">
-            <h3>Paso 2: Contacto e Identificación</h3>
-            <p>
-                <label>Correo:</label>
-                <input type="email" name="correo" id="correo" value="{{ valores.correo }}" placeholder="nombre@dominio.com" required autocomplete="off">
-            </p>
-            <p>
-                <label>Teléfono:</label>
-                <input type="text" name="telefono" id="telefono" value="{{ valores.telefono }}" placeholder="00000000" required autocomplete="off">
-            </p>
-            <p>
-                <label>Cédula:</label>
-                <input type="text" name="cedula" id="cedula" value="{{ valores.cedula }}" placeholder="000-000000-0000X" required autocomplete="off">
-            </p>
-            <div class="botones">
-                <button type="button" onclick="prevStep(2)" class="Continuar">Atrás</button>
-                <button type="button" onclick="nextStep(2)" class="Continuar">Siguiente</button>
+            <h6 class="text-center mx-4 mt-2 mb-4 text-accent">Paso 2: Contacto e Identificación</h6>
+
+            <div class="form-floating input-diseno-imagen my-3 mx-5">
+                <i class="fa-solid fa-envelope input-icon"></i>
+                <input type="email" class="form-control" name="correo" id="correo" value="{{ valores.correo }}" placeholder="nombre@dominio.com" required autocomplete="off">
+                <label for="correo">Correo</label>
+            </div>
+
+            <div class="form-floating input-diseno-imagen my-3 mx-5">
+                <i class="fa-solid fa-phone input-icon"></i>
+                <input type="text" class="form-control" name="telefono" id="telefono" value="{{ valores.telefono }}" placeholder="00000000" required autocomplete="off">
+                <label for="telefono">Teléfono</label>
+            </div>
+
+            <div class="form-floating input-diseno-imagen my-3 mx-5">
+                <i class="fa-solid fa-id-card input-icon"></i>
+                <input type="text" class="form-control" name="cedula" id="cedula" value="{{ valores.cedula }}" placeholder="000-000000-0000X" required autocomplete="off">
+                <label for="cedula">Cédula</label>
+            </div>
+
+            <div class="d-flex justify-content-between mx-5 mt-4 gap-2">
+                <button type="button" onclick="prevStep(2)" class="btn-menu btn-menu-secundario">Atrás</button>
+                <button type="button" onclick="nextStep(2)" class="btn-menu">Siguiente</button>
             </div>
         </div>
 
+        <!-- ================= PASO 3 ================= -->
         <div class="step-section" id="step-3">
-            <h3>Paso 3: Credenciales de Acceso</h3>
-            <p>
-                <label>Contraseña:</label>
-                <input type="password" name="contrasena1" id="contrasena1" placeholder="••••••••" required autocomplete="off">
+            <h6 class="text-center mx-4 mt-2 mb-4 text-accent">Paso 3: Credenciales de Acceso</h6>
+
+            <div class="form-floating input-diseno-imagen mt-3 mb-1 mx-5">
+                <i class="fa-solid fa-lock input-icon"></i>
+                <input type="password" class="form-control" name="contrasena1" id="contrasena1" placeholder="••••••••" required autocomplete="off">
+                <label for="contrasena1">Contraseña</label>
+            </div>
+            <div class="mx-5 mb-3">
                 <span class="help-text">Mínimo 10 caracteres, una mayúscula, una minúscula, un número y un símbolo.</span>
-            </p>
-            <p>
-                <label>Confirmar contraseña:</label>
-                <input type="password" name="contrasena2" id="contrasena2" placeholder="••••••••" required autocomplete="off">
-            </p>
-            <div class="botones">
-                <button type="button" onclick="prevStep(3)" class="Continuar">Atrás</button>
-                <button type="button" onclick="nextStep(3)" class="Continuar">Siguiente</button>
+            </div>
+
+            <div class="form-floating input-diseno-imagen my-3 mx-5">
+                <i class="fa-solid fa-lock input-icon"></i>
+                <input type="password" class="form-control" name="contrasena2" id="contrasena2" placeholder="••••••••" required autocomplete="off">
+                <label for="contrasena2">Confirmar contraseña</label>
+            </div>
+
+            <div class="d-flex justify-content-between mx-5 mt-4 gap-2">
+                <button type="button" onclick="prevStep(3)" class="btn-menu btn-menu-secundario">Atrás</button>
+                <button type="button" onclick="nextStep(3)" class="btn-menu">Siguiente</button>
             </div>
         </div>
 
+        <!-- ================= PASO 4 ================= -->
         <div class="step-section" id="step-4">
-            <h3>Paso 4: Resumen</h3>
-            <p>
-                <label class="summary-label">Nombre Completo:</label>
-                <span id="summary-nombre"></span>
-            </p>
-            <p>
-                <label class="summary-label">Rol:</label>
-                <span id="summary-rol"></span>
-            </p>
-            <p>
-                <label class="summary-label">Correo:</label>
-                <span id="summary-correo"></span>
-            </p>
-            <p>
-                <label class="summary-label">Teléfono:</label>
-                <span id="summary-telefono"></span>
-            </p>
-            <p>
-                <label class="summary-label">Cédula:</label>
-                <span id="summary-cedula"></span>
-            </p>
+            <h6 class="text-center mx-4 mt-2 mb-4 text-accent">Paso 4: Resumen</h6>
 
-            <div class="botones">
-                <button type="button" onclick="prevStep(4)" class="Continuar">Atrás</button>
-                <button type="submit" class="Registrarse">Registrarse</button>
+            <div class="mx-5 mb-4 p-3 rounded" style="background-color: var(--bg-page-claro); border: 1px solid var(--table-border-row);">
+                <div class="summary-item">
+                    <div class="summary-label">Nombre Completo:</div>
+                    <span id="summary-nombre" class="fw-medium"></span>
+                </div>
+                <div class="summary-item">
+                    <div class="summary-label">Rol:</div>
+                    <span id="summary-rol" class="fw-medium"></span>
+                </div>
+                <div class="summary-item">
+                    <div class="summary-label">Correo:</div>
+                    <span id="summary-correo" class="fw-medium"></span>
+                </div>
+                <div class="summary-item">
+                    <div class="summary-label">Teléfono:</div>
+                    <span id="summary-telefono" class="fw-medium"></span>
+                </div>
+                <div class="summary-item mb-0">
+                    <div class="summary-label">Cédula:</div>
+                    <span id="summary-cedula" class="fw-medium"></span>
+                </div>
+            </div>
+
+            <div class="d-flex justify-content-between mx-5 mt-4 gap-2">
+                <button type="button" onclick="prevStep(4)" class="btn-menu btn-menu-secundario">Atrás</button>
+                <button type="submit" class="btn-menu">Registrarse</button>
             </div>
         </div>
     </form>
@@ -317,19 +225,18 @@
     <script>
         // Función para mostrar el paso actual y ocultar los demás
         function showStep(stepNumber) {
-            // Ocultar el mensaje de error al cambiar de paso
             document.getElementById('form-error-message').style.display = 'none';
-            
             document.querySelectorAll('.step-section').forEach(section => {
                 section.style.display = 'none';
             });
             document.getElementById(`step-${stepNumber}`).style.display = 'block';
         }
 
-        // Función para mostrar el error 
+        // Función para mostrar el error utilizando las clases de alerta de Bootstrap
         function displayError(message) {
             const errorDiv = document.getElementById('form-error-message');
-            errorDiv.innerHTML = message; 
+            errorDiv.className = 'alert alert-danger mx-5 mb-0 mt-2';
+            errorDiv.innerHTML = `<b>Error:</b> ${message}`;
             errorDiv.style.display = 'block';
         }
 
@@ -337,7 +244,6 @@
         // LÓGICA DE PASOS
         // ----------------------------------------------------------------------------------
 
-        // Función para ir al siguiente paso, con validación mejorada
         function nextStep(currentStep) {
             const currentSection = document.getElementById(`step-${currentStep}`);
             const requiredInputs = currentSection.querySelectorAll('[required]');
@@ -352,7 +258,7 @@
             let firstInvalidInput = null;
             let errorMessage = "Por favor, completa todos los campos requeridos para continuar.";
 
-            // --- 1. Validar campos vacíos y recopilar el primer campo inválido ---
+            // 1. Validar campos vacíos
             requiredInputs.forEach(input => {
                 if (!input.value.trim()) {
                     isValid = false;
@@ -365,16 +271,13 @@
                 }
             });
 
-            // Si hay campos vacíos, no continuar con validaciones de formato
+            // Si no hay campos vacíos, proceder a validaciones de formato
             if (isValid) {
-            
-                // --- 2. Validaciones de formato y UNICIDAD por Paso ---
                 if (currentStep === 1) {
                     const nombre = document.getElementById('nombre').value;
                     const apellido = document.getElementById('apellido').value;
                     const rol = document.getElementById('rol').value;
                     
-                    // Expresión regular para letras (a-z, A-Z), letras acentuadas, ñ, Ñ y espacios
                     const nameRegex = /^[a-zA-Z\u00C0-\u017F\sñÑ]*$/; 
 
                     if (!rol) {
@@ -398,11 +301,8 @@
                     const telefono = document.getElementById('telefono').value.trim();
                     const cedula = document.getElementById('cedula').value.trim();
                     
-                    // RegEx para formato de correo electrónico estándar
                     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/; 
-                    // RegEx para solo 8 dígitos
                     const phoneRegex = /^\d{8}$/; 
-                    // RegEx para el formato 000-000000-0000X
                     const cedulaRegex = /^\d{3}-\d{6}-\d{4}[A-Z]$/; 
 
                     if (!emailRegex.test(correo)) {
@@ -425,7 +325,6 @@
                     const pass1 = document.getElementById('contrasena1').value;
                     const pass2 = document.getElementById('contrasena2').value;
                     
-                    // Nueva RegEx robusta: Mínimo 10 caracteres, 1 mayúscula, 1 minúscula, 1 número y 1 símbolo especial
                     const strongPasswordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[\W_]).{10,}$/;
 
                     if (pass1 !== pass2) {
@@ -444,19 +343,15 @@
                 }
             }
 
-            // --- 3. Manejo del flujo (Si es válido o no) ---
+            // Manejo del flujo
             if (isValid) {
                 const nextStepNumber = currentStep + 1;
-
                 if (nextStepNumber === 4) {
                     updateSummary();
                 }
-                
                 showStep(nextStepNumber);
             } else {
-                // Mostrar el error en el div
                 displayError(errorMessage);
-
                 if (firstInvalidInput) {
                     firstInvalidInput.focus();
                 }
@@ -468,7 +363,7 @@
             showStep(currentStep - 1);
         }
 
-        // Función para actualizar el resumen y generar el usuario
+        // Función para actualizar el resumen
         function updateSummary() {
             const nombre = document.getElementById('nombre').value;
             const apellido = document.getElementById('apellido').value;
@@ -477,7 +372,6 @@
             const telefono = document.getElementById('telefono').value;
             const cedula = document.getElementById('cedula').value;
 
-            // Mostrar la demás información en el resumen
             document.getElementById('summary-nombre').textContent = `${nombre} ${apellido}`;
             document.getElementById('summary-rol').textContent = rolSelect.options[rolSelect.selectedIndex].text;
             document.getElementById('summary-correo').textContent = correo;
@@ -485,15 +379,13 @@
             document.getElementById('summary-cedula').textContent = cedula;
         }
 
-        // Asegurarse de que solo el primer paso se muestre al cargar
         document.addEventListener('DOMContentLoaded', () => {
             showStep(1);
         });
 
         document.getElementById('registrationForm').addEventListener('submit', function(event) {
-            event.preventDefault(); // Evitar recarga de página
+            event.preventDefault(); 
 
-            // 1. Recopilar datos del formulario
             const data = {
                 nombre: document.getElementById('nombre').value,
                 apellido: document.getElementById('apellido').value,
@@ -505,7 +397,6 @@
                 contrasena2: document.getElementById('contrasena2').value,
             };
 
-            // 2. Realizar petición REST
             fetch('/api/empleados/registro/', {
                 method: 'POST',
                 headers: {
@@ -517,10 +408,8 @@
             .then(response => response.json().then(resData => ({ status: response.status, body: resData })))
             .then(result => {
                 if (result.status === 201) {
-                    // Éxito: Redirigir
                     window.location.href = '/dashboard/';
                 } else {
-                    // Error HTTP 400: Mostrar los errores devueltos por el serializador
                     let errorMsg = "Errores en el registro:<br>";
                     for (const [field, errors] of Object.entries(result.body)) {
                         errorMsg += `<b>${field}:</b> ${errors.join(', ')}<br>`;

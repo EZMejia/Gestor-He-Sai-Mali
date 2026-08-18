@@ -5,19 +5,29 @@
 
 {% block extra_style %}
     <style>
-        :root {
-            --primary-color: #981a28; 
-            --secondary-color: #f3bb67; 
-            --bg-page: #2c3038; 
+        body { 
+            height: 100%; 
+            overflow: hidden; 
+            background-color: var(--bg-page-claro);
         }
 
-        body { height: 100%; overflow: hidden; }
-        .main-content { height: calc(100dvh - 60px); display: flex; flex-direction: column; overflow: hidden; }
-        .contenido { flex-grow: 1; padding: 20px 20px; overflow-y: auto;}
+        .main-content { 
+            height: calc(100dvh - 60px); 
+            display: flex; 
+            flex-direction: column; 
+            overflow: hidden; 
+            transition: margin-left 0.3s ease;
+        }
+
+        .contenido { 
+            flex-grow: 1; 
+            padding: 20px 20px; 
+            overflow-y: auto;
+        }
 
         .container_admin {
-            background-color: white;
-            box-shadow: 0 0 50px 10px rgba(0, 0, 0, 0.3);
+            background-color: var(--table-even); 
+            box-shadow: 0 0 10px 10px rgba(0, 0, 0, 0.3);
             width: 100%;
             border-radius: 5px;
             padding: 20px;
@@ -25,22 +35,23 @@
         }
 
         .card-custom {
-            border: 1px solid #ddd;
             border-radius: 5px;
             margin-bottom: 20px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
         }
         
         .card-header-custom {
-            background-color: #981a28; 
+            background-color: var(--primary-color); 
             color: white;
             padding: 10px 15px;
-            border-bottom: 3px solid #f3bb67; 
+            border-bottom: 3px solid var(--primary-color); 
             border-radius: 5px 5px 0 0;
             font-weight: bold;
         }
         
-        .card-body-custom { padding: 15px; }
+        .card-body-custom { 
+            padding: 15px; 
+            background-color: var(--bg-claro);
+        }
 
         .form-label-custom {
             display: block;
@@ -56,24 +67,9 @@
             border: 1px solid #ccc;
             border-radius: 4px;
             box-sizing: border-box;
-            background-color: #fff;
+            background-color: var(--bg-claro);
+            color: var(--texto-oscuro);
         }
-
-        .table-custom {
-            width: 100%;
-            border-collapse: collapse;
-            font-size: 0.9em;
-        }
-        .table-custom thead tr { background-color: #ddd; }
-        .table-custom th, .table-custom td {
-            padding: 12px 10px;
-            text-align: left;
-            border-bottom: 1px solid #eee;
-            vertical-align: middle;
-        }
-        .table-custom tbody tr:nth-child(odd) { background-color: #F8F8F8; }
-        .table-custom tbody tr:nth-child(even) { background-color: #EEEEEE; }
-        .table-custom tbody tr:hover { background-color: #e0e0e0; }
 
         .btn-custom-secondary {
             background-color: #6c757d;
@@ -114,13 +110,13 @@
             justify-content: center;
             width: 120px; 
             height: 30px;
-            background-color: #e9ecef;
-            color: #495057;
+            background-color: var(--bg-page-claro);
+            color: var(--muted-text);
             padding: 2px 5px;
             border-radius: 4px;
             font-weight: 600;
             font-size: 0.85em;
-            border: 1px solid #ced4da;
+            border: 1px solid var(--bg-claro);
             text-align: center;
             box-sizing: border-box;
             white-space: nowrap; 
@@ -137,16 +133,16 @@
     <main class="main-content" id="main-content">
         <div class="contenido">
             <div class="container_admin">
-                <h1 style="color: #981a28; margin-bottom: 20px;"><i class="fas fa-history me-2"></i> Registro de Actividades del Sistema</h1>
+                <h1 style="color: var(--primary-color); margin-bottom: 20px;">Registro de Actividades del Sistema</h1>
 
-                <div class="card-custom">
+                <div class="card-custom shadow">
                     <div class="card-header-custom">
-                        <i class="fas fa-filter me-1"></i> Filtros de Búsqueda
+                        Filtros de Búsqueda
                     </div>
-                    <div class="card-body-custom" style="display: flex; gap: 15px; flex-wrap: wrap; align-items: flex-end;">
+                    <div class="card-body-custom rounded-bottom" style="display: flex; gap: 15px; flex-wrap: wrap; align-items: flex-end;">
                         
                         <div style="flex: 1 1 200px;">
-                            <label class="form-label-custom">Búsqueda general</label>
+                            <label class="form-label-custom" for="filtro-texto" style="color: var(--texto-oscuro)">Búsqueda general</label>
                             <div style="position: relative;">
                                 <span style="position: absolute; left: 10px; top: 9px; color: #888;"><i class="fas fa-search"></i></span>
                                 <input type="text" id="filtro-texto" class="form-control-custom" placeholder="Usuario, acción o detalles..." style="padding-left: 35px;">
@@ -154,7 +150,7 @@
                         </div>
 
                         <div style="flex: 1 1 150px;">
-                            <label class="form-label-custom">Módulo</label>
+                            <label class="form-label-custom" for="filtro-modulo" style="color: var(--texto-oscuro)">Módulo</label>
                             <select id="filtro-modulo" class="form-select-custom">
                                 <option value="TODOS">Todos los módulos</option>
                                 <option value="Autenticación">Autenticación</option>
@@ -172,12 +168,12 @@
                         </div>
 
                         <div style="flex: 1 1 130px;">
-                            <label class="form-label-custom">Fecha Desde</label>
+                            <label class="form-label-custom" for="filtro-fecha-inicio" style="color: var(--texto-oscuro)">Fecha Desde</label>
                             <input type="date" id="filtro-fecha-inicio" class="form-control-custom">
                         </div>
 
                         <div style="flex: 1 1 130px;">
-                            <label class="form-label-custom">Fecha Hasta</label>
+                            <label class="form-label-custom" for="filtro-fecha-fin" style="color: var(--texto-oscuro)">Fecha Hasta</label>
                             <input type="date" id="filtro-fecha-fin" class="form-control-custom">
                         </div>
 
@@ -189,7 +185,7 @@
                     </div>
                 </div>
 
-                <div class="card-custom" style="padding: 0; overflow-x: auto;">
+                <div class="card-custom shadow-sm" style="padding: 0; overflow-x: auto;">
                     <table class="table-custom" id="tabla-auditoria">
                         <thead>
                             <tr>
@@ -311,21 +307,21 @@
             let columnaSucursal = '';
             if (esGlobalAdmin) {
                 const nombreSucursal = reg.sucursal_id ? `N° ${reg.sucursal_id}` : 'Global';
-                columnaSucursal = `<td style="font-weight: bold; color: #555;">${nombreSucursal}</td>`;
+                columnaSucursal = `<td style="font-weight: bold;">${nombreSucursal}</td>`;
             }
 
             tr.innerHTML = `
                 <td>
                     <strong>${fechaTxt}</strong><br>
-                    <span style="color:#666; font-size:0.85em;">${horaTxt} ${ampm}</span>
+                    <span style="color: var(--muted-text); font-size:0.85em;">${horaTxt} ${ampm}</span>
                 </td>
                 <td>
                     <span class="fw-bold">${reg.usuario_nombre}</span><br>
-                    <small class="text-muted">${reg.rol}</small>
+                    <small style="color: var(--muted-text);">${reg.rol}</small>
                 </td>
                 <td><span class="badge-modulo">${reg.modulo}</span></td>
                 <td><span class="badge-accion" style="background-color: ${colorBadge}">${reg.accion}</span></td>
-                <td style="color: #444;">${reg.detalles}</td>
+                <td>${reg.detalles}</td>
                 ${columnaSucursal}
             `;
             tbody.appendChild(tr);

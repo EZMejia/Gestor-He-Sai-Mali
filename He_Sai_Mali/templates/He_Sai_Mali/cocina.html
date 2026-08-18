@@ -5,23 +5,21 @@
 
 {% block extra_style %}
     <style>
-        :root {
-            /* Colores del diseño de la APP (He Sai Mali) */
-            --primary-color: #981a28; /* Rojo Oscuro (Header) */
-            --secondary-color: #f3bb67; /* Amarillo (Acento/Border) */
-            --sidebar-bg: #2b3543; /* Gris Oscuro (Usado para el menú lateral) */
-            --bg-page: #2c3038; /* Gris Oscuro (Fondo de página) */
-            --text-light: #ffffff;
-            --text-accent: #dacfb7;
-            --menu-item-hover: #b12131; /* Rojo más claro para hover */
+        body { 
+            height: 100%; 
+            overflow: hidden; 
+            background-color: var(--bg-page-claro);
         }
-
-        body { height: 100%; overflow: hidden; }
 
         /* ---------------------------------------------------- */
         /* --- Contenido Principal (MAIN CONTENT) --- */
         /* ---------------------------------------------------- */
-        .main-content { height: calc(100dvh - 60px); display: flex; flex-direction: column; overflow: hidden; transition: margin-left 0.3s ease;}
+        .main-content { 
+            height: calc(100dvh - 60px); 
+            display: flex; flex-direction: 
+            column; overflow: hidden; 
+            transition: margin-left 0.3s ease;
+        }
 
         /* Estilos del Contenido de Registro (Adaptados) */
         .contenido { flex-grow: 1; padding: 20px 20px; overflow-y: auto; }
@@ -36,18 +34,18 @@
         }
 
         .pedido-card {
-            background-color: white;
+            background-color: var(--bg-claro);
             box-shadow: 0 0 15px 5px rgba(0, 0, 0, 0.2);
             border-radius: 8px;
             width: 100%;
             overflow: hidden;
             box-sizing: border-box;
-            border: 2px solid #f3bb67; /* Añadido borde para coherencia */
+            border: 2px solid var(--secondary-color);
         }
         
         .pedido-mas-antiguo {
-            background-color: #fff3cd; /* Amarillo suave */
-            border-color: var(--secondary-color); /* Borde amarillo más fuerte */
+            background-color: var(--amarillo-light);
+            border-color: var(--secondary-color);
         }
 
         .card-header {
@@ -55,14 +53,14 @@
             justify-content: space-between;
             align-items: center;
             padding: 10px;
-            background-color: #981a28; /* Color principal */
+            background-color: var(--primary-color); /* Color principal */
             color: white;
-            border-bottom: 3px solid #f3bb67;
+            border-bottom: 3px solid var(--secondary-color);
         }
         .pedido-mas-antiguo .card-header {
-            background-color: var(--secondary-color); /* Amarillo */
-            color: black;
-            border-bottom-color: #981a28;
+            background-color: var(--naranja-light);
+            color: white;
+            border-bottom-color: var(--primary-color);
         }
 
         .card-body {
@@ -70,7 +68,7 @@
         }
 
         .card-body h6 {
-            color: #333;
+            color: var(--texto-oscuro);
             margin-top: 10px;
             padding-bottom: 5px;
             margin-bottom: 0px;
@@ -140,7 +138,7 @@
                 <div id="contenedor-mensajes" class="toast-container position-fixed top-0 end-0 p-4" style="z-index: 1080;">
                 </div>
                 
-                <h2 style="color: #dacfb7; text-align: center; padding: 20px 0;">Productos Pendientes por Elaborar</h2>
+                <h2 style="color: var(--secondary-color); text-align: center; padding: 20px 0;">Productos Pendientes por Elaborar</h2>
                 
                 <!-- El contenedor de la cola se vacía. El JS lo llenará al cargar. -->
                 <div id="lista-pedidos" class="cola-cocina">
@@ -230,14 +228,14 @@
                             <span style="font-size: 14px;">${pedido.mesa}</span>
                         </div>
                         <div class="card-body">
-                            <p style="margin-bottom: 5px;">Cliente: ${pedido.cliente}</p>
-                            <p style="font-size: 0.85em; color: #666;">Hora: ${horaStr}</p>
+                            <p style="margin-bottom: 5px; color: var(--texto-oscuro);">Cliente: ${pedido.cliente}</p>
+                            <p style="font-size: 0.85em; color: var(--muted-text);">Hora: ${horaStr}</p>
                             <h6>Productos a Preparar:</h6>`;
                     
                     pedido.platillos.forEach(platillo => {
                         html += `
                             <div class="platillo-item">
-                                <div style="font-weight: bold;">
+                                <div style="font-weight: bold; color: var(--texto-oscuro);">
                                     ${platillo.cantidad}x ${platillo.nombre}
                                 </div>
                                 <form action="/api/cocina/platillo_listo/${platillo.id_pp}/" style="display:inline;" class="ajax-form estado-form">

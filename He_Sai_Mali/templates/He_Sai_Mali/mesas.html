@@ -6,40 +6,49 @@
 {% block extra_style %}
     <style>
         :root {
-            /* Colores del diseño de la APP (He Sai Mali) */
-            --primary-color: #981a28; /* Rojo Oscuro (Header) */
-            --secondary-color: #f3bb67; /* Amarillo (Acento/Border) */
-            --sidebar-bg: #2b3543; /* Gris Oscuro (Usado para el menú lateral) */
-            --bg-page: #2c3038; /* Gris Oscuro (Fondo de página) */
-            --text-light: #ffffff;
-            --text-accent: #dacfb7;
-            --menu-item-hover: #b12131; /* Rojo más claro para hover */
             /* Colores de estado de Mesas */
-            --mesa-ocupada: #dc3545; /* Rojo para Ocupada */
-            --mesa-libre: #28a745; /* Verde para Libre */
+            --mesa-ocupada: #dc3545;
+            --mesa-libre: #28a745;
             --btn-delete: #f44336;
             --btn-edit: #007bff;
         }
 
-        body { height: 100%; overflow: hidden; }
+        body { 
+            height: 100%; 
+            overflow: hidden; 
+            background-color: var(--bg-page-claro);
+        }
 
         /* MAIN CONTENT */
-        .main-content { height: calc(100dvh - 60px); display: flex; flex-direction: column; overflow: hidden; transition: margin-left 0.3s ease;}
+        .main-content { 
+            height: calc(100dvh - 60px); 
+            display: flex; 
+            flex-direction: column; 
+            overflow: hidden; 
+            transition: margin-left 0.3s ease;
+        }
         
-        .contenido { flex-grow: 1; padding: 20px 20px; overflow-y: auto;}
+        .contenido { 
+            flex-grow: 1; 
+            padding: 20px 20px; 
+            overflow-y: auto;
+        }
 
         .container_admin {
-            background-color: white; box-shadow: 0 0 50px 10px rgba(0, 0, 0, 0.3);
-            width: 100%; border-radius: 5px; padding: 20px;
+            background-color: var(--table-even); 
+            box-shadow: 0 0 10px 10px rgba(0, 0, 0, 0.3);
+            width: 100%; 
+            border-radius: 5px; 
+            padding: 20px;
         }
 
         /* CUSTOM COMPONENTS */
-        .card-custom { border: 1px solid #ddd; border-radius: 5px; margin-bottom: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .card-custom { border-radius: 5px; margin-bottom: 20px;}
         .card-header-custom {
             background-color: var(--primary-color); color: white; padding: 10px 15px;
             border-bottom: 3px solid var(--primary-color); border-radius: 5px 5px 0 0; font-weight: bold;
         }
-        .card-body-custom { padding: 15px; }
+        .card-body-custom { padding: 15px; background-color: var(--bg-claro); border-radius: 0 0 5px 5px;}
 
         /* Form Controls */
         .form-label-custom { display: block; margin-bottom: 5px; font-weight: bold; }
@@ -47,7 +56,9 @@
         .form-check-custom { display: flex; align-items: center; margin-top: 10px; }
         .form-check-custom input[type="checkbox"] { width: 20px; height: 20px; margin-right: 10px; }
 
-        .form-control {
+        .form-control-busqueda {
+            background: var(--bg-claro);
+            color: var(--texto-oscuro);
             width: 100%;
             padding: 8px;
             margin-bottom: 10px;
@@ -69,30 +80,7 @@
         .btn-custom-delete { background-color: var(--btn-delete); }
         .btn-custom-delete:hover { background-color: #d32f2f; color: white; }
 
-        /* Table and Status */
-        .table-custom {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 0px;
-            color: #333; /* Color de texto para la tabla */
-        }
-        .table-custom thead tr {
-            background-color: #ddd; /* Color claro del diseño */
-        }
-        .table-custom th, .table-custom td {
-            padding: 10px;
-            text-align: left;
-            border-bottom: 1px solid #eee;
-        }
-        .table-custom tbody tr:nth-child(odd) {
-            background-color: #F8F8F8;
-        }
-        .table-custom tbody tr:nth-child(even) {
-            background-color: #EEEEEE;
-        }
-        .table-custom tbody tr:hover {
-            background-color: #e0e0e0;
-        }
+        /* Status */
         .status-badge { padding: 4px 8px; border-radius: 5px; font-weight: bold; color: white; }
         .status-libre { background-color: var(--mesa-libre); }
         .status-ocupada { background-color: var(--mesa-ocupada); }
@@ -106,7 +94,7 @@
             <div class="contenido">
                 <div class="container_admin">
                     {% if user.rol != "Mesero" %}
-                        <h1 style="color: #981a28; margin-bottom: 20px;">Administración de Mesas</h1>
+                        <h1 style="color: var(--primary-color); margin-bottom: 20px;">Administración de Mesas</h1>
 
                         <div id="alert-container" class="toast-container position-fixed top-0 end-0 p-4" style="z-index: 1080; pointer-events: none;">
                             {% if messages %}
@@ -122,7 +110,7 @@
                             {% endif %}
                         </div>
                         
-                        <div class="card-custom">
+                        <div class="card-custom shadow">
                             <div class="card-header-custom" id="form-header">
                                 {% if mesa_a_editar %}Editar Mesa: {{ mesa_a_editar.idMesa }}{% else %}Agregar Nueva Mesa{% endif %}
                             </div>
@@ -136,16 +124,16 @@
                                     <div style="display: flex; gap: 15px; flex-wrap: wrap; align-items: flex-start;">
     
                                         <div style="flex: 1 1 25%; min-width: 150px;">
-                                            <label for="idMesa" class="form-label-custom">ID Mesa</label>
-                                            <input type="number" class="form-control-custom" id="idMesa" name="idMesa" placeholder="Nuevo ID"
+                                            <label for="idMesa" class="form-label-custom" style="color: var(--texto-oscuro);">ID Mesa</label>
+                                            <input type="number" class="form-control-custom" id="idMesa" name="idMesa" placeholder="Nuevo ID" min="1"
                                             value="{% if mesa_a_editar %}{{ mesa_a_editar.idMesa }}{% endif %}"
-                                            {% if mesa_a_editar %}disabled{% endif %}>
+                                            {% if mesa_a_editar %}disabled{% else %}required{% endif %} style="background: transparent; color: var(--texto-oscuro);">
                                         </div>
 
                                         <div style="flex: 1 1 35%; min-width: 180px;">
-                                            <label for="capacidad" class="form-label-custom">Capacidad (Asientos)</label>
+                                            <label for="capacidad" class="form-label-custom" style="color: var(--texto-oscuro);">Capacidad (Asientos)</label>
                                             <input type="number" class="form-control-custom" id="capacidad" name="capacidad" min="1" 
-                                                value="{% if mesa_seleccionada %}{{ mesa_seleccionada.capacidad }}{% endif %}" required>
+                                                value="{% if mesa_seleccionada %}{{ mesa_seleccionada.capacidad }}{% endif %}" style="background: transparent; color: var(--texto-oscuro);" required>
                                         </div>
                                         
                                         <div class="mt-md-3" style="flex: 1 1 30%; min-width: 200px; display: flex; align-items: flex-end; height: 62px;">
@@ -163,15 +151,15 @@
                         </div>
                     {% endif %}
 
-                    <h2 style="color: #981a28; margin-top: {% if user.rol != "Mesero" %} 30px {% endif %}; border-bottom: 2px solid #981a28; padding-bottom: 5px; margin-bottom: 10px;">Listado de Mesas</h2>
+                    <h2 style="color: var(--primary-color); margin-top: {% if user.rol != "Mesero" %} 30px {% endif %}; border-bottom: 2px solid #981a28; padding-bottom: 5px; margin-bottom: 10px;">Listado de Mesas</h2>
                     
                     <div style="margin-bottom: 20px;">
-                        <label for="buscador" style="font-weight: bold; display: block; margin-bottom: 5px;">Buscar mesa:</label>
+                        <label for="buscador" style="font-weight: bold; display: block; margin-bottom: 5px; color: var(--texto-oscuro);">Buscar mesa:</label>
                         <div style="position: relative; display: flex; align-items: center;">
                             <span style="position: absolute; left: 10px; color: #888;">
                                 <i class="fas fa-search"></i>
                             </span>
-                            <input type="text" id="buscador" class="form-control" 
+                            <input type="text" id="buscador" class="form-control-busqueda" 
                                 placeholder="Escribe el numero de mesa..." 
                                 style="padding-left: 35px; padding-right: 35px; margin-bottom: 0;" 
                                 autocomplete="off"
@@ -183,7 +171,7 @@
                         </div>
                     </div>
 
-                    <div class="card-custom" style="padding: 0; overflow-x: auto;">
+                    <div class="card-custom shadow-sm" style="padding: 0; overflow-x: auto;">
                         <table class="table-custom">
                             <thead>
                                 <tr>
@@ -246,13 +234,13 @@
                             </h5>
                             <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
                         </div>
-                        <div class="modal-body">
-                            <p>¿Está seguro de que desea eliminar la <strong>Mesa <span id="modal-id-mesa-texto"></span></strong>?</p>
-                            <p class="text-muted" style="font-size: 0.9em;">
+                        <div class="modal-body" style="background-color: var(--bg-claro);">
+                            <p style="color: var(--texto-oscuro);">¿Está seguro de que desea eliminar la <strong>Mesa <span id="modal-id-mesa-texto"></span></strong>?</p>
+                            <p style="font-size: 0.9em; color: var(--muted-text);">
                                 Esta acción no se puede deshacer y fallará si existen pedidos asociados a esta mesa.
                             </p>
                         </div>
-                        <div class="modal-footer">
+                        <div class="modal-footer" style="background-color: var(--bg-claro);">
                             <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
                             <form id="form-eliminar-mesa" method="POST" action="">
                                 {% csrf_token %}
@@ -510,7 +498,7 @@
             const filaVaciaPrevia = document.getElementById('empty-results-row');
             if (filaVaciaPrevia) filaVaciaPrevia.remove();
 
-            if (coincidencias === 0) {
+            if (coincidencias === 0 && filas.length > 0) {
                 const emptyRow = document.createElement('tr');
                 emptyRow.id = 'empty-results-row';
                 emptyRow.innerHTML = `

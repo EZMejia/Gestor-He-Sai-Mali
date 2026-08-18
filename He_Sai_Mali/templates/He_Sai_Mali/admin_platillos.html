@@ -5,25 +5,29 @@
 
 {% block extra_style %}
     <style>
-        :root {
-            /* Colores del diseño de la APP (He Sai Mali) */
-            --primary-color: #981a28; 
-            --secondary-color: #f3bb67; 
-            --sidebar-bg: #2b3543; 
-            --bg-page: #2c3038; 
-            --text-light: #ffffff;
-            --text-accent: #dacfb7;
-            --menu-item-hover: #b12131; 
+        body { 
+            height: 100%; 
+            overflow: hidden; 
+            background-color: var(--bg-page-claro);
         }
 
-        body { height: 100%; overflow: hidden; }
+        .main-content { 
+            height: calc(100dvh - 60px); 
+            display: flex; 
+            flex-direction: column; 
+            overflow: hidden; 
+            transition: margin-left 0.3s ease;
+        }
 
-        .main-content { height: calc(100dvh - 60px); display: flex; flex-direction: column; overflow: hidden; transition: margin-left 0.3s ease;}
-        .contenido { flex-grow: 1; padding: 20px 20px; overflow-y: auto;}
+        .contenido { 
+            flex-grow: 1; 
+            padding: 20px 20px; 
+            overflow-y: auto;
+        }
 
         .container_admin {
-            background-color: white;
-            box-shadow: 0 0 50px 10px rgba(0, 0, 0, 0.3);
+            background-color: var(--table-even); 
+            box-shadow: 0 0 10px 10px rgba(0, 0, 0, 0.3);
             width: 100%;
             border-radius: 5px;
             padding: 20px;
@@ -31,20 +35,22 @@
         }
 
         .card-custom {
-            border: 1px solid #ddd;
             border-radius: 5px;
             margin-bottom: 20px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
         }
         .card-header-custom {
-            background-color: #981a28; 
+            background-color: var(--primary-color); 
             color: white;
             padding: 10px 15px;
-            border-bottom: 3px solid #981a28; 
+            border-bottom: 3px solid var(--primary-color); 
             border-radius: 5px 5px 0 0;
             font-weight: bold;
         }
-        .card-body-custom { padding: 15px; }
+        .card-body-custom { 
+            padding: 15px; 
+            background-color: var(--bg-claro);
+            border-radius: 0 0 5px 5px;
+        }
 
         .btn-custom-success {
             text-decoration: none;
@@ -67,12 +73,16 @@
             box-sizing: border-box;
         }
 
-        .table-custom { width: 100%; border-collapse: collapse; margin-top: 0px; color: #333; }
-        .table-custom thead tr { background-color: #ddd; }
-        .table-custom th, .table-custom td { padding: 10px; text-align: left; border-bottom: 1px solid #eee; }
-        .table-custom tbody tr:nth-child(odd) { background-color: #F8F8F8; }
-        .table-custom tbody tr:nth-child(even) { background-color: #EEEEEE; }
-        .table-custom tbody tr:hover { background-color: #e0e0e0; }
+        .form-control-busqueda {
+            background: var(--bg-claro);
+            color: var(--texto-oscuro);
+            width: 100%;
+            padding: 8px;
+            margin-bottom: 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
 
         .btn-toggle-disponible {
             padding: 5px 10px;
@@ -132,40 +142,40 @@
         <main class="main-content" id="main-content">
             <div class="contenido">
                 <div class="container_admin">
-                    <h1 style="color: #981a28; margin-bottom: 20px;">Administración de Productos</h1>
+                    <h1 style="color: var(--primary-color); margin-bottom: 20px;">Administración de Productos</h1>
 
                     <!-- Contenedor de Notificaciones Dinámicas -->
                     <div id="toast-container" class="position-fixed top-0 end-0 p-4" style="z-index: 1080;"></div>
 
                     <!-- Formulario de Producto (Alta y Edición) -->
-                    <div class="card-custom">
+                    <div class="card-custom shadow">
                         <div id="form-card-header" class="card-header-custom">Agregar Nuevo Producto</div>
                         <div class="card-body-custom">
                             <form id="form-producto" onsubmit="guardarProducto(event)">
                                 <div style="display: flex; flex-wrap: wrap; gap: 15px;">
                                     <div style="flex: 1 1 40%; min-width: 200px;">
-                                        <label for="nombre" class="form-label-custom">Nombre</label>
-                                        <input type="text" class="form-control-custom" id="nombre" required autocomplete="off">
+                                        <label for="nombre" class="form-label-custom" style="color: var(--texto-oscuro);">Nombre</label>
+                                        <input type="text" class="form-control-custom" id="nombre" style="background: transparent; color: var(--texto-oscuro);" required autocomplete="off">
                                     </div>
                                     <div style="flex: 1 1 30%; min-width: 200px;">
-                                        <label for="precio" class="form-label-custom">Precio (C$)</label>
-                                        <input type="number" step="1" class="form-control-custom" id="precio" min="0" required>
+                                        <label for="precio" class="form-label-custom" style="color: var(--texto-oscuro);">Precio (C$)</label>
+                                        <input type="number" step="1" class="form-control-custom" id="precio" min="0" style="background: transparent; color: var(--texto-oscuro);" required>
                                     </div>
                                     <div style="flex: 1 1 25%; min-width: 200px;">
-                                        <label for="categoria" class="form-label-custom">Categoría</label>
-                                        <input list="categorias-list" class="form-control-custom" id="categoria" required>
+                                        <label for="categoria" class="form-label-custom" style="color: var(--texto-oscuro);">Categoría</label>
+                                        <input list="categorias-list" class="form-control-custom" id="categoria" style="background: transparent; color: var(--texto-oscuro);" required>
                                         <datalist id="categorias-list"></datalist>
 
                                         <datalist id="articulos-inventario-list"></datalist>
                                     </div>
 
                                     <div style="flex: 1 1 100%;">
-                                        <label for="tiempoPreparacion" class="form-label-custom">Tiempo de preparación (segundos)</label>
-                                        <input type="number" step="1" class="form-control-custom" id="tiempoPreparacion" min="0" required>
+                                        <label for="tiempoPreparacion" class="form-label-custom" style="color: var(--texto-oscuro);">Tiempo de preparación (segundos)</label>
+                                        <input type="number" step="1" class="form-control-custom" id="tiempoPreparacion" min="0" style="background: transparent; color: var(--texto-oscuro);" required>
                                     </div>
 
                                     <div style="flex: 1 1 100%; border-top: 1px dashed #ccc; padding-top: 15px;">
-                                        <label class="form-label-custom" style="margin-bottom: 10px;">Artículos de Inventario</label>
+                                        <p class="form-label-custom" style="margin-bottom: 10px; color: var(--texto-oscuro);">Artículos de Inventario</p>
                                         <div id="ingredientes-container"></div>
                                         <button type="button" class="btn-custom-success" onclick="agregarIngrediente()">
                                             + Añadir Ingrediente
@@ -187,16 +197,16 @@
                         </div>
                     </div>
 
-                    <h2 style="color: #981a28; margin-top: 30px; border-bottom: 2px solid #981a28; padding-bottom: 5px; margin-bottom: 10px;">Listado de Productos</h2>
+                    <h2 style="color: var(--primary-color); margin-top: 30px; border-bottom: 2px solid var(--primary-color); padding-bottom: 5px; margin-bottom: 10px;">Listado de Productos</h2>
                     
                     <!-- Buscador -->
                     <div style="margin-bottom: 20px;">
-                        <label for="buscador" style="font-weight: bold; display: block; margin-bottom: 5px;">Buscar producto:</label>
+                        <label for="buscador" style="font-weight: bold; display: block; margin-bottom: 5px; color: var(--texto-oscuro);">Buscar producto:</label>
                         <div style="position: relative; display: flex; align-items: center;">
                             <span style="position: absolute; left: 10px; color: #888;">
                                 <i class="fas fa-search"></i>
                             </span>
-                            <input type="text" id="buscador" class="form-control" 
+                            <input type="text" id="buscador" class="form-control-busqueda" 
                                 placeholder="Escribe el nombre del producto..." 
                                 style="padding-left: 35px; padding-right: 35px; margin-bottom: 0;" 
                                 autocomplete="off"
@@ -209,7 +219,7 @@
                     </div>
 
                     <!-- Tabla del CRUD -->
-                    <div class="card-custom" style="padding: 0; overflow-x: auto;">
+                    <div class="card-custom shadow-sm" style="padding: 0; overflow-x: auto;">
                         <table class="table-custom">
                             <thead>
                                 <tr>
@@ -240,13 +250,13 @@
                             </h5>
                             <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
                         </div>
-                        <div class="modal-body">
-                            <p>¿Está seguro de que desea eliminar el producto <strong><span id="modal-nombre-platillo-texto"></span></strong> (ID: <span id="modal-id-platillo-texto"></span>)?</p>
-                            <p class="text-muted" style="font-size: 0.9em;">
+                        <div class="modal-body" style="background-color: var(--bg-claro);">
+                            <p style="color: var(--texto-oscuro);">¿Está seguro de que desea eliminar el producto <strong><span id="modal-nombre-platillo-texto"></span></strong> (ID: <span id="modal-id-platillo-texto"></span>)?</p>
+                            <p style="font-size: 0.9em; color: var(--muted-text);">
                                 Esta acción no se puede deshacer y fallará si existen pedidos asociados a este producto.
                             </p>
                         </div>
-                        <div class="modal-footer">
+                        <div class="modal-footer" style="background-color: var(--bg-claro);">
                             <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
                             <button type="button" class="btn" style="background-color: var(--primary-color); color: white;" onclick="ejecutarEliminacionPlatillo()">Sí, Eliminar Producto</button>
                         </div>
@@ -332,7 +342,6 @@
         }
 
         // --- Renderizadores del DOM ---
-
         function renderizarTablaProductos(lista) {
             const tbody = document.getElementById('tabla-productos-body');
             tbody.innerHTML = '';
@@ -544,15 +553,22 @@
 
         function agregarIngrediente(initialId = '', initialNombre = '', initialCantidad = '', initialUnidad = '') { 
             const container = document.getElementById('ingredientes-container');
+            const uniqueId = Date.now() + '_' + Math.floor(Math.random() * 1000);
+
             const wrapper = document.createElement('div');
             wrapper.className = 'ingrediente-item';
+            wrapper.style.background = 'var(--table-even)';
+            wrapper.style.border = 'none';
             
             const inputArticulo = document.createElement('input');
             inputArticulo.type = 'text';
             inputArticulo.className = 'form-control-custom';
+            inputArticulo.id = `articulo_${uniqueId}`;
             inputArticulo.setAttribute('list', 'articulos-inventario-list');
             inputArticulo.setAttribute('placeholder', 'Buscar Artículo de Inventario');
             inputArticulo.setAttribute('required', 'required');
+            inputArticulo.style.background = 'var(--bg-claro)';
+            inputArticulo.style.color = 'var(--texto-oscuro)';
             
             const hiddenInput = document.createElement('input');
             hiddenInput.type = 'hidden';
@@ -560,11 +576,14 @@
             
             const inputCantidad = document.createElement('input');
             inputCantidad.type = 'number';
+            inputCantidad.id = `cantidad_${uniqueId}`;
             inputCantidad.step = '0.01';
             inputCantidad.min = '0.01';
             inputCantidad.className = 'form-control-custom';
             inputCantidad.setAttribute('required', 'required');
-            
+            inputCantidad.style.background = 'var(--bg-claro)';
+            inputCantidad.style.color = 'var(--texto-oscuro)';
+
             function setCantidadPlaceholder(unidad) {
                 inputCantidad.setAttribute('placeholder', unidad ? `Cantidad usada (${unidad})` : 'Cantidad usada');
             }
@@ -611,12 +630,39 @@
         function filtrarProductosLocal() {
             const input = document.getElementById('buscador');
             const btnLimpiar = document.getElementById('btn-limpiar');
+            const tbody = document.querySelector('.table-custom tbody');
             const filtro = input.value.toLowerCase();
+            const filas = document.querySelectorAll('.fila-producto');
             
             btnLimpiar.style.display = filtro.length > 0 ? "block" : "none";
 
-            const filtrados = productosData.filter(p => p.nombre.toLowerCase().includes(filtro));
-            renderizarTablaProductos(filtrados);
+            let coincidencias = 0;
+
+            filas.forEach(fila => {
+                const nombreProducto = fila.querySelector('.nombre-producto').textContent.toLowerCase();
+                if (nombreProducto.includes(filtro)) {
+                    fila.style.display = "";
+                    coincidencias++;
+                } else {
+                    fila.style.display = "none";
+                }
+            });
+
+            const filaVaciaPrevia = document.getElementById('empty-results-row');
+            if (filaVaciaPrevia) filaVaciaPrevia.remove();
+
+            if (coincidencias === 0 && filas.length > 0) {
+                const emptyRow = document.createElement('tr');
+                emptyRow.id = 'empty-results-row';
+                emptyRow.innerHTML = `
+                    <td colspan="8">
+                        <div class="empty-results" style="padding: 20px; text-align: center; color: #666;">
+                            <i class="fas fa-ban fa-2x"></i>
+                            <p class="mb-0">No se encontraron productos que coincidan con "<span>${input.value}</span>"</p>
+                        </div>
+                    </td>`;
+                tbody.appendChild(emptyRow);
+            }
         }
 
         function limpiarBusqueda() {
