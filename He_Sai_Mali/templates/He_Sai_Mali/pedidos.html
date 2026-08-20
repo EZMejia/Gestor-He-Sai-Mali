@@ -729,15 +729,15 @@
 
             const metodoPago = document.getElementById('metodo_pago').value;
 
-            // Se realiza la petición POST para registrar el pago
-            fetch(`/pedidos/facturar/${currentFacturarId}/`, { 
+            fetch(`/api/pedidos/facturar/${currentFacturarId}/`, { 
                 method: 'POST',
                 headers: {
-                    'Content-Type': 'application/x-www-form-urlencoded',
+                    'Content-Type': 'application/json', // 2. Cambiar a JSON
                     'X-CSRFToken': getCookie('csrftoken'),
                     'X-Requested-With': 'XMLHttpRequest'
                 },
-                body: new URLSearchParams({ 'metodo_pago': metodoPago })
+                // 3. Enviar como JSON stringificado
+                body: JSON.stringify({ 'metodo_pago': metodoPago }) 
             })
             .then(res => {
                 if (!res.ok) throw new Error("Error al procesar el pago.");
@@ -745,10 +745,8 @@
                 modalPagoInstancia.hide();
                 mostrarToast("Pedido facturado con éxito. Redirigiendo...", 'success');
                 
-                // 2. Reemplazamos el '0' de la URL base por el ID del pedido actual
                 const urlDestino = urlFacturaBase.replace('0', currentFacturarId);
                 
-                // 3. Redirigimos al usuario después de 1 segundo para que vea la notificación de éxito
                 setTimeout(() => {
                     window.location.href = urlDestino;
                 }, 1000);
